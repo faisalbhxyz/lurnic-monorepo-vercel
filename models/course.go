@@ -146,3 +146,70 @@ type CourseInstructor struct {
 	CreatedAt    time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 }
+
+// COURSES RESPONSE for "/"
+type CourseDetailsResponse struct {
+	ID              uint                    `gorm:"primaryKey;autoIncrement" json:"id"`
+	Title           string                  `json:"title"`
+	Summary         string                  `gorm:"type:text" json:"summary"`
+	Description     *string                 `gorm:"type:text" json:"description"`
+	Visibility      Visibility              `gorm:"type:enum('public','private','protected');default:'public'" json:"visibility"`
+	IsScheduled     *bool                   `gorm:"default:false" json:"is_scheduled"`
+	ScheduleDate    *time.Time              `gorm:"type:date" json:"schedule_date"`
+	ScheduleTime    *time.Time              `gorm:"type:time" json:"schedule_time"`
+	FeaturedImage   *string                 `gorm:"column:featured_image" json:"featured_image"`
+	IntroVideo      datatypes.JSON          `gorm:"type:json;column:intro_video" json:"intro_video"`
+	PricingModel    PricingModel            `gorm:"column:pricing_model;enum('free','paid');default:'free'" json:"pricing_model"`
+	RegularPrice    *float32                `gorm:"column:regular_price;default:0" json:"regular_price"`
+	SalePrice       *float32                `gorm:"column:sale_price;default:0" json:"sale_price"`
+	ShowCommingSoom *bool                   `gorm:"default:false" json:"show_comming_soom"`
+	Tags            datatypes.JSON          `gorm:"type:json" json:"tags"`
+	Overview        datatypes.JSON          `gorm:"type:json" json:"overview"`
+	AuthorID        uint                    `gorm:"column:author_id" json:"author_id"`
+	Author          UserWithoutRole         `gorm:"foreignKey:AuthorID;references:ID" json:"author"`
+	CreatedAt       time.Time               `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt       time.Time               `gorm:"autoUpdateTime" json:"updated_at"`
+	Chapters        []CourseChapterResponse `gorm:"foreignKey:CourseID;references:ID" json:"course_chapters"`
+	GeneralSettings CourseGeneralSettings   `gorm:"foreignKey:CourseID;references:ID" json:"general_settings"`
+	Instructors     []CourseInstructor      `gorm:"foreignKey:CourseID;references:ID" json:"course_instructors"`
+}
+
+func (CourseDetailsResponse) TableName() string {
+	return "course_details"
+}
+
+type CourseChapterResponse struct {
+	ID          uint                   `gorm:"primaryKey;autoIncrement" json:"id"`
+	Position    int                    `gorm:"default:0" json:"position"`
+	Title       string                 `json:"title"`
+	Description *string                `gorm:"type:text" json:"description"`
+	Access      Access                 `gorm:"enum('draft','published');default:'published'" json:"access"`
+	CreatedAt   time.Time              `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time              `gorm:"autoUpdateTime" json:"updated_at"`
+	CourseID    uint                   `gorm:"column:course_id" json:"course_id"`
+	Lessons     []CourseLessonResponse `gorm:"foreignKey:ChapterID;references:ID" json:"course_lessons"`
+}
+
+func (CourseChapterResponse) TableName() string {
+	return "course_chapters"
+}
+
+type CourseLessonResponse struct {
+	ID          uint             `gorm:"primaryKey;autoIncrement" json:"id"`
+	Title       string           `json:"title"`
+	Description *string          `gorm:"type:text" json:"description"`
+	LessonType  LessonType       `gorm:"enum('video','live_session','audio','text');default:'video'" json:"lesson_type"`
+	SourceType  LessonSourceType `gorm:"enum('youtube','vimeo', 'sound_cloud','spotify','custom_code','upload');default:'youtube'" json:"source_type"`
+	Source      datatypes.JSON   `gorm:"type:json" json:"source"`
+	IsPublished bool             `gorm:"default:false" json:"is_published"`
+	IsPublic    bool             `gorm:"default:false" json:"is_public"`
+	Resources   datatypes.JSON   `gorm:"type:json" json:"resources"` // filename, mimetype, url, size
+	Position    int              `gorm:"default:0" json:"position"`
+	CreatedAt   time.Time        `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time        `gorm:"autoUpdateTime" json:"updated_at"`
+	ChapterID   uint             `gorm:"column:chapter_id" json:"chapter_id"`
+}
+
+func (CourseLessonResponse) TableName() string {
+	return "course_lessons"
+}

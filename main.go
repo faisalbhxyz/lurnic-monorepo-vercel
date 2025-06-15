@@ -18,9 +18,11 @@ func main() {
 	// Set Gin to release mode
 	// gin.SetMode(gin.ReleaseMode)
 
-	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Fatalln("Warning: No .env file found")
+	// Load environment variables
+	if gin.Mode() != gin.ReleaseMode {
+		if err := godotenv.Load(); err != nil {
+			log.Fatalln("Warning: No .env file found")
+		}
 	}
 
 	// Initialize Gin
@@ -28,19 +30,18 @@ func main() {
 
 	// Enable CORS
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"}, // allow all origins
-		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
-		// ExposeHeaders:    []string{"Content-Length"},
-		// AllowCredentials: true,
-		// MaxAge: 12 * time.Hour,
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Access-Control-Allow-Origin"},
+		AllowCredentials: false,
 	}))
-
-	// Initialize API routes
-	apiRoutesGroup := router.Group("/api")
 
 	// Connect to database
 	utils.ConnectDatabase()
+
+	// Initialize API routes
+	apiRoutesGroup := router.Group("/api")
 
 	// craete superadmin
 	CreateSuperadminIfNotExists()

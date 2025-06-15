@@ -15,6 +15,9 @@ import (
 	"gorm.io/gorm"
 )
 
+func CheckUser(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, gin.H{"data": "WORKING"})
+}
 func GetUsers(ctx *gin.Context) {
 	var users []models.User
 	utils.DB.Preload("Tenant").Select("id", "user_id", "name", "phone", "email", "status", "created_at", "updated_at", "tenant_id").Find(&users)

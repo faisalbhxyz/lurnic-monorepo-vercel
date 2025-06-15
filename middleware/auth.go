@@ -59,8 +59,8 @@ func AuthMiddleware() gin.HandlerFunc {
 			var user models.User
 			utils.DB.Where("user_id = ?", claims["user_id"]).Select("id", "user_id", "tenant_id").First(&user)
 
-			// Set user info in context (e.g., user_id)
-			ctx.Set("user_id", claims["user_id"])
+			// Set user info in context
+			ctx.Set("user_id", user.ID)
 			ctx.Set("tenant_id", user.TenantID)
 		}
 

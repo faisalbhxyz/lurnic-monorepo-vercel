@@ -1,16 +1,27 @@
 package course
 
 import (
+	"context"
 	"dashlearn/models"
 	"dashlearn/utils"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/jinzhu/copier"
 )
+
+func GetCourses(ctx *gin.Context) {
+	var courses []models.CourseDetailsResponse
+
+	if err := utils.DB.Where("tenant_id = ?", ctx.GetUint("tenant_id")).Preload("Author").Preload("Chapters").Preload("Chapters.Lessons").Preload("GeneralSettings").Preload("GeneralSettings.Category").Preload("Instructors").Preload("Instructors.Instructor").Find(&courses).Error; err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": courses})
+}
 
 func CreateCourse(ctx *gin.Context) {
 	var input CourseDetailsInput
@@ -52,22 +63,22 @@ func CreateCourse(ctx *gin.Context) {
 		input.Instructors = instructors
 	}
 
-	// file, err := ctx.FormFile("featured_image")
-	// if err == nil {
-	// 	// url, err := utils.UploadFile(context.Background(), file)
-	// 	// if err != nil {
-	// 	// 	ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	// 	// 	return
-	// 	// }
-	// 	// input.FeaturedImage = &url
-	// } else {
-	// 	input.FeaturedImage = nil
-	// }
-
-	// Step 3: Debug log the final parsed object
-	if output, err := json.MarshalIndent(input, "", "  "); err == nil {
-		fmt.Println("Parsed Input:\n", string(output))
+	file, err := ctx.FormFile("featured_image")
+	if err == nil {
+		url, err := utils.UploadFile(context.Background(), file)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		input.FeaturedImage = &url
+	} else {
+		input.FeaturedImage = nil
 	}
+
+	// // Step 3: Debug log the final parsed object
+	// if output, err := json.MarshalIndent(input, "", "  "); err == nil {
+	// 	fmt.Println("Parsed Input:\n", string(output))
+	// }
 
 	//create course details
 
@@ -120,7 +131,7 @@ func CreateCourse(ctx *gin.Context) {
 		Overview:        overviewJSON,
 		FeaturedImage:   input.FeaturedImage,
 		IntroVideo:      introVideo,
-		AuthorID:        1,
+		AuthorID:        ctx.GetUint("user_id"),
 		TenantID:        ctx.GetUint("tenant_id"),
 	}
 

@@ -12,7 +12,7 @@ CREATE TABLE
         category_id INT UNSIGNED NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id),
         course_id INT UNSIGNED NOT NULL,
-        FOREIGN KEY (course_id) REFERENCES course_details (id)
+        FOREIGN KEY (course_id) REFERENCES course_details (id) ON DELETE CASCADE
     );
 
 -- +goose StatementEnd
