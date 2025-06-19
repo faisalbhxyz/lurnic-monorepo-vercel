@@ -15,7 +15,7 @@ import (
 
 func GetStudents(ctx *gin.Context) {
 	var users []models.Student
-	utils.DB.Where("tenant_id = ?", ctx.GetUint("tenant_id")).Find(&users)
+	utils.DB.Preload("Enrollments").Where("tenant_id = ?", ctx.GetUint("tenant_id")).Find(&users)
 	ctx.JSON(http.StatusOK, gin.H{"data": users})
 }
 
@@ -107,90 +107,74 @@ func CreateStudent(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, gin.H{"message": "Student created successfully"})
 }
 
-// func LoginUser(ctx *gin.Context) {
-// 	var input LoginUserInput
+func LoginStudent(ctx *gin.Context) {
+	var input LoginStudentInput
 
-// 	if err := ctx.ShouldBindJSON(&input); err != nil {
-// 		var validationErrors validator.ValidationErrors
-// 		if errors.As(err, &validationErrors) {
-// 			errorsMap := make(map[string]string)
-// 			for _, fieldErr := range validationErrors {
-// 				field := fieldErr.Field()
-// 				tag := fieldErr.Tag()
-// 				switch field {
-// 				case "Email":
-// 					if tag == "required" {
-// 						errorsMap["email"] = "Email is required"
-// 					} else if tag == "email" {
-// 						errorsMap["email"] = "Invalid email format"
-// 					}
-// 				case "Password":
-// 					if tag == "required" {
-// 						errorsMap["password"] = "Password is required"
-// 					} else if tag == "min" {
-// 						errorsMap["password"] = "Password must be at least 6 characters long"
-// 					}
-// 				}
-// 			}
-// 			ctx.JSON(http.StatusBadRequest, gin.H{"error": errorsMap})
-// 			return
-// 		}
-// 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			errorsMap := make(map[string]string)
+			for _, fieldErr := range validationErrors {
+				field := fieldErr.Field()
+				tag := fieldErr.Tag()
+				switch field {
+				case "Email":
+					if tag == "required" {
+						errorsMap["email"] = "Email is required"
+					} else if tag == "email" {
+						errorsMap["email"] = "Invalid email format"
+					}
+				case "Password":
+					if tag == "required" {
+						errorsMap["password"] = "Password is required"
+					} else if tag == "min" {
+						errorsMap["password"] = "Password must be at least 6 characters long"
+					}
+				}
+			}
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": errorsMap})
+			return
+		}
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-// 	var user User
-// 	err := utils.DB.Where("email = ?", input.Email).First(&user).Error
-// 	if errors.Is(err, gorm.ErrRecordNotFound) {
-// 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Email not found"})
-// 		return
-// 	} else if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
-// 		return
-// 	}
+	var user models.Student
+	err := utils.DB.Where("email = ?", input.Email).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Email not found"})
+		return
+	} else if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
+		return
+	}
 
-// 	// Compare the provided password with the stored hashed password
-// 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-// 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
-// 		return
-// 	}
+	// Compare the provided password with the stored hashed password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+		return
+	}
 
-// 	// Generate JWT token
-// 	token, err := utils.GenerateJWT(user.UserID)
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-// 		return
-// 	}
+	// Generate JWT token
+	token, err := utils.GenerateJWT(user.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
 
-// 	ctx.JSON(http.StatusOK, gin.H{
-// 		"token": token,
-// 		"user": gin.H{
-// 			"user_id": user.UserID,
-// 			"name":    user.Name,
-// 			"phone":   user.Phone,
-// 			"email":   user.Email,
-// 		},
-// 	})
+	ctx.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user": gin.H{
+			"user_id": user.UserID,
+			"name": user.FirstName + func() string {
+				if user.LastName != nil {
+					return " " + *user.LastName
+				}
+				return ""
+			}(),
+			"phone": user.Phone,
+			"email": user.Email,
+		},
+	})
 
-// }
-
-// func UploadUser(c *gin.Context) {
-// 	fileHeader, err := c.FormFile("file")
-// 	fmt.Println("FILE", fileHeader.Filename)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
-// 		return
-// 	}
-
-// 	// Call your UploadFile util function
-// 	url, err := utils.UploadFile(context.Background(), fileHeader)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	// Return the uploaded file URL
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"url": url,
-// 	})
-// }
+}

@@ -17,6 +17,12 @@ func GetAllCategory(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": categories})
 }
 
+func GetAllCategoryPublic(ctx *gin.Context) {
+	var categories []models.Category
+	utils.DB.Where("tenant_id = ?", ctx.GetUint("tenant_id")).Find(&categories)
+	ctx.JSON(http.StatusOK, gin.H{"data": categories})
+}
+
 func GetCategoryByID(ctx *gin.Context) {
 	categoryID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {

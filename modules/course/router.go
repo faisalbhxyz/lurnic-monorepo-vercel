@@ -15,7 +15,7 @@ func RegisterCourseRoutes(rg *gin.RouterGroup) {
 		authGroup.POST("/create", CreateCourse)
 	}
 
-	publicGroup := rg.Group("/public/course", middleware.GetTenantID())
+	publicGroup := rg.Group("/course", middleware.GetTenantID())
 	{
 		publicGroup.GET("/", GetPublicCourses)
 		publicGroup.GET("/:id", GetCourseByID)

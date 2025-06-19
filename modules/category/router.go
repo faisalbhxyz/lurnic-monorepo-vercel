@@ -7,12 +7,18 @@ import (
 )
 
 func RegisterCategoryRoutes(rg *gin.RouterGroup) {
-	routerGroup := rg.Group("/category")
+	authgroup := rg.Group("/private/category", middleware.AuthMiddleware())
 	{
-		routerGroup.GET("/", middleware.AuthMiddleware(), GetAllCategory)
-		routerGroup.GET("/:id", middleware.AuthMiddleware(), GetCategoryByID)
-		routerGroup.POST("/create", middleware.AuthMiddleware(), CreateCategory)
-		routerGroup.PUT("/update/:id", middleware.AuthMiddleware(), UpdateCategory)
+		authgroup.GET("/", GetAllCategory)
+		authgroup.GET("/:id", GetCategoryByID)
+		authgroup.POST("/create", CreateCategory)
+		authgroup.PUT("/update/:id", UpdateCategory)
 		// routerGroup.DELETE("/delete/:id", middleware.AuthMiddleware(), DeleteCategory)
+	}
+
+	publicGroup := rg.Group("/category", middleware.GetTenantID())
+	{
+		publicGroup.GET("/", GetAllCategoryPublic)
+		// publicGroup.GET("/:id", GetCategoryByIDPublic)
 	}
 }

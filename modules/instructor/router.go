@@ -7,10 +7,11 @@ import (
 )
 
 func RegisterInstructorRoutes(rg *gin.RouterGroup) {
-	routesGroup := rg.Group("/instructor")
+	authGroup := rg.Group("/private/instructor")
 	{
-		routesGroup.GET("/", middleware.AuthMiddleware(), GetInstructors)
-		routesGroup.POST("/register", middleware.AuthMiddleware(), CreateInstructor)
+		authGroup.GET("/", middleware.AuthMiddleware(), GetInstructors)
+		authGroup.GET("/lite", middleware.AuthMiddleware(), GetInstructorsLite)
+		authGroup.POST("/register", middleware.AuthMiddleware(), CreateInstructor)
 		// userGroup.POST("/login", LoginUser)
 		// userGroup.POST("/upload", UploadUser)
 	}

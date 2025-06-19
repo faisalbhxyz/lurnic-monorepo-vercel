@@ -12,7 +12,11 @@ func RegisterStudentRoutes(rg *gin.RouterGroup) {
 		authGroup.GET("/", middleware.AuthMiddleware(), GetStudents)
 		authGroup.GET("/lite", middleware.AuthMiddleware(), GetStudentLite)
 		authGroup.POST("/register", middleware.AuthMiddleware(), CreateStudent)
-		// userGroup.POST("/login", LoginUser)
 		// userGroup.POST("/upload", UploadUser)
+	}
+
+	publicGroup := rg.Group("/student")
+	{
+		publicGroup.POST("/login", LoginStudent)
 	}
 }
