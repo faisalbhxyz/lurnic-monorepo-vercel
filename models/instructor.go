@@ -32,3 +32,18 @@ type InstructorResponseLite struct {
 func (InstructorResponseLite) TableName() string {
 	return "instructors"
 }
+
+type InstructorDetailsResponse struct {
+	ID          uint    `gorm:"primaryKey;autoIncrement" json:"id"`
+	FirstName   string  `gorm:"column:first_name" json:"first_name"`
+	LastName    *string `gorm:"column:last_name" json:"last_name"`
+	Email       string  `gorm:"uniqueIndex" json:"email"`
+	Phone       *string `json:"phone"`
+	Role        *string `json:"role"`
+	Designation *string `json:"designation"`
+	Image       *string `json:"image"`
+}
+
+func (InstructorDetailsResponse) TableName() string {
+	return "instructors"
+}

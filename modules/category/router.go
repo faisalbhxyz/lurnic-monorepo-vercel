@@ -17,7 +17,7 @@ func RegisterCategoryRoutes(rg *gin.RouterGroup) {
 		authgroup.GET("/:id", handler.GetByID)
 		authgroup.POST("/create", handler.Create)
 		authgroup.PUT("/update/:id", handler.Update)
-		// routerGroup.DELETE("/delete/:id", middleware.AuthMiddleware(), DeleteCategory)
+		authgroup.DELETE("/delete/:id", handler.Delete)
 	}
 
 	publicGroup := rg.Group("/category", middleware.GetTenantID())

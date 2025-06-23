@@ -103,3 +103,16 @@ func handleValidationError(c *gin.Context, err error) {
 	}
 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 }
+
+func (h *CategoryHandler) Delete(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
+		return
+	}
+	if err := h.service.Delete(id, c.GetUint("tenant_id")); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Category deleted successfully"})
+}

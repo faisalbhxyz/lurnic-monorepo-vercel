@@ -5,7 +5,9 @@ import (
 	"dashlearn/models"
 	"dashlearn/utils"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -25,6 +27,17 @@ func GetInstructorsLite(c *gin.Context) {
 	var users []models.InstructorResponseLite
 	utils.DB.Find(&users)
 	c.JSON(http.StatusOK, gin.H{"data": users})
+}
+
+func GetInstructorDetails(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid student ID"})
+		return
+	}
+	var user models.InstructorDetailsResponse
+	utils.DB.Where("tenant_id = ? AND id = ?", c.GetUint("tenant_id"), id).First(&user)
+	c.JSON(http.StatusOK, gin.H{"data": user})
 }
 
 func CreateInstructor(c *gin.Context) {
@@ -237,23 +250,143 @@ func CreateInstructor(c *gin.Context) {
 
 // }
 
-// func UploadUser(c *gin.Context) {
-// 	fileHeader, err := c.FormFile("file")
-// 	fmt.Println("FILE", fileHeader.Filename)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
-// 		return
-// 	}
+func UpdateInstructor(c *gin.Context) {
 
-// 	// Call your UploadFile util function
-// 	url, err := utils.UploadFile(context.Background(), fileHeader)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-// 		return
-// 	}
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid student ID"})
+		return
+	}
 
-// 	// Return the uploaded file URL
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"url": url,
-// 	})
-// }
+	var input UpdateInstructorInput
+	if err := c.ShouldBindWith(&input, binding.FormMultipart); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tenantID := c.GetUint("tenant_id")
+
+	var instructor models.Instructor
+	if err := utils.DB.Where("id = ? AND tenant_id = ?", id, tenantID).First(&instructor).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Instructor not found"})
+		return
+	}
+
+	var imageURL *string
+	file, err := c.FormFile("image")
+
+	if file != nil && instructor.Image != nil {
+		if delErr := utils.DeleteCDNFile(context.Background(), *instructor.Image); delErr != nil {
+			// You can log or ignore deletion errors as per your need
+			fmt.Println("Failed to delete old file:", delErr)
+		}
+	}
+
+	if err == nil {
+		if file.Size > 2*1024*1024 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Max image size is 2MB"})
+			return
+		}
+
+		// ✅ 2. MIME type check
+		src, err := file.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open image file"})
+			return
+		}
+		defer src.Close()
+
+		// Detect content type
+		buffer := make([]byte, 512)
+		if _, err := src.Read(buffer); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read file content"})
+			return
+		}
+		contentType := http.DetectContentType(buffer)
+
+		allowedTypes := map[string]bool{
+			"image/jpeg": true,
+			"image/png":  true,
+			"image/jpg":  true,
+			// "image/webp": true,
+			// "image/gif":  true,
+		}
+		if !allowedTypes[contentType] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Only PNG, JPG formats are supported"})
+			return
+		}
+
+		// ✅ 3. (Optional) Image dimension check
+		// if contentType == "image/jpeg" || contentType == "image/png" {
+		// 	// Need to re-seek for reading again
+		// 	if seeker, ok := src.(io.Seeker); ok {
+		// 		seeker.Seek(0, io.SeekStart)
+		// 	}
+
+		// 	img, _, err := image.Decode(src)
+		// 	if err != nil {
+		// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode image"})
+		// 		return
+		// 	}
+		// 	width := img.Bounds().Dx()
+		// 	height := img.Bounds().Dy()
+
+		// 	if width > 1920 || height > 1080 {
+		// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Image must be 1920x1080 pixels or smaller"})
+		// 		return
+		// 	}
+		// }
+
+		// save file
+		url, err := utils.UploadFile(context.Background(), file)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		imageURL = &url
+	} else {
+		imageURL = nil
+	}
+
+	updateUser := models.Instructor{
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+		Phone:     input.Phone,
+		Image:     imageURL,
+	}
+
+	utils.DB.Model(&instructor).Updates(updateUser)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Instructor updated successfully"})
+
+}
+
+func DeleteInstructor(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid student ID"})
+		return
+	}
+
+	tenantID := c.GetUint("tenant_id")
+
+	var instructor models.Instructor
+	if err := utils.DB.Where("id = ? AND tenant_id = ?", id, tenantID).First(&instructor).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Instructor not found"})
+		return
+	}
+
+	if instructor.Image != nil {
+		if delErr := utils.DeleteCDNFile(context.Background(), *instructor.Image); delErr != nil {
+			// You can log or ignore deletion errors as per your need
+			fmt.Println("Failed to delete old file:", delErr)
+		}
+	}
+
+	if err := utils.DB.Where("id = ? AND tenant_id = ?", id, tenantID).Delete(&models.Instructor{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Instructor deleted successfully"})
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"dashlearn/models"
 	"dashlearn/utils"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -81,92 +82,75 @@ func (s *courseService) GetByID(tenantID uint, courseID uint) (models.CourseDeta
 }
 
 func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID uint) error {
-	// // Step 3: Debug log the final parsed object
-	// if output, err := json.MarshalIndent(input, "", "  "); err == nil {
-	// 	fmt.Println("Parsed Input:\n", string(output))
-	// }
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var videoPtr *models.IntroVideo
 
-	//create course details
-
-	var videoPtr *models.IntroVideo
-
-	if input.IntroVideo == nil ||
-		(input.IntroVideo.Type == "" && input.IntroVideo.Source == "") {
-		// Set pointer to nil to store NULL in DB
-		videoPtr = nil
-	} else {
-		// Valid data, assign normally
-		videoPtr = &models.IntroVideo{
-			Type:   input.IntroVideo.Type,
-			Source: input.IntroVideo.Source,
-		}
-	}
-
-	input.IntroVideo = videoPtr
-
-	tagsJSON, err := utils.NormalizeTags(input.Tags)
-	if err != nil {
-		tagsJSON = nil
-	}
-
-	overviewJSON, err := utils.NormalizeTags(input.Overview)
-	if err != nil {
-		overviewJSON = nil
-	}
-
-	var introVideo *utils.JSONB[models.IntroVideo]
-	if input.IntroVideo != nil {
-		introVideo = &utils.JSONB[models.IntroVideo]{Data: *input.IntroVideo}
-	} else {
-		introVideo = nil
-	}
-
-	newCourseDetails := models.CourseDetails{
-		Title:           input.Title,
-		Summary:         input.Summary,
-		Description:     utils.ZeroToNil(input.Description),
-		Visibility:      input.Visibility,
-		IsScheduled:     utils.ZeroToNil(input.IsScheduled),
-		ScheduleDate:    utils.ZeroToNil(input.ScheduleDate),
-		ScheduleTime:    utils.ZeroToNil(input.ScheduleTime),
-		PricingModel:    input.PricingModel,
-		RegularPrice:    input.RegularPrice,
-		SalePrice:       input.SalePrice,
-		ShowCommingSoom: input.ShowCommingSoom,
-		Tags:            tagsJSON,
-		Overview:        overviewJSON,
-		FeaturedImage:   input.FeaturedImage,
-		IntroVideo:      introVideo,
-		AuthorID:        userID,
-		TenantID:        tenantID,
-	}
-
-	if err := s.db.Create(&newCourseDetails).Error; err != nil {
-		return err
-	}
-
-	// craete course chapter
-	for idx, chapter := range input.CourseChapters {
-		newCourseChapter := models.CourseChapter{
-			CourseID:    newCourseDetails.ID,
-			Title:       chapter.Title,
-			Description: utils.EmptyStringToNil(chapter.Description),
-			Position:    idx,
-			Access:      chapter.Access,
+		if input.IntroVideo == nil ||
+			(input.IntroVideo.Type == "" && input.IntroVideo.Source == "") {
+			videoPtr = nil
+		} else {
+			videoPtr = &models.IntroVideo{
+				Type:   input.IntroVideo.Type,
+				Source: input.IntroVideo.Source,
+			}
 		}
 
-		if err := s.db.Create(&newCourseChapter).Error; err != nil {
+		input.IntroVideo = videoPtr
+
+		tagsJSON, err := utils.NormalizeTags(input.Tags)
+		if err != nil {
+			tagsJSON = nil
+		}
+
+		overviewJSON, err := utils.NormalizeTags(input.Overview)
+		if err != nil {
+			overviewJSON = nil
+		}
+
+		var introVideo *utils.JSONB[models.IntroVideo]
+		if input.IntroVideo != nil {
+			introVideo = &utils.JSONB[models.IntroVideo]{Data: *input.IntroVideo}
+		}
+
+		newCourseDetails := models.CourseDetails{
+			Title:           input.Title,
+			Summary:         input.Summary,
+			Description:     utils.ZeroToNil(input.Description),
+			Visibility:      input.Visibility,
+			IsScheduled:     utils.ZeroToNil(input.IsScheduled),
+			ScheduleDate:    utils.ZeroToNil(input.ScheduleDate),
+			ScheduleTime:    utils.ZeroToNil(input.ScheduleTime),
+			PricingModel:    input.PricingModel,
+			RegularPrice:    input.RegularPrice,
+			SalePrice:       input.SalePrice,
+			ShowCommingSoom: input.ShowCommingSoom,
+			Tags:            tagsJSON,
+			Overview:        overviewJSON,
+			FeaturedImage:   input.FeaturedImage,
+			IntroVideo:      introVideo,
+			AuthorID:        userID,
+			TenantID:        tenantID,
+		}
+
+		if err := tx.Create(&newCourseDetails).Error; err != nil {
 			return err
 		}
 
-		if len(chapter.CourseLessons) > 0 {
+		// Create chapters and lessons
+		for idx, chapter := range input.CourseChapters {
+			newCourseChapter := models.CourseChapter{
+				CourseID:    newCourseDetails.ID,
+				Title:       chapter.Title,
+				Description: utils.EmptyStringToNil(chapter.Description),
+				Position:    idx,
+				Access:      chapter.Access,
+			}
+
+			if err := tx.Create(&newCourseChapter).Error; err != nil {
+				return err
+			}
+
 			for idx, lesson := range chapter.CourseLessons {
-
-				// sourceJSON, err := json.Marshal(lesson.Source)
-				// if err != nil {
-				// 	sourceJSON = nil
-				// }
-
 				sourceJSON := utils.JSONB[models.Source]{Data: lesson.Source}
 
 				newCourseLesson := models.CourseLesson{
@@ -180,46 +164,51 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 					IsPublished: lesson.IsPublished,
 					IsPublic:    lesson.IsPublic,
 				}
-				if err := s.db.Create(&newCourseLesson).Error; err != nil {
+
+				if err := tx.Create(&newCourseLesson).Error; err != nil {
 					return err
 				}
-
 			}
 		}
-	}
 
-	// course instructors
-	for _, instructor := range input.Instructors {
-		newCourseInstructor := models.CourseInstructor{
-			CourseID:     newCourseDetails.ID,
-			InstructorID: uint(instructor),
+		// Create instructors
+		for _, instructor := range input.Instructors {
+			newCourseInstructor := models.CourseInstructor{
+				CourseID:     newCourseDetails.ID,
+				InstructorID: uint(instructor),
+			}
+			if err := tx.Create(&newCourseInstructor).Error; err != nil {
+				return err
+			}
 		}
-		if err := s.db.Create(&newCourseInstructor).Error; err != nil {
+
+		// Create general settings
+		var difficultyLevelPtr *models.DifficultyLevel
+		if input.GeneralSettings.DifficultyLevel != "" {
+			difficultyLevelPtr = &input.GeneralSettings.DifficultyLevel
+		} else {
+			defaultVal := models.All
+			difficultyLevelPtr = &defaultVal
+		}
+
+		defaultLang := "english"
+
+		newGeneralSettings := models.CourseGeneralSettings{
+			CourseID:        newCourseDetails.ID,
+			DifficultyLevel: difficultyLevelPtr,
+			MaximumStudent:  utils.ZeroToNil(input.GeneralSettings.MaximumStudent),
+			Language:        &defaultLang,
+			CategoryID:      input.GeneralSettings.CategoryID,
+			Duration:        utils.ZeroToNil(input.GeneralSettings.Duration),
+		}
+
+		if err := tx.Create(&newGeneralSettings).Error; err != nil {
 			return err
 		}
-	}
 
-	// general settings
-	var difficultyLevelPtr *models.DifficultyLevel
-	if input.GeneralSettings.DifficultyLevel != "" {
-		difficultyLevelPtr = &input.GeneralSettings.DifficultyLevel
-	} else {
-		defaultVal := models.All
-		difficultyLevelPtr = &defaultVal
-	}
-
-	deafultLng := "english"
-
-	newGeneralSettings := models.CourseGeneralSettings{
-		CourseID:        newCourseDetails.ID,
-		DifficultyLevel: difficultyLevelPtr,
-		MaximumStudent:  utils.ZeroToNil(input.GeneralSettings.MaximumStudent),
-		Language:        &deafultLng,
-		CategoryID:      input.GeneralSettings.CategoryID,
-		Duration:        utils.ZeroToNil(input.GeneralSettings.Duration),
-	}
-
-	return s.db.Create(&newGeneralSettings).Error
+		// ✅ Everything succeeded, transaction will be committed
+		return nil
+	})
 }
 
 func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDetailsInput) error {
@@ -462,33 +451,46 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 
 func (s *courseService) Delete(id uint, tenantID uint) error {
 
+	// 1. Check and delete CourseInstructors if any
 	var existingInstructors []models.CourseInstructor
 	if err := s.db.Where("course_id = ?", id).Find(&existingInstructors).Error; err != nil {
 		return err
 	}
 
-	for _, inst := range existingInstructors {
-		if err := s.db.Where("course_id = ? AND instructor_id = ?", id, inst.InstructorID).Delete(&models.CourseInstructor{}).Error; err != nil {
+	if len(existingInstructors) > 0 {
+		if err := s.db.Where("course_id = ?", id).Delete(&models.CourseInstructor{}).Error; err != nil {
 			return err
 		}
 	}
 
-	var existingCourseDetails models.CourseDetails
+	// 2. Optionally delete GeneralSettings if it exists
+	var generalSettings models.CourseGeneralSettings
+	if err := s.db.Where("course_id = ?", id).First(&generalSettings).Error; err != nil {
+		// Check if it's an actual error or just record not found
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+	} else {
+		// Found, so delete
+		if err := s.db.Delete(&generalSettings).Error; err != nil {
+			return err
+		}
+	}
 
-	// Find the course by ID and tenant ID
+	// 3. Check and delete the CourseDetails
+	var existingCourseDetails models.CourseDetails
 	if err := s.db.Where("id = ? AND tenant_id = ?", id, tenantID).First(&existingCourseDetails).Error; err != nil {
 		return err
 	}
 
-	// If there is a featured image, attempt to delete it from CDN
+	// Delete CDN image if present
 	if existingCourseDetails.FeaturedImage != nil {
 		if err := utils.DeleteCDNFile(context.Background(), *existingCourseDetails.FeaturedImage); err != nil {
-			// Log error but do not block deletion of the course
 			fmt.Printf("Failed to delete image from CDN: %v\n", err)
 		}
 	}
 
-	// Delete the course
+	// Finally delete the course
 	if err := s.db.Where("id = ? AND tenant_id = ?", id, tenantID).Delete(&models.CourseDetails{}).Error; err != nil {
 		return err
 	}

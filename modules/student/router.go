@@ -7,12 +7,14 @@ import (
 )
 
 func RegisterStudentRoutes(rg *gin.RouterGroup) {
-	authGroup := rg.Group("/private/student")
+	authGroup := rg.Group("/private/student", middleware.AuthMiddleware())
 	{
-		authGroup.GET("/", middleware.AuthMiddleware(), GetStudents)
-		authGroup.GET("/lite", middleware.AuthMiddleware(), GetStudentLite)
-		authGroup.POST("/register", middleware.AuthMiddleware(), CreateStudent)
-		// userGroup.POST("/upload", UploadUser)
+		authGroup.GET("/", GetStudents)
+		authGroup.GET("/lite", GetStudentLite)
+		authGroup.GET("/details/:id", GetStudentDetailsByID)
+		authGroup.POST("/register", CreateStudent)
+		authGroup.PUT("/update/:id", UpdateStudent)
+		authGroup.DELETE("/delete/:id", DeleteStudent)
 	}
 
 	publicGroup := rg.Group("/student", middleware.GetTenantID())

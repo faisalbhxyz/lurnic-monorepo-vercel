@@ -5,6 +5,7 @@ import (
 	"dashlearn/utils"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -197,15 +198,17 @@ func LoginStudent(c *gin.Context) {
 				tag := fieldErr.Tag()
 				switch field {
 				case "Email":
-					if tag == "required" {
+					switch tag {
+					case "required":
 						errorsMap["email"] = "Email is required"
-					} else if tag == "email" {
+					case "email":
 						errorsMap["email"] = "Invalid email format"
 					}
 				case "Password":
-					if tag == "required" {
+					switch tag {
+					case "required":
 						errorsMap["password"] = "Password is required"
-					} else if tag == "min" {
+					case "min":
 						errorsMap["password"] = "Password must be at least 6 characters long"
 					}
 				}
@@ -257,6 +260,20 @@ func LoginStudent(c *gin.Context) {
 
 }
 
+func GetStudentDetailsByID(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid student ID"})
+		return
+	}
+	var users models.StudentDetailsRes
+	utils.DB.
+		Where("tenant_id = ? AND id = ?", c.GetUint("tenant_id"), id).
+		First(&users)
+
+	c.JSON(http.StatusOK, gin.H{"data": users})
+}
+
 func GetStudentDetails(c *gin.Context) {
 	var users models.StudentDetailsRes
 	utils.DB.
@@ -265,4 +282,60 @@ func GetStudentDetails(c *gin.Context) {
 		First(&users)
 
 	c.JSON(http.StatusOK, gin.H{"data": users})
+}
+
+func UpdateStudent(c *gin.Context) {
+	// Parse the student ID from URL
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid student ID"})
+		return
+	}
+
+	// Bind request body
+	var input UpdateStudentInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tenantID := c.GetUint("tenant_id")
+
+	// Optional: Check if student exists first (skip if you're fine with silent fail)
+	var student models.Student
+	if err := utils.DB.Where("id = ? AND tenant_id = ?", id, tenantID).First(&student).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Student not found"})
+		return
+	}
+
+	// Update fields
+	if err := utils.DB.
+		Model(&student).
+		Updates(models.Student{
+			FirstName: input.FirstName,
+			LastName:  input.LastName,
+			Phone:     input.Phone,
+		}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Student updated successfully"})
+}
+
+func DeleteStudent(c *gin.Context) {
+	// Parse the student ID from URL
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid student ID"})
+		return
+	}
+
+	// Delete the student
+	if err := utils.DB.Where("id = ? AND tenant_id = ?", id, c.GetUint("tenant_id")).Delete(&models.Student{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Student deleted successfully"})
 }

@@ -13,6 +13,7 @@ type CategoryService interface {
 	GetByID(tenantID uint, id uint64) (*models.Category, error)
 	Create(input CreateCategoryInput, tenantID uint) error
 	Update(id uint64, input CreateCategoryInput, tenantID uint) error
+	Delete(id uint64, tenantID uint) error
 }
 
 type categoryService struct {
@@ -71,4 +72,8 @@ func (s *categoryService) Update(id uint64, input CreateCategoryInput, tenantID 
 	category.Description = utils.EmptyStringToNil(input.Description)
 
 	return s.db.Save(&category).Error
+}
+
+func (s *categoryService) Delete(id uint64, tenantID uint) error {
+	return s.db.Where("id = ? AND tenant_id = ?", id, tenantID).Delete(&models.Category{}).Error
 }
