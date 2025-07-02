@@ -19,13 +19,13 @@ import (
 
 func GetInstructors(c *gin.Context) {
 	var users []models.Instructor
-	utils.DB.Find(&users)
+	utils.DB.Where("tenant_id = ?", c.GetUint("tenant_id")).Find(&users)
 	c.JSON(http.StatusOK, gin.H{"data": users})
 }
 
 func GetInstructorsLite(c *gin.Context) {
 	var users []models.InstructorResponseLite
-	utils.DB.Find(&users)
+	utils.DB.Where("tenant_id = ?", c.GetUint("tenant_id")).Find(&users)
 	c.JSON(http.StatusOK, gin.H{"data": users})
 }
 

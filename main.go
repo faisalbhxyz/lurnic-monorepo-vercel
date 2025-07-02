@@ -2,6 +2,7 @@ package main
 
 import (
 	"dashlearn/models"
+	"dashlearn/modules/banner"
 	"dashlearn/modules/category"
 	"dashlearn/modules/course"
 	"dashlearn/modules/enrollment"
@@ -43,7 +44,7 @@ func main() {
 	utils.ConnectDatabase()
 
 	// Initialize API routes
-	apiRoutesGroup := router.Group("/api")
+	apiRoutesGroup := router.Group("/v1")
 
 	// craete superadmin
 	CreateSuperadminIfNotExists()
@@ -55,6 +56,7 @@ func main() {
 	category.RegisterCategoryRoutes(apiRoutesGroup)
 	course.RegisterCourseRoutes(apiRoutesGroup)
 	enrollment.RegisterEnrollmentRoutes(apiRoutesGroup)
+	banner.RegisterBannerRoutes(apiRoutesGroup)
 
 	// Run the server
 	router.Run(":5000")
