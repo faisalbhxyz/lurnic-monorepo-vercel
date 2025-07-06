@@ -139,9 +139,10 @@ func (h *CourseHandler) Update(c *gin.Context) {
 	var input CourseDetailsInput
 	var flatInput CreateCourseDetailsInput
 
-	// if output, err := json.MarshalIndent(input, "", "  "); err == nil {
-	// 	fmt.Println("Parsed Input:\n", string(output))
-	// }
+	if output, err := json.MarshalIndent(input, "", "  "); err == nil {
+		fmt.Println("Parsed Input:\n", string(output))
+	}
+
 	courseID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})

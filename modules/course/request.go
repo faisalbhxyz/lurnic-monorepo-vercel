@@ -106,6 +106,7 @@ type CreateQuizQuestionInput struct {
 }
 
 type CreateAssignmentInput struct {
+	ID               *int64                           `json:"id" form:"id" binding:"omitempty"`
 	Title            string                           `json:"title" form:"title" binding:"required"`
 	Instructions     string                           `json:"instructions" form:"instructions"`
 	Attachments      *datatypes.JSON                  `json:"attachments" form:"attachments"`

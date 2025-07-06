@@ -11,13 +11,13 @@ import (
 )
 
 type CourseService interface {
-	GetAll(tenantID uint) ([]models.CourseDetailsResponse, error)
+	GetAll(tenantID uint) ([]CourseDetailsResponse, error)
 	GetAllLite(tenantID uint) ([]struct {
 		ID    uint   `json:"id"`
 		Title string `json:"title"`
 	}, error)
-	GetAllPublic(tenantID uint) ([]models.CourseDetailsPublicResponse, error)
-	GetByID(tenantID uint, courseID uint) (models.CourseDetailsResponse, error)
+	GetAllPublic(tenantID uint) ([]CourseDetailsPublicResponse, error)
+	GetByID(tenantID uint, courseID uint) (CourseDetailsResponse, error)
 	Create(input CourseDetailsInput, tenantID uint, userID uint) error
 	Update(courseID, tenantID, userID uint, input CourseDetailsInput) error
 	Delete(id uint, tenantID uint) error
@@ -33,8 +33,8 @@ func NewCourseService(db *gorm.DB) CourseService {
 	}
 }
 
-func (s *courseService) GetAll(tenantID uint) ([]models.CourseDetailsResponse, error) {
-	var courses []models.CourseDetailsResponse
+func (s *courseService) GetAll(tenantID uint) ([]CourseDetailsResponse, error) {
+	var courses []CourseDetailsResponse
 
 	err := s.db.Where("tenant_id = ?", tenantID).Preload("Author").Preload("Chapters").Preload("Chapters.Lessons").Preload("GeneralSettings").Preload("GeneralSettings.Category").Preload("Instructors").Preload("Instructors.Instructor").Find(&courses).Error
 
@@ -55,22 +55,25 @@ func (s *courseService) GetAllLite(tenantID uint) ([]struct {
 	return courses, err
 }
 
-func (s *courseService) GetAllPublic(tenantID uint) ([]models.CourseDetailsPublicResponse, error) {
-	var courses []models.CourseDetailsPublicResponse
+func (s *courseService) GetAllPublic(tenantID uint) ([]CourseDetailsPublicResponse, error) {
+	var courses []CourseDetailsPublicResponse
 
 	err := s.db.Where("tenant_id = ?", tenantID).Preload("GeneralSettings").Preload("GeneralSettings.Category").Find(&courses).Error
 
 	return courses, err
 }
 
-func (s *courseService) GetByID(tenantID uint, courseID uint) (models.CourseDetailsResponse, error) {
-	var course models.CourseDetailsResponse
+func (s *courseService) GetByID(tenantID uint, courseID uint) (CourseDetailsResponse, error) {
+	var course CourseDetailsResponse
 
 	err := s.db.
 		Where("tenant_id = ? AND id = ?", tenantID, courseID).
 		Preload("Author").
 		Preload("Chapters").
 		Preload("Chapters.Lessons").
+		Preload("Chapters.Assignments").
+		Preload("Chapters.Quizzes").
+		Preload("Chapters.Quizzes.Questions").
 		Preload("GeneralSettings").
 		Preload("GeneralSettings.Category").
 		Preload("Instructors").
@@ -335,21 +338,36 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 		}
 	}
 
+	existingAssignmentMap := make(map[uint]models.CourseAssignment)
+	s.db.Preload("Assignments").Where("course_id = ?", courseID).Find(&existingChaptersForUpdate)
+	for _, chapter := range existingChaptersForUpdate {
+		for _, assignment := range chapter.Assignments {
+			existingAssignmentMap[assignment.ID] = assignment
+		}
+	}
+
 	// Maps to track incoming IDs
 	incomingChapterIDs := make(map[uint]bool)
 	incomingLessonIDs := make(map[uint]bool)
+	incomingAssignmentIDs := make(map[uint]bool)
 
 	// Fetch all existing chapters and their lessons
 	var existingChapters []models.CourseChapter
-	s.db.Preload("Lessons").Where("course_id = ?", courseID).Find(&existingChapters)
+	s.db.Preload("Lessons").Preload("Assignments").Where("course_id = ?", courseID).Find(&existingChapters)
 
 	chapterMap := make(map[uint]models.CourseChapter)
 	lessonMap := make(map[uint]models.CourseLesson)
+	assignmentMap := make(map[uint]models.CourseAssignment)
 
 	for _, ch := range existingChapters {
 		chapterMap[ch.ID] = ch
+		// Map existing lessons
 		for _, lesson := range ch.Lessons {
 			lessonMap[lesson.ID] = lesson
+		}
+		// Map existing assignments
+		for _, assignment := range ch.Assignments {
+			assignmentMap[assignment.ID] = assignment
 		}
 	}
 
@@ -430,12 +448,63 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 				incomingLessonIDs[newLesson.ID] = true
 			}
 		}
+
+		// Handle assignments inside chapter
+		for _, assignment := range chapter.Assignments {
+			if assignment.ID != nil && *assignment.ID != 0 {
+				assignmentID := uint(*assignment.ID)
+				incomingAssignmentIDs[assignmentID] = true
+
+				if existingAssignment, found := assignmentMap[assignmentID]; found {
+					// Update
+					existingAssignment.Title = assignment.Title
+					existingAssignment.Instructions = assignment.Instructions
+					// existingAssignment.Position = lIdx
+					existingAssignment.Attachments = assignment.Attachments
+					existingAssignment.IsPublished = assignment.IsPublished
+					existingAssignment.TimeLimit = assignment.TimeLimit
+					existingAssignment.TimeLimitOption = assignment.TimeLimitOption
+					existingAssignment.FileUploadLimit = assignment.FileUploadLimit
+					existingAssignment.TotalMarks = assignment.TotalMarks
+					existingAssignment.MinimumPassMarks = assignment.MinimumPassMarks
+
+					if err := s.db.Save(&existingAssignment).Error; err != nil {
+						return err
+					}
+				}
+			} else {
+				// Create new assignment
+				newAssignment := models.CourseAssignment{
+					ChapterID:        chapterID,
+					Title:            assignment.Title,
+					Instructions:     assignment.Instructions,
+					IsPublished:      assignment.IsPublished,
+					TimeLimit:        assignment.TimeLimit,
+					TimeLimitOption:  assignment.TimeLimitOption,
+					FileUploadLimit:  assignment.FileUploadLimit,
+					TotalMarks:       assignment.TotalMarks,
+					MinimumPassMarks: assignment.MinimumPassMarks,
+					Attachments:      nil,
+				}
+				if err := s.db.Create(&newAssignment).Error; err != nil {
+					return err
+				}
+				incomingLessonIDs[newAssignment.ID] = true
+			}
+		}
 	}
 
 	// Delete removed lessons
 	for id := range lessonMap {
 		if !incomingLessonIDs[id] {
 			_ = s.db.Where("id = ?", id).Delete(&models.CourseLesson{})
+		}
+	}
+
+	// Delete removed assignments
+	for id := range assignmentMap {
+		if !incomingAssignmentIDs[id] {
+			_ = s.db.Where("id = ?", id).Delete(&models.CourseAssignment{})
 		}
 	}
 
