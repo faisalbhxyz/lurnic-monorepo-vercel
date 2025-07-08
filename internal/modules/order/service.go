@@ -1,8 +1,8 @@
 package order
 
 import (
-	"dashlearn/models"
-	"dashlearn/response"
+	"dashlearn/internal/models"
+	"dashlearn/internal/response"
 	"errors"
 
 	"gorm.io/gorm"

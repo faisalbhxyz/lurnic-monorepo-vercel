@@ -1,8 +1,8 @@
 package course
 
 import (
-	"dashlearn/middleware"
-	"dashlearn/utils"
+	"dashlearn/internal/middleware"
+	"dashlearn/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )

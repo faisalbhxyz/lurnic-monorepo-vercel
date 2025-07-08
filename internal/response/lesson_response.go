@@ -1,8 +1,8 @@
 package response
 
 import (
-	"dashlearn/models"
-	"dashlearn/utils"
+	"dashlearn/internal/models"
+	"dashlearn/internal/utils"
 	"time"
 
 	"gorm.io/datatypes"

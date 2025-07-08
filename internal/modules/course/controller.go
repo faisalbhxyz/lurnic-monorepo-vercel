@@ -2,7 +2,7 @@ package course
 
 import (
 	"context"
-	"dashlearn/utils"
+	"dashlearn/internal/utils"
 	"encoding/json"
 	"net/http"
 	"strconv"

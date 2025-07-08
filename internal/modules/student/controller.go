@@ -1,8 +1,8 @@
 package student
 
 import (
-	"dashlearn/models"
-	"dashlearn/utils"
+	"dashlearn/internal/models"
+	"dashlearn/internal/utils"
 	"errors"
 	"net/http"
 	"strconv"

@@ -2,8 +2,8 @@ package instructor
 
 import (
 	"context"
-	"dashlearn/models"
-	"dashlearn/utils"
+	"dashlearn/internal/models"
+	"dashlearn/internal/utils"
 	"errors"
 	"fmt"
 	"net/http"

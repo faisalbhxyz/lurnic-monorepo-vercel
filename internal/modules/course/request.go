@@ -1,7 +1,7 @@
 package course
 
 import (
-	"dashlearn/models"
+	"dashlearn/internal/models"
 	"time"
 
 	"gorm.io/datatypes"

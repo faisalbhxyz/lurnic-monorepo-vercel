@@ -1,8 +1,8 @@
 package category
 
 import (
-	"dashlearn/models"
-	"dashlearn/utils"
+	"dashlearn/internal/models"
+	"dashlearn/internal/utils"
 	"errors"
 
 	"gorm.io/gorm"

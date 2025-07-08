@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"dashlearn/models"
-	"dashlearn/utils"
+	"dashlearn/internal/models"
+	"dashlearn/internal/utils"
 	"net/http"
 	"os"
 	"strings"

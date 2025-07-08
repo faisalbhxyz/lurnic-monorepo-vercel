@@ -1,16 +1,17 @@
 package main
 
 import (
-	"dashlearn/models"
-	"dashlearn/modules/banner"
-	"dashlearn/modules/category"
-	"dashlearn/modules/course"
-	"dashlearn/modules/enrollment"
-	"dashlearn/modules/instructor"
-	"dashlearn/modules/order"
-	"dashlearn/modules/student"
-	"dashlearn/modules/user"
-	"dashlearn/utils"
+	"dashlearn/internal/models"
+	"dashlearn/internal/modules/banner"
+	"dashlearn/internal/modules/category"
+	"dashlearn/internal/modules/course"
+	"dashlearn/internal/modules/enrollment"
+	generalsettings "dashlearn/internal/modules/general_settings"
+	"dashlearn/internal/modules/instructor"
+	"dashlearn/internal/modules/order"
+	"dashlearn/internal/modules/student"
+	"dashlearn/internal/modules/user"
+	"dashlearn/internal/utils"
 	"log"
 
 	"github.com/gin-contrib/cors"
@@ -59,6 +60,7 @@ func main() {
 	enrollment.RegisterEnrollmentRoutes(apiRoutesGroup)
 	banner.RegisterBannerRoutes(apiRoutesGroup)
 	order.RegisterCourseRoutes(apiRoutesGroup)
+	generalsettings.RegisterGeneralSettingsRoutes(apiRoutesGroup)
 
 	// Run the server
 	router.Run(":5000")

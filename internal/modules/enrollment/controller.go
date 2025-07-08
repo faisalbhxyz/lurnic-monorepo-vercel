@@ -1,7 +1,7 @@
 package enrollment
 
 import (
-	"dashlearn/models"
+	"dashlearn/internal/models"
 	"net/http"
 	"strconv"
 

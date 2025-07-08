@@ -1,7 +1,7 @@
 package instructor
 
 import (
-	"dashlearn/middleware"
+	"dashlearn/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )

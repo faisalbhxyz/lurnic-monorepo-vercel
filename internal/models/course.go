@@ -1,7 +1,7 @@
 package models
 
 import (
-	"dashlearn/utils"
+	"dashlearn/internal/utils"
 	"time"
 
 	"gorm.io/datatypes"

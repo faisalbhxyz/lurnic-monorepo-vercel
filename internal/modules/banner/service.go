@@ -2,9 +2,9 @@ package banner
 
 import (
 	"context"
-	"dashlearn/models"
-	"dashlearn/response"
-	"dashlearn/utils"
+	"dashlearn/internal/models"
+	"dashlearn/internal/response"
+	"dashlearn/internal/utils"
 	"fmt"
 
 	"gorm.io/gorm"

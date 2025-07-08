@@ -2,7 +2,8 @@ package banner
 
 import (
 	"context"
-	"dashlearn/utils"
+	"dashlearn/internal/utils"
+
 	"encoding/json"
 	"fmt"
 	"net/http"
