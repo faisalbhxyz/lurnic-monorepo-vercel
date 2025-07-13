@@ -98,14 +98,12 @@ func (h *CourseHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": course})
 }
 
-func (h *CourseHandler) GetByIDPublic(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
-		return
-	}
+func (h *CourseHandler) GetBySlugPublic(c *gin.Context) {
+	slug := c.Param("slug")
 	tenantID := c.GetUint("tenant_id")
-	course, err := h.service.GetByIDPublic(tenantID, uint(id))
+
+	course, err := h.service.GetBySlugPublic(tenantID, slug)
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Course not found"})
 		return

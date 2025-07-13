@@ -43,14 +43,30 @@ func (s *enrollmentService) GetAll(tenantID uint) ([]response.EnrollmentResponse
 
 func (s *enrollmentService) GetEnrolledCourses(tenantID uint, studentID uint) ([]response.EnrolledCourseRes, error) {
 	var enrollments []response.EnrolledCourseRes
+	var modelEnrollment []models.Enrollment
 
 	err := s.db.
+		Preload("Course").
+		// Select("id", "course_id", "course", "student_id", "student", "created_at", "updated_at", "course.title").
 		Where(&models.Enrollment{
 			TenantID:  tenantID,
 			StudentID: studentID,
 		}).
-		Preload("Course").
-		Find(&enrollments).Error
+		Find(&modelEnrollment).Error
+
+	for _, enrollment := range modelEnrollment {
+		enrollments = append(enrollments, response.EnrolledCourseRes{
+			ID:       enrollment.ID,
+			CourseID: enrollment.CourseID,
+			Course: response.CourseDetailsPublicResponse{
+				ID:            enrollment.Course.ID,
+				Title:         enrollment.Course.Title,
+				Slug:          enrollment.Course.Slug,
+				FeaturedImage: enrollment.Course.FeaturedImage,
+			},
+			StudentID: enrollment.StudentID,
+		})
+	}
 
 	return enrollments, err
 }

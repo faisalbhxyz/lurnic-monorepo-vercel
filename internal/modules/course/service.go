@@ -7,6 +7,7 @@ import (
 	"dashlearn/internal/utils"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -20,7 +21,7 @@ type CourseService interface {
 	GetAllPublic(tenantID uint, limitApplied bool, showItems int) ([]response.CourseDetailsPublicResponse, error)
 	GetAllPublicByCategory(tenantID uint, categorySlug string) ([]response.CourseDetailsPublicResponse, error)
 	GetByID(tenantID uint, courseID uint) (models.CourseDetails, error)
-	GetByIDPublic(tenantID uint, courseID uint) (*response.CourseDetailsPublicResponse, error)
+	GetBySlugPublic(tenantID uint, slug string) (*response.CourseDetailsPublicResponse, error)
 	Create(input CourseDetailsInput, tenantID uint, userID uint) error
 	Update(courseID, tenantID, userID uint, input CourseDetailsInput) error
 	Delete(id uint, tenantID uint) error
@@ -88,6 +89,7 @@ func (s *courseService) GetAllPublic(tenantID uint, limitApplied bool, showItems
 		res := response.CourseDetailsPublicResponse{
 			ID:              course.ID,
 			Title:           course.Title,
+			Slug:            course.Slug,
 			Summary:         course.Summary,
 			Visibility:      course.Visibility,
 			IsScheduled:     course.IsScheduled,
@@ -100,7 +102,7 @@ func (s *courseService) GetAllPublic(tenantID uint, limitApplied bool, showItems
 			SalePrice:       course.SalePrice,
 			ShowCommingSoom: course.ShowCommingSoom,
 			Tags:            course.Tags,
-			GeneralSettings: response.CourseGeneralSettingsResponse{
+			GeneralSettings: &response.CourseGeneralSettingsResponse{
 				ID:              course.GeneralSettings.ID,
 				CourseID:        course.GeneralSettings.CourseID,
 				DifficultyLevel: course.GeneralSettings.DifficultyLevel,
@@ -150,6 +152,7 @@ func (s *courseService) GetAllPublicByCategory(tenantID uint, categorySlug strin
 		res := response.CourseDetailsPublicResponse{
 			ID:              course.ID,
 			Title:           course.Title,
+			Slug:            course.Slug,
 			Summary:         course.Summary,
 			Visibility:      course.Visibility,
 			IsScheduled:     course.IsScheduled,
@@ -162,7 +165,7 @@ func (s *courseService) GetAllPublicByCategory(tenantID uint, categorySlug strin
 			SalePrice:       course.SalePrice,
 			ShowCommingSoom: course.ShowCommingSoom,
 			Tags:            course.Tags,
-			GeneralSettings: response.CourseGeneralSettingsResponse{
+			GeneralSettings: &response.CourseGeneralSettingsResponse{
 				ID:              course.GeneralSettings.ID,
 				CourseID:        course.GeneralSettings.CourseID,
 				DifficultyLevel: course.GeneralSettings.DifficultyLevel,
@@ -209,11 +212,11 @@ func (s *courseService) GetByID(tenantID uint, courseID uint) (models.CourseDeta
 	return course, err
 }
 
-func (s *courseService) GetByIDPublic(tenantID uint, courseID uint) (*response.CourseDetailsPublicResponse, error) {
+func (s *courseService) GetBySlugPublic(tenantID uint, slug string) (*response.CourseDetailsPublicResponse, error) {
 	var modelCourse models.CourseDetails
 
 	err := s.db.
-		Where("tenant_id = ? AND id = ?", tenantID, courseID).
+		Where("tenant_id = ? AND slug = ?", tenantID, slug).
 		Preload("Author").
 		Preload("Chapters", "access = 'published'").
 		Preload("Chapters.Lessons", "is_published = true").
@@ -371,7 +374,7 @@ func (s *courseService) GetByIDPublic(tenantID uint, courseID uint) (*response.C
 		ShowCommingSoom: modelCourse.ShowCommingSoom,
 		Tags:            modelCourse.Tags,
 		Overview:        modelCourse.Overview,
-		GeneralSettings: response.CourseGeneralSettingsResponse{
+		GeneralSettings: &response.CourseGeneralSettingsResponse{
 			ID:              modelCourse.GeneralSettings.ID,
 			CourseID:        modelCourse.GeneralSettings.CourseID,
 			DifficultyLevel: modelCourse.GeneralSettings.DifficultyLevel,
@@ -402,6 +405,19 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var videoPtr *models.IntroVideo
 
+		var lastID uint
+		err := tx.Model(&models.CourseDetails{}).
+			Select("id").
+			Order("id DESC").
+			Limit(1).
+			Pluck("id", &lastID).Error
+
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+
+		newID := lastID + 1
+
 		if input.IntroVideo == nil ||
 			(input.IntroVideo.Type == "" && input.IntroVideo.Source == "") {
 			videoPtr = nil
@@ -431,6 +447,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 
 		newCourseDetails := models.CourseDetails{
 			Title:           input.Title,
+			Slug:            utils.Slugify(input.Title) + "-" + strconv.Itoa(int(newID)),
 			Summary:         input.Summary,
 			Description:     utils.ZeroToNil(input.Description),
 			Visibility:      input.Visibility,
@@ -618,6 +635,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 	// Update course
 	updateData := models.CourseDetails{
 		Title:           input.Title,
+		Slug:            utils.Slugify(input.Title) + "-" + strconv.Itoa(int(courseID)),
 		Summary:         input.Summary,
 		Description:     utils.ZeroToNil(input.Description),
 		Visibility:      input.Visibility,

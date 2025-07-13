@@ -43,6 +43,7 @@ type IntroVideo struct {
 type CourseDetails struct {
 	ID              uint                     `gorm:"primaryKey;autoIncrement" json:"id"`
 	Title           string                   `json:"title"`
+	Slug            string                   `json:"slug"`
 	Summary         string                   `gorm:"type:text" json:"summary"`
 	Description     *string                  `gorm:"type:text" json:"description"`
 	Visibility      Visibility               `gorm:"type:enum('public','private','protected');default:'public'" json:"visibility"`

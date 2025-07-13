@@ -41,23 +41,24 @@ func (CourseDetailsResponse) TableName() string {
 
 // COURSES RESPONSE without chapters, instructors and enrollments
 type CourseDetailsPublicResponse struct {
-	ID              uint                            `json:"id"`
-	Title           string                          `json:"title"`
-	Summary         string                          `json:"summary"`
-	Description     *string                         `json:"description"`
-	Visibility      models.Visibility               `json:"visibility"`
-	IsScheduled     *bool                           `json:"is_scheduled"`
-	ScheduleDate    *time.Time                      `json:"schedule_date"`
-	ScheduleTime    *time.Time                      `json:"schedule_time"`
-	FeaturedImage   *string                         `json:"featured_image"`
-	IntroVideo      *utils.JSONB[models.IntroVideo] `json:"intro_video"`
-	PricingModel    models.CoursePricingModel       `json:"pricing_model"`
-	RegularPrice    *float32                        `json:"regular_price"`
-	SalePrice       *float32                        `json:"sale_price"`
-	ShowCommingSoom *bool                           `json:"show_comming_soom"`
-	Tags            datatypes.JSON                  `json:"tags"`
-	Overview        datatypes.JSON                  `json:"overview"`
-	GeneralSettings CourseGeneralSettingsResponse   `json:"general_settings"`
+	ID              uint                            `json:"id,omitempty"`
+	Title           string                          `json:"title,omitempty"`
+	Slug            string                          `json:"slug,omitempty"`
+	Summary         string                          `json:"summary,omitempty"`
+	Description     *string                         `json:"description,omitempty"`
+	Visibility      models.Visibility               `json:"visibility,omitempty"`
+	IsScheduled     *bool                           `json:"is_scheduled,omitempty"`
+	ScheduleDate    *time.Time                      `json:"schedule_date,omitempty"`
+	ScheduleTime    *time.Time                      `json:"schedule_time,omitempty"`
+	FeaturedImage   *string                         `json:"featured_image,omitempty"`
+	IntroVideo      *utils.JSONB[models.IntroVideo] `json:"intro_video,omitempty"`
+	PricingModel    models.CoursePricingModel       `json:"pricing_model,omitempty"`
+	RegularPrice    *float32                        `json:"regular_price,omitempty"`
+	SalePrice       *float32                        `json:"sale_price,omitempty"`
+	ShowCommingSoom *bool                           `json:"show_comming_soom,omitempty"`
+	Tags            datatypes.JSON                  `json:"tags,omitempty"`
+	Overview        datatypes.JSON                  `json:"overview,omitempty"`
+	GeneralSettings *CourseGeneralSettingsResponse  `json:"general_settings,omitempty"`
 	Chapters        []CourseChapterResponse         `json:"course_chapters,omitempty"`
 	Instructors     []CourseInstructorResponse      `json:"course_instructors,omitempty"`
 	Enrollments     []EnrolledCourseRes             `json:"enrollments,omitempty"`

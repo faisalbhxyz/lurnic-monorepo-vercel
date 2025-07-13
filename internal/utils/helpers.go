@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -70,4 +71,18 @@ func NormalizeTags(rawTags *[]string) (datatypes.JSON, error) {
 	}
 
 	return datatypes.JSON(b), nil
+}
+
+func Slugify(title string) string {
+	// Lowercase
+	slug := strings.ToLower(title)
+
+	// Replace non-alphanumeric characters with hyphens
+	reg := regexp.MustCompile(`[^a-z0-9]+`)
+	slug = reg.ReplaceAllString(slug, "-")
+
+	// Trim hyphens
+	slug = strings.Trim(slug, "-")
+
+	return slug
 }

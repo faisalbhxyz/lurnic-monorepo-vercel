@@ -41,7 +41,7 @@ func (EnrollmentResponse) TableName() string {
 type EnrolledCourseRes struct {
 	ID        uint                        `json:"id"`
 	CourseID  uint                        `json:"course_id"`
-	Course    CourseDetailsPublicResponse `json:"course,omitempty"`
+	Course    CourseDetailsPublicResponse `json:"course" gorm:"foreignKey:ID;references:CourseID"`
 	StudentID uint                        `json:"student_id"`
 	CreatedAt time.Time                   `json:"created_at"`
 }
