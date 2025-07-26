@@ -25,6 +25,8 @@ func RegisterCourseRoutes(rg *gin.RouterGroup) {
 	{
 		publicGroup.GET("/", handler.GetAllPublic)
 		publicGroup.GET("/:slug", handler.GetBySlugPublic)
+		publicGroup.GET("/search", handler.GetSearchCourses)
 		publicGroup.GET("/category/:category", handler.GetAllPublicByCategory)
+		publicGroup.GET("/menu/:subcategory", handler.GetAllPublicBySubCategory)
 	}
 }

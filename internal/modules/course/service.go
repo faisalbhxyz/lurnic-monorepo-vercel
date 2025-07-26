@@ -18,8 +18,15 @@ type CourseService interface {
 		ID    uint   `json:"id"`
 		Title string `json:"title"`
 	}, error)
+	SearchCourses(tenantID uint, query string) ([]struct {
+		ID            uint   `json:"id"`
+		Title         string `json:"title"`
+		FeaturedImage string `json:"featured_image"`
+		Slug          string `json:"slug"`
+	}, error)
 	GetAllPublic(tenantID uint, limitApplied bool, showItems int) ([]response.CourseDetailsPublicResponse, error)
 	GetAllPublicByCategory(tenantID uint, categorySlug string) ([]response.CourseDetailsPublicResponse, error)
+	GetAllPublicBySubCategory(tenantID uint, categorySlug string) ([]response.CourseDetailsPublicResponse, error)
 	GetByID(tenantID uint, courseID uint) (models.CourseDetails, error)
 	GetBySlugPublic(tenantID uint, slug string) (*response.CourseDetailsPublicResponse, error)
 	Create(input CourseDetailsInput, tenantID uint, userID uint) error
@@ -55,6 +62,28 @@ func (s *courseService) GetAllLite(tenantID uint) ([]struct {
 	}
 
 	err := s.db.Table("course_details").Where("tenant_id = ?", tenantID).Select("id", "title", "tenant_id").Find(&courses).Error
+
+	return courses, err
+}
+
+func (s *courseService) SearchCourses(tenantID uint, query string) ([]struct {
+	ID            uint   `json:"id"`
+	Title         string `json:"title"`
+	FeaturedImage string `json:"featured_image"`
+	Slug          string `json:"slug"`
+}, error) {
+	var courses []struct {
+		ID            uint   `json:"id"`
+		Title         string `json:"title"`
+		FeaturedImage string `json:"featured_image"`
+		Slug          string `json:"slug"`
+	}
+
+	err := s.db.Table("course_details").
+		Where("tenant_id = ?", tenantID).
+		Where("title LIKE ? OR JSON_CONTAINS(tags, JSON_QUOTE(?)) = 1", "%"+query+"%", query).
+		Select("id", "title", "featured_image", "slug").
+		Find(&courses).Error
 
 	return courses, err
 }
@@ -139,6 +168,71 @@ func (s *courseService) GetAllPublicByCategory(tenantID uint, categorySlug strin
 		Where("categories.slug = ?", categorySlug).
 		Preload("GeneralSettings").
 		Preload("GeneralSettings.Category").
+		Find(&modelCourses).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []response.CourseDetailsPublicResponse{}, nil
+		}
+		return nil, fmt.Errorf("failed to retrieve courses: %w", err)
+	}
+
+	for _, course := range modelCourses {
+		res := response.CourseDetailsPublicResponse{
+			ID:              course.ID,
+			Title:           course.Title,
+			Slug:            course.Slug,
+			Summary:         course.Summary,
+			Visibility:      course.Visibility,
+			IsScheduled:     course.IsScheduled,
+			ScheduleDate:    course.ScheduleDate,
+			ScheduleTime:    course.ScheduleTime,
+			FeaturedImage:   course.FeaturedImage,
+			IntroVideo:      course.IntroVideo,
+			PricingModel:    course.PricingModel,
+			RegularPrice:    course.RegularPrice,
+			SalePrice:       course.SalePrice,
+			ShowCommingSoom: course.ShowCommingSoom,
+			Tags:            course.Tags,
+			GeneralSettings: &response.CourseGeneralSettingsResponse{
+				ID:              course.GeneralSettings.ID,
+				CourseID:        course.GeneralSettings.CourseID,
+				DifficultyLevel: course.GeneralSettings.DifficultyLevel,
+				Language:        course.GeneralSettings.Language,
+				MaximumStudent:  course.GeneralSettings.MaximumStudent,
+				Category: response.CategoryResponse{
+					ID:          course.GeneralSettings.Category.ID,
+					Name:        course.GeneralSettings.Category.Name,
+					Slug:        course.GeneralSettings.Category.Slug,
+					Description: utils.EmptyStringToNil(course.GeneralSettings.Category.Description),
+					Thumbnail:   utils.EmptyStringToNil(course.GeneralSettings.Category.Thumbnail),
+					CreatedAt:   course.GeneralSettings.Category.CreatedAt,
+					UpdatedAt:   course.GeneralSettings.Category.UpdatedAt,
+				},
+				Duration:  course.GeneralSettings.Duration,
+				CreatedAt: course.GeneralSettings.CreatedAt,
+				UpdatedAt: course.GeneralSettings.UpdatedAt,
+			},
+		}
+		publicResponses = append(publicResponses, res)
+	}
+
+	return publicResponses, err
+}
+
+func (s *courseService) GetAllPublicBySubCategory(tenantID uint, categorySlug string) ([]response.CourseDetailsPublicResponse, error) {
+	var modelCourses []models.CourseDetails
+	var publicResponses []response.CourseDetailsPublicResponse
+
+	err := s.db.
+		Joins("JOIN course_general_settings ON course_general_settings.course_id = course_details.id").
+		Joins("JOIN categories ON categories.id = course_general_settings.category_id").
+		Joins("JOIN sub_categories ON sub_categories.id = course_general_settings.sub_category_id").
+		Where("course_details.tenant_id = ? AND course_details.visibility = ?", tenantID, models.Public).
+		Where("sub_categories.slug = ?", categorySlug).
+		Preload("GeneralSettings").
+		Preload("GeneralSettings.Category").
+		Preload("GeneralSettings.SubCategory").
 		Find(&modelCourses).Error
 
 	if err != nil {
@@ -597,6 +691,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 			MaximumStudent:  utils.ZeroToNil(input.GeneralSettings.MaximumStudent),
 			Language:        &defaultLang,
 			CategoryID:      input.GeneralSettings.CategoryID,
+			SubCategoryID:   utils.ZeroToNil(input.GeneralSettings.SubCategoryID),
 			Duration:        utils.ZeroToNil(input.GeneralSettings.Duration),
 		}
 
@@ -1053,11 +1148,12 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 		MaximumStudent:  utils.ZeroToNil(input.GeneralSettings.MaximumStudent),
 		Language:        &deafultLng,
 		CategoryID:      input.GeneralSettings.CategoryID,
+		SubCategoryID:   utils.ZeroToNil(input.GeneralSettings.SubCategoryID),
 		Duration:        utils.ZeroToNil(input.GeneralSettings.Duration),
 	}
 
 	// If exists, update
-	return s.db.Where("course_id = ?", courseID).Updates(&updateGeneralSettings).Error
+	return s.db.Where("course_id = ?", courseID).Select("difficulty_level", "maximum_student", "language", "category_id", "sub_category_id", "duration").Updates(&updateGeneralSettings).Error
 
 }
 

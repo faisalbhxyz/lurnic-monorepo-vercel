@@ -31,7 +31,7 @@ func (s *subcategoryService) GetAll(tenantID uint) ([]response.SubCategoryRespon
 	var subcategories []models.SubCategory
 	err := s.db.Where("tenant_id = ?", tenantID).Preload("Category").Find(&subcategories).Error
 
-	if err != nil {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
@@ -43,7 +43,7 @@ func (s *subcategoryService) GetAll(tenantID uint) ([]response.SubCategoryRespon
 			Name:        subcategory.Name,
 			Slug:        subcategory.Slug,
 			Description: subcategory.Description,
-			Category: response.CategoryResponse{
+			Category: &response.CategoryResponse{
 				ID:   subcategory.Category.ID,
 				Name: subcategory.Category.Name,
 				Slug: subcategory.Category.Slug,
@@ -67,7 +67,7 @@ func (s *subcategoryService) GetByID(tenantID uint, id uint64) (*response.SubCat
 		Name:        subcategory.Name,
 		Slug:        subcategory.Slug,
 		Description: subcategory.Description,
-		Category: response.CategoryResponse{
+		Category: &response.CategoryResponse{
 			ID:   subcategory.Category.ID,
 			Name: subcategory.Category.Name,
 			Slug: subcategory.Category.Slug,

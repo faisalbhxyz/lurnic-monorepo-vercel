@@ -4,6 +4,7 @@ import (
 	"context"
 	"dashlearn/internal/utils"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -44,6 +45,18 @@ func (h *CourseHandler) GetAllLite(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": courses})
 }
 
+func (h *CourseHandler) GetSearchCourses(c *gin.Context) {
+	tenantID := c.GetUint("tenant_id")
+	query := c.Query("search")
+
+	courses, err := h.service.SearchCourses(tenantID, query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": courses})
+}
+
 func (h *CourseHandler) GetAllPublic(c *gin.Context) {
 	tenantID := c.GetUint("tenant_id")
 	showItemsStr := c.Query("showItems")
@@ -76,6 +89,20 @@ func (h *CourseHandler) GetAllPublicByCategory(c *gin.Context) {
 	categorySlug := c.Param("category")
 
 	courses, err := h.service.GetAllPublicByCategory(tenantID, categorySlug)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": courses})
+}
+
+func (h *CourseHandler) GetAllPublicBySubCategory(c *gin.Context) {
+	tenantID := c.GetUint("tenant_id")
+	categorySlug := c.Param("subcategory")
+
+	fmt.Println("[categorySlug]", categorySlug)
+
+	courses, err := h.service.GetAllPublicBySubCategory(tenantID, categorySlug)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

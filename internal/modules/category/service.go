@@ -2,6 +2,7 @@ package category
 
 import (
 	"dashlearn/internal/models"
+	"dashlearn/internal/response"
 	"dashlearn/internal/utils"
 	"errors"
 
@@ -9,7 +10,7 @@ import (
 )
 
 type CategoryService interface {
-	GetAll(tenantID uint) ([]models.Category, error)
+	GetAll(tenantID uint) ([]response.CategoryResponse, error)
 	GetByID(tenantID uint, id uint64) (*models.Category, error)
 	Create(input CreateCategoryInput, tenantID uint) error
 	Update(id uint64, input CreateCategoryInput, tenantID uint) error
@@ -26,10 +27,41 @@ func NewCategoryService(db *gorm.DB) CategoryService {
 	}
 }
 
-func (s *categoryService) GetAll(tenantID uint) ([]models.Category, error) {
+func (s *categoryService) GetAll(tenantID uint) ([]response.CategoryResponse, error) {
 	var categories []models.Category
-	err := s.db.Where("tenant_id = ?", tenantID).Find(&categories).Error
-	return categories, err
+	err := s.db.Where("tenant_id = ?", tenantID).Preload("SubCategories").Find(&categories).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	result := make([]response.CategoryResponse, len(categories))
+
+	for i, category := range categories {
+		// Convert subcategories
+		subCategories := make([]response.SubCategoryResponse, len(category.SubCategories))
+		for j, sub := range category.SubCategories {
+			subCategories[j] = response.SubCategoryResponse{
+				ID:          sub.ID,
+				Name:        sub.Name,
+				Slug:        sub.Slug,
+				Description: sub.Description,
+			}
+		}
+
+		result[i] = response.CategoryResponse{
+			ID:            category.ID,
+			Name:          category.Name,
+			Slug:          category.Slug,
+			Description:   category.Description,
+			Thumbnail:     category.Thumbnail,
+			CreatedAt:     category.CreatedAt,
+			UpdatedAt:     category.UpdatedAt,
+			SubCategories: subCategories,
+		}
+	}
+
+	return result, nil
 }
 
 func (s *categoryService) GetByID(tenantID uint, id uint64) (*models.Category, error) {

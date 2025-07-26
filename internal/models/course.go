@@ -136,6 +136,8 @@ type CourseGeneralSettings struct {
 	Language        *string          `gorm:"default:'english'" json:"language"`
 	CategoryID      uint             `gorm:"column:category_id" json:"category_id"`
 	Category        Category         `gorm:"foreignKey:CategoryID;references:ID" json:"category"`
+	SubCategoryID   *uint            `gorm:"column:sub_category_id" json:"sub_category_id"`
+	SubCategory     SubCategory      `gorm:"foreignKey:SubCategoryID;references:ID" json:"sub_category"`
 	Duration        *string          `json:"duration"`
 	CreatedAt       time.Time        `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time        `gorm:"autoUpdateTime" json:"updated_at"`

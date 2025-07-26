@@ -76,6 +76,7 @@ type CreateGeneralSettings struct {
 	MaximumStudent  *int32                 `json:"maximum_student" form:"maximum_student" binding:"omitempty"`
 	Language        *string                `json:"language" form:"language" binding:"omitempty"`
 	CategoryID      uint                   `json:"category_id" form:"category_id" binding:"required"`
+	SubCategoryID   *uint                  `json:"sub_category_id" form:"sub_category_id" binding:"omitempty"`
 	Duration        *string                `json:"duration" form:"duration" binding:"omitempty"`
 }
 

@@ -20,7 +20,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var Version = "v1.0.0"
+var Version = "v1.0.1"
 
 func main() {
 	// Set Gin to release mode
