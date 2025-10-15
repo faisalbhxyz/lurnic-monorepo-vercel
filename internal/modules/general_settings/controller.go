@@ -1,7 +1,6 @@
 package generalsettings
 
 import (
-	"context"
 	"dashlearn/internal/utils"
 	"encoding/json"
 	"errors"
@@ -78,9 +77,15 @@ func (h *GeneralSettingsHandler) UpdateOrCreate(c *gin.Context) {
 		return
 	}
 
-	logo, err := c.FormFile("logo")
+	logo_headers, err := c.FormFile("logo")
 	if err == nil {
-		imageURL, err := utils.UploadFile(context.Background(), logo)
+		logo_file, err := logo_headers.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open image"})
+			return
+		}
+		defer logo_file.Close()
+		imageURL, err := utils.UploadToBunny(logo_file, logo_headers)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
 			return
@@ -90,9 +95,15 @@ func (h *GeneralSettingsHandler) UpdateOrCreate(c *gin.Context) {
 		input.Logo = nil
 	}
 
-	favicon, err := c.FormFile("favicon")
+	favicon_headers, err := c.FormFile("favicon")
 	if err == nil {
-		imageURL, err := utils.UploadFile(context.Background(), favicon)
+		favicon_file, err := favicon_headers.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open image"})
+			return
+		}
+		defer favicon_file.Close()
+		imageURL, err := utils.UploadToBunny(favicon_file, favicon_headers)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
 			return

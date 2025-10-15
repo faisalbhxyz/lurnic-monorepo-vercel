@@ -1,7 +1,6 @@
 package course
 
 import (
-	"context"
 	"dashlearn/internal/utils"
 	"encoding/json"
 	"fmt"
@@ -179,9 +178,16 @@ func (h *CourseHandler) Create(c *gin.Context) {
 		input.Instructors = instructors
 	}
 
-	file, err := c.FormFile("featured_image")
+	featured_image_headers, err := c.FormFile("featured_image")
 	if err == nil {
-		url, err := utils.UploadFile(context.Background(), file)
+		file, err := featured_image_headers.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer file.Close()
+
+		url, err := utils.UploadToBunny(file, featured_image_headers)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -248,9 +254,16 @@ func (h *CourseHandler) Update(c *gin.Context) {
 		input.Instructors = instructors
 	}
 
-	file, err := c.FormFile("featured_image")
+	featured_image_headers, err := c.FormFile("featured_image")
 	if err == nil {
-		url, err := utils.UploadFile(context.Background(), file)
+		file, err := featured_image_headers.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer file.Close()
+
+		url, err := utils.UploadToBunny(file, featured_image_headers)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

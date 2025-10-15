@@ -33,7 +33,7 @@ COPY --from=builder /go/bin/goose /usr/local/bin/goose
 COPY ./migrations ./migrations
 
 # Expose the port your Gin app listens on
-EXPOSE 5000
+EXPOSE 5001
 
 # Run DB migrations first, then start app
 CMD goose up && ./main

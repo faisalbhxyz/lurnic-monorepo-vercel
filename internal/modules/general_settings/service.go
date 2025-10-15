@@ -1,7 +1,6 @@
 package generalsettings
 
 import (
-	"context"
 	"dashlearn/internal/models"
 	"dashlearn/internal/response"
 	"dashlearn/internal/utils"
@@ -60,7 +59,7 @@ func (s *generalsettingsService) UpdateGeneralSettings(input *CreateOrUpdateGene
 		//update record
 
 		if input.Logo != nil && *input.Logo != "" && existingRes.Logo != nil && *existingRes.Logo != "" {
-			err := utils.DeleteCDNFile(context.Background(), *existingRes.Logo)
+			err := utils.DeleteFromBunny(*existingRes.Logo)
 			if err != nil {
 				fmt.Println("Error deleting old image:", err)
 			}
@@ -71,7 +70,7 @@ func (s *generalsettingsService) UpdateGeneralSettings(input *CreateOrUpdateGene
 		}
 
 		if input.Favicon != nil && *input.Favicon != "" && existingRes.Favicon != nil && *existingRes.Favicon != "" {
-			err := utils.DeleteCDNFile(context.Background(), *existingRes.Favicon)
+			err := utils.DeleteFromBunny(*existingRes.Favicon)
 			if err != nil {
 				fmt.Println("Error deleting old image:", err)
 			}

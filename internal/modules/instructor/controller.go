@@ -1,7 +1,6 @@
 package instructor
 
 import (
-	"context"
 	"dashlearn/internal/utils"
 	"errors"
 	"net/http"
@@ -101,24 +100,24 @@ func (h *InstructorHandler) CreateInstructor(c *gin.Context) {
 		return
 	}
 
-	file, err := c.FormFile("image")
+	file_headers, err := c.FormFile("image")
 	if err == nil {
-		if file.Size > 2*1024*1024 {
+		if file_headers.Size > 2*1024*1024 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Max image size is 2MB"})
 			return
 		}
 
 		// ✅ 2. MIME type check
-		src, err := file.Open()
+		file, err := file_headers.Open()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open image file"})
 			return
 		}
-		defer src.Close()
+		defer file.Close()
 
 		// Detect content type
 		buffer := make([]byte, 512)
-		if _, err := src.Read(buffer); err != nil {
+		if _, err := file.Read(buffer); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read file content"})
 			return
 		}
@@ -136,29 +135,8 @@ func (h *InstructorHandler) CreateInstructor(c *gin.Context) {
 			return
 		}
 
-		// ✅ 3. (Optional) Image dimension check
-		// if contentType == "image/jpeg" || contentType == "image/png" {
-		// 	// Need to re-seek for reading again
-		// 	if seeker, ok := src.(io.Seeker); ok {
-		// 		seeker.Seek(0, io.SeekStart)
-		// 	}
-
-		// 	img, _, err := image.Decode(src)
-		// 	if err != nil {
-		// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode image"})
-		// 		return
-		// 	}
-		// 	width := img.Bounds().Dx()
-		// 	height := img.Bounds().Dy()
-
-		// 	if width > 1920 || height > 1080 {
-		// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Image must be 1920x1080 pixels or smaller"})
-		// 		return
-		// 	}
-		// }
-
 		// save file
-		url, err := utils.UploadFile(context.Background(), file)
+		url, err := utils.UploadToBunny(file, file_headers)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -259,24 +237,24 @@ func (h *InstructorHandler) UpdateInstructor(c *gin.Context) {
 
 	tenantID := c.GetUint("tenant_id")
 
-	file, err := c.FormFile("image")
+	file_headers, err := c.FormFile("image")
 	if err == nil {
-		if file.Size > 2*1024*1024 {
+		if file_headers.Size > 2*1024*1024 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Max image size is 2MB"})
 			return
 		}
 
 		// ✅ 2. MIME type check
-		src, err := file.Open()
+		file, err := file_headers.Open()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open image file"})
 			return
 		}
-		defer src.Close()
+		defer file.Close()
 
 		// Detect content type
 		buffer := make([]byte, 512)
-		if _, err := src.Read(buffer); err != nil {
+		if _, err := file.Read(buffer); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read file content"})
 			return
 		}
@@ -294,29 +272,8 @@ func (h *InstructorHandler) UpdateInstructor(c *gin.Context) {
 			return
 		}
 
-		// ✅ 3. (Optional) Image dimension check
-		// if contentType == "image/jpeg" || contentType == "image/png" {
-		// 	// Need to re-seek for reading again
-		// 	if seeker, ok := src.(io.Seeker); ok {
-		// 		seeker.Seek(0, io.SeekStart)
-		// 	}
-
-		// 	img, _, err := image.Decode(src)
-		// 	if err != nil {
-		// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode image"})
-		// 		return
-		// 	}
-		// 	width := img.Bounds().Dx()
-		// 	height := img.Bounds().Dy()
-
-		// 	if width > 1920 || height > 1080 {
-		// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Image must be 1920x1080 pixels or smaller"})
-		// 		return
-		// 	}
-		// }
-
 		// save file
-		url, err := utils.UploadFile(context.Background(), file)
+		url, err := utils.UploadToBunny(file, file_headers)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

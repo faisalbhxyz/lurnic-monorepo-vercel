@@ -1,7 +1,6 @@
 package banner
 
 import (
-	"context"
 	"dashlearn/internal/models"
 	"dashlearn/internal/response"
 	"dashlearn/internal/utils"
@@ -61,7 +60,7 @@ func (s *bannerService) Update(id uint64, input UpdateBannerInput, tenantID uint
 	}
 
 	if input.Image != nil {
-		err := utils.DeleteCDNFile(context.Background(), banner.Image)
+		err := utils.DeleteFromBunny(banner.Image)
 		if err != nil {
 			fmt.Println("Error deleting old image:", err)
 		}
@@ -88,7 +87,7 @@ func (s *bannerService) Delete(id uint64, tenantID uint) error {
 		return err
 	}
 
-	if err := utils.DeleteCDNFile(context.Background(), banner.Image); err != nil {
+	if err := utils.DeleteFromBunny(banner.Image); err != nil {
 		fmt.Println("Error deleting image:", err)
 		return err
 	}

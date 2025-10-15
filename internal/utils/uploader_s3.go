@@ -67,7 +67,7 @@ func initS3(c context.Context) (*s3.Client, error) {
 	return client, nil
 }
 
-func UploadFile(c context.Context, fileHeader *multipart.FileHeader) (string, error) {
+func UploadFileS3(c context.Context, fileHeader *multipart.FileHeader) (string, error) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
@@ -114,7 +114,7 @@ func UploadFile(c context.Context, fileHeader *multipart.FileHeader) (string, er
 	return url, nil
 }
 
-func DeleteCDNFile(ctx context.Context, fileURL string) error {
+func DeleteCDNFileS3(ctx context.Context, fileURL string) error {
 	// Extract the file key from the full URL
 	baseURL := fmt.Sprintf("https://%s.%s.digitaloceanspaces.com/",
 		os.Getenv("DO_BUCKET_NAME"),

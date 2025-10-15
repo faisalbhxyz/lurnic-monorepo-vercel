@@ -1,7 +1,6 @@
 package user
 
 import (
-	"context"
 	"dashlearn/internal/models"
 	"dashlearn/internal/utils"
 	"errors"
@@ -186,8 +185,15 @@ func UploadUser(c *gin.Context) {
 		return
 	}
 
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to open file"})
+		return
+	}
+	defer file.Close()
+
 	// Call your UploadFile util function
-	url, err := utils.UploadFile(context.Background(), fileHeader)
+	url, err := utils.UploadToBunny(file, fileHeader)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -1,7 +1,6 @@
 package course
 
 import (
-	"context"
 	"dashlearn/internal/models"
 	"dashlearn/internal/response"
 	"dashlearn/internal/utils"
@@ -712,7 +711,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 	}
 
 	if input.FeaturedImage != nil && *input.FeaturedImage != "" && existing.FeaturedImage != nil {
-		if delErr := utils.DeleteCDNFile(context.Background(), *existing.FeaturedImage); delErr != nil {
+		if delErr := utils.DeleteFromBunny(*existing.FeaturedImage); delErr != nil {
 			// You can log or ignore deletion errors as per your need
 			fmt.Println("Failed to delete old file:", delErr)
 		}
@@ -1193,7 +1192,7 @@ func (s *courseService) Delete(id uint, tenantID uint) error {
 
 	// Delete CDN image if present
 	if existingCourseDetails.FeaturedImage != nil {
-		if err := utils.DeleteCDNFile(context.Background(), *existingCourseDetails.FeaturedImage); err != nil {
+		if err := utils.DeleteFromBunny(*existingCourseDetails.FeaturedImage); err != nil {
 			fmt.Printf("Failed to delete image from CDN: %v\n", err)
 		}
 	}

@@ -1,7 +1,6 @@
 package instructor
 
 import (
-	"context"
 	"dashlearn/internal/models"
 	"dashlearn/internal/response"
 	"dashlearn/internal/utils"
@@ -130,7 +129,7 @@ func (s *instructorService) UpdateInstructor(input UpdateInstructorInput, tenant
 	}
 
 	if input.ImageURL != nil && *input.ImageURL != "" && instructor.Image != nil {
-		if delErr := utils.DeleteCDNFile(context.Background(), *instructor.Image); delErr != nil {
+		if delErr := utils.DeleteFromBunny(*instructor.Image); delErr != nil {
 			// You can log or ignore deletion errors as per your need
 			fmt.Println("Failed to delete old file:", delErr)
 		}
@@ -154,7 +153,7 @@ func (s *instructorService) DeleteInstructor(tenantID uint, id uint) error {
 	}
 
 	if instructor.Image != nil && *instructor.Image != "" {
-		if delErr := utils.DeleteCDNFile(context.Background(), *instructor.Image); delErr != nil {
+		if delErr := utils.DeleteFromBunny(*instructor.Image); delErr != nil {
 			// You can log or ignore deletion errors as per your need
 			fmt.Println("Failed to delete old file:", delErr)
 		}

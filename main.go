@@ -14,17 +14,18 @@ import (
 	"dashlearn/internal/modules/user"
 	"dashlearn/internal/utils"
 	"log"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
-var Version = "v1.0.1"
+var Version = "v1.0.2"
 
 func main() {
 	// Set Gin to release mode
-	// gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	// Load environment variables
 	if gin.Mode() != gin.ReleaseMode {
@@ -67,7 +68,7 @@ func main() {
 	generalsettings.RegisterGeneralSettingsRoutes(apiRoutesGroup)
 
 	// Run the server
-	router.Run(":5000")
+	router.Run(":" + os.Getenv("APP_PORT"))
 }
 
 func CreateSuperadminIfNotExists() {

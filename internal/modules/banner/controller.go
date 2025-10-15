@@ -1,7 +1,6 @@
 package banner
 
 import (
-	"context"
 	"dashlearn/internal/utils"
 
 	"encoding/json"
@@ -54,18 +53,26 @@ func (h *BannerHandler) Create(c *gin.Context) {
 	var input CreateBannerInput
 	if err := c.ShouldBindWith(&input, binding.FormMultipart); err != nil {
 
-		image, err := c.FormFile("image")
+		imageHeader, err := c.FormFile("image")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Image is required"})
 			return
-		} else {
-			imageURL, err := utils.UploadFile(context.Background(), image)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
-				return
-			}
-			input.Image = imageURL
 		}
+
+		imageFile, err := imageHeader.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open image"})
+			return
+		}
+		defer imageFile.Close()
+
+		imageURL, err := utils.UploadToBunny(imageFile, imageHeader)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		input.Image = imageURL
 
 		if err := h.service.Create(input, c.GetUint("tenant_id")); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -93,14 +100,27 @@ func (h *BannerHandler) Update(c *gin.Context) {
 		return
 	}
 
-	image, err := c.FormFile("image")
+	imageHeader, err := c.FormFile("image")
 
 	if err == nil {
-		imageURL, err := utils.UploadFile(context.Background(), image)
+		imageFile, err := imageHeader.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open image"})
+			return
+		}
+		defer imageFile.Close()
+
+		if imageHeader.Size > 5*1024*1024 { // 5 MB limit
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Image too large"})
+			return
+		}
+
+		imageURL, err := utils.UploadToBunny(imageFile, imageHeader)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
 			return
 		}
+
 		input.Image = &imageURL
 	}
 
