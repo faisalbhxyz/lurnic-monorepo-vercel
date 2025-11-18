@@ -89,7 +89,11 @@ func (s *orderService) Create(input CreateOrderInput, tenantID uint, studentID u
 		Discount:      0,
 		Total:         coursePrice,
 		PaymentType:   "manual",
+		CustomerNote:  nil,
+		AdminNote:     nil,
 		PaymentStatus: models.OrderPaymentStatusUnpaid,
+		PaymentMethod: input.PaymentMethod,
+		TransactionID: input.TransactionID,
 	}
 
 	if err := s.db.Create(&newOrder).Error; err != nil {
@@ -102,7 +106,7 @@ func (s *orderService) Create(input CreateOrderInput, tenantID uint, studentID u
 		InvoiceID:    newOrder.InvoiceID,
 		CourseID:     newOrder.CourseID,
 		Total:        newOrder.Total,
-		CustomerNote: newOrder.CustomerNote,
+		CustomerNote: *newOrder.CustomerNote,
 		CreatedAt:    newOrder.CreatedAt,
 		UpdatedAt:    newOrder.UpdatedAt,
 	}

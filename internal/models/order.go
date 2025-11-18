@@ -23,8 +23,10 @@ type Order struct {
 	PaymentStatus OrderPaymentStatus `json:"payment_status" gorm:"type:varchar(20);enum:paid,unpaid;default:unpaid"`
 	InvoiceID     int64              `json:"invoice_id" gorm:"not null;index"`
 	PaymentType   string             `json:"payment_type" gorm:"type:varchar(50);default:'manual'"`
-	CustomerNote  string             `json:"customer_note" gorm:"type:text;default:''"`
-	AdminNote     string             `json:"admin_note" gorm:"type:text;default:''"`
+	CustomerNote  *string            `json:"customer_note" gorm:"type:text;default:''"`
+	AdminNote     *string            `json:"admin_note" gorm:"type:text;default:''"`
+	PaymentMethod *string            `json:"payment_method" gorm:"type:varchar(255);null"`
+	TransactionID *string            `json:"transaction_id" gorm:"type:varchar(255);null"`
 	CreatedAt     time.Time          `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time          `gorm:"autoUpdateTime" json:"updated_at"`
 	TenantID      uint               `gorm:"column:tenant_id" json:"-"`

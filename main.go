@@ -9,11 +9,13 @@ import (
 	generalsettings "dashlearn/internal/modules/general_settings"
 	"dashlearn/internal/modules/instructor"
 	"dashlearn/internal/modules/order"
+	paymentmethod "dashlearn/internal/modules/payment_method"
 	"dashlearn/internal/modules/student"
 	subcategory "dashlearn/internal/modules/sub_category"
 	"dashlearn/internal/modules/user"
 	"dashlearn/internal/utils"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/gin-contrib/cors"
@@ -21,7 +23,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var Version = "v1.0.2"
+var Version = "v1.0.4"
 
 func main() {
 	// Set Gin to release mode
@@ -36,6 +38,11 @@ func main() {
 
 	// Initialize Gin
 	router := gin.Default()
+
+	router.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 100<<20) // 100 MB
+		c.Next()
+	})
 
 	// Enable CORS
 	router.Use(cors.New(cors.Config{
@@ -66,6 +73,7 @@ func main() {
 	banner.RegisterBannerRoutes(apiRoutesGroup)
 	order.RegisterCourseRoutes(apiRoutesGroup)
 	generalsettings.RegisterGeneralSettingsRoutes(apiRoutesGroup)
+	paymentmethod.RegisterRoutes(apiRoutesGroup)
 
 	// Run the server
 	router.Run(":" + os.Getenv("APP_PORT"))
