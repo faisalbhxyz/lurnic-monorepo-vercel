@@ -14,6 +14,7 @@ import (
 	subcategory "dashlearn/internal/modules/sub_category"
 	"dashlearn/internal/modules/user"
 	"dashlearn/internal/utils"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -21,9 +22,10 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 )
 
-var Version = "v1.0.7"
+var Version = "v1.0.8"
 
 func main() {
 	// Set Gin to release mode
@@ -35,6 +37,18 @@ func main() {
 			log.Fatalln("Warning: No .env file found")
 		}
 	}
+
+	c := cron.New()
+
+	// Run the helper every minute
+	c.AddFunc("@every 1m", func() {
+		if err := course.CronJobForCoursesSchedule(utils.DB); err != nil {
+			fmt.Println("⏰ Cron error:", err)
+		}
+	})
+
+	c.Start()
+	fmt.Println("⌛ Cron started for scheduled courses (Bangladesh time GMT+6)")
 
 	// Initialize Gin
 	router := gin.Default()

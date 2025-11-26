@@ -4,6 +4,13 @@ FROM golang:1.24-alpine AS builder
 # Install git (required for go install) and gcc (optional if CGo used)
 RUN apk add --no-cache git
 
+# Install tzdata
+RUN apk add --no-cache tzdata
+
+# Set TZ env var
+ENV TZ=Asia/Dhaka
+
+
 WORKDIR /app
 
 # Copy go module files & download deps

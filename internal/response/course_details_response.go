@@ -47,7 +47,7 @@ type CourseDetailsPublicResponse struct {
 	Summary         string                          `json:"summary,omitempty"`
 	Description     *string                         `json:"description,omitempty"`
 	Visibility      models.Visibility               `json:"visibility,omitempty"`
-	IsScheduled     *bool                           `json:"is_scheduled,omitempty"`
+	IsScheduled     bool                            `json:"is_scheduled,omitempty"`
 	ScheduleDate    *time.Time                      `json:"schedule_date,omitempty"`
 	ScheduleTime    *time.Time                      `json:"schedule_time,omitempty"`
 	FeaturedImage   *string                         `json:"featured_image,omitempty"`

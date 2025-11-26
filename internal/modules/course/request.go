@@ -2,7 +2,6 @@ package course
 
 import (
 	"dashlearn/internal/models"
-	"time"
 
 	"gorm.io/datatypes"
 )
@@ -12,13 +11,13 @@ type CourseDetailsInput struct {
 	Summary         string                    `form:"summary" json:"summary" binding:"required"`
 	Description     *string                   `form:"description" json:"description" binding:"omitempty"`
 	Visibility      models.Visibility         `form:"visibility" json:"visibility" binding:"required,oneof=public private protected"`
-	IsScheduled     *bool                     `form:"is_scheduled" json:"is_scheduled" binding:"omitempty"`
-	ScheduleDate    *time.Time                `form:"schedule_date" json:"schedule_date" binding:"omitempty"`
-	ScheduleTime    *time.Time                `form:"schedule_time" json:"schedule_time" binding:"omitempty"`
+	IsScheduled     string                    `form:"is_scheduled" json:"is_scheduled" binding:"omitempty"`
+	ScheduleDate    *string                   `form:"schedule_date" json:"schedule_date" binding:"omitempty"`
+	ScheduleTime    *string                   `form:"schedule_time" json:"schedule_time" binding:"omitempty"`
 	PricingModel    models.CoursePricingModel `form:"pricing_model" json:"pricing_model" binding:"omitempty"`
 	RegularPrice    *float32                  `form:"regular_price" json:"regular_price" binding:"omitempty"`
 	SalePrice       *float32                  `form:"sale_price" json:"sale_price" binding:"omitempty"`
-	ShowCommingSoom *bool                     `form:"show_comming_soom" json:"show_comming_soom" binding:"omitempty"`
+	ShowCommingSoon *string                   `form:"show_comming_soon" json:"show_comming_soon" binding:"omitempty"`
 	Tags            *[]string                 `form:"tags" json:"tags" binding:"omitempty"`
 	AuthorID        uint                      `form:"author_id" json:"author_id" binding:"required"`
 	FeaturedImage   *string                   `form:"featured_image" json:"featured_image" binding:"omitempty"`
@@ -34,13 +33,13 @@ type CreateCourseDetailsInput struct {
 	Summary         string                    `form:"summary" json:"summary" binding:"required"`
 	Description     *string                   `form:"description" json:"description" binding:"omitempty"`
 	Visibility      models.Visibility         `form:"visibility" json:"visibility" binding:"required,oneof=public private protected"`
-	IsScheduled     *bool                     `form:"is_scheduled" json:"is_scheduled" binding:"omitempty"`
-	ScheduleDate    *time.Time                `form:"schedule_date" json:"schedule_date" binding:"omitempty"`
-	ScheduleTime    *time.Time                `form:"schedule_time" json:"schedule_time" binding:"omitempty"`
+	IsScheduled     string                    `form:"is_scheduled" json:"is_scheduled" binding:"omitempty"`
+	ScheduleDate    *string                   `form:"schedule_date" json:"schedule_date" binding:"omitempty"`
+	ScheduleTime    *string                   `form:"schedule_time" json:"schedule_time" binding:"omitempty"`
 	PricingModel    models.CoursePricingModel `form:"pricing_model" json:"pricing_model" binding:"omitempty"`
 	RegularPrice    *float32                  `form:"regular_price" json:"regular_price" binding:"omitempty"`
 	SalePrice       *float32                  `form:"sale_price" json:"sale_price" binding:"omitempty"`
-	ShowCommingSoom *bool                     `form:"show_comming_soom" json:"show_comming_soom" binding:"omitempty"`
+	ShowCommingSoon *string                   `form:"show_comming_soon" json:"show_comming_soon" binding:"omitempty"`
 	Tags            *[]string                 `form:"tags" json:"tags" binding:"omitempty"`
 	AuthorID        uint                      `form:"author_id" json:"author_id" binding:"required"`
 	IntroVideo      *models.IntroVideo        `form:"intro_video" json:"intro_video" binding:"omitempty"`

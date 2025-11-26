@@ -15,7 +15,7 @@ CREATE TABLE
         pricing_model ENUM ('free', 'paid') NOT NULL DEFAULT 'free',
         regular_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
         sale_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
-        show_comming_soom BOOLEAN NOT NULL DEFAULT FALSE,
+        show_comming_soon BOOLEAN NOT NULL DEFAULT FALSE,
         tags JSON NULL,
         overview JSON NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

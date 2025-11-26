@@ -178,6 +178,13 @@ func (h *CourseHandler) Create(c *gin.Context) {
 		input.Instructors = instructors
 	}
 
+	if input.IsScheduled == "true" {
+		if input.ScheduleDate == nil || *input.ScheduleDate == "" || input.ScheduleTime == nil || *input.ScheduleTime == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Schedule date or time missing"})
+			return
+		}
+	}
+
 	featured_image_headers, err := c.FormFile("featured_image")
 	if err == nil {
 		file, err := featured_image_headers.Open()
@@ -303,6 +310,16 @@ func (h *CourseHandler) Update(c *gin.Context) {
 		input.Instructors = instructors
 	}
 
+	fmt.Printf("Type of input.IsScheduled: %T\n", input.IsScheduled)
+	fmt.Println("CEHEK", strings.ToLower(strings.TrimSpace(input.IsScheduled)) == "true")
+
+	if input.IsScheduled == "true" {
+		if input.ScheduleDate == nil || *input.ScheduleDate == "" || input.ScheduleTime == nil || *input.ScheduleTime == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Schedule date or time missing"})
+			return
+		}
+	}
+
 	featured_image_headers, err := c.FormFile("featured_image")
 	if err == nil {
 		file, err := featured_image_headers.Open()
@@ -320,9 +337,9 @@ func (h *CourseHandler) Update(c *gin.Context) {
 		input.FeaturedImage = &url
 	}
 
-	// if output, err := json.MarshalIndent(input, "", "  "); err == nil {
-	// 	fmt.Println("Parsed Input:\n", string(output))
-	// }
+	if output, err := json.MarshalIndent(input, "", "  "); err == nil {
+		fmt.Println("Parsed Input:\n", string(output))
+	}
 
 	// insert resources
 	for key, files := range c.Request.MultipartForm.File {

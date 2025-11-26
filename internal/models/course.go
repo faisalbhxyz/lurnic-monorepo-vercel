@@ -47,19 +47,20 @@ type CourseDetails struct {
 	Summary         string                   `gorm:"type:text" json:"summary"`
 	Description     *string                  `gorm:"type:text" json:"description"`
 	Visibility      Visibility               `gorm:"type:enum('public','private','protected');default:'public'" json:"visibility"`
-	IsScheduled     *bool                    `gorm:"default:false" json:"is_scheduled"`
-	ScheduleDate    *time.Time               `gorm:"type:date" json:"schedule_date"`
-	ScheduleTime    *time.Time               `gorm:"type:time" json:"schedule_time"`
+	IsScheduled     *bool                    `gorm:"column:is_scheduled;default:false" json:"is_scheduled"`
+	ScheduleDate    *string                  `gorm:"type:date" json:"schedule_date"`
+	ScheduleTime    *string                  `gorm:"type:time" json:"schedule_time"`
 	FeaturedImage   *string                  `gorm:"column:featured_image" json:"featured_image"`
 	IntroVideo      *utils.JSONB[IntroVideo] `gorm:"type:json;column:intro_video" json:"intro_video"`
 	PricingModel    CoursePricingModel       `gorm:"column:pricing_model;enum('free','paid');default:'free'" json:"pricing_model"`
 	RegularPrice    *float32                 `gorm:"column:regular_price;default:0" json:"regular_price"`
 	SalePrice       *float32                 `gorm:"column:sale_price;default:0" json:"sale_price"`
-	ShowCommingSoom *bool                    `gorm:"default:false" json:"show_comming_soom"`
+	ShowCommingSoon *bool                    `gorm:"default:false" json:"show_comming_soon"`
 	Tags            datatypes.JSON           `gorm:"type:json" json:"tags"`
 	Overview        datatypes.JSON           `gorm:"type:json" json:"overview"`
 	AuthorID        uint                     `gorm:"column:author_id" json:"author_id"`
 	Author          User                     `gorm:"foreignKey:AuthorID;references:ID" json:"author"`
+	Position        int64                    `gorm:"default:0" json:"position"`
 	CreatedAt       time.Time                `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time                `gorm:"autoUpdateTime" json:"updated_at"`
 	TenantID        uint                     `gorm:"column:tenant_id" json:"-"`

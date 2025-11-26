@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -123,21 +124,21 @@ func (s *courseService) GetAllPublic(tenantID uint, limitApplied bool, showItems
 
 	for _, course := range modelCourses {
 		res := response.CourseDetailsPublicResponse{
-			ID:              course.ID,
-			Title:           course.Title,
-			Slug:            course.Slug,
-			Summary:         course.Summary,
-			Visibility:      course.Visibility,
-			IsScheduled:     course.IsScheduled,
-			ScheduleDate:    course.ScheduleDate,
-			ScheduleTime:    course.ScheduleTime,
-			FeaturedImage:   course.FeaturedImage,
-			IntroVideo:      course.IntroVideo,
-			PricingModel:    course.PricingModel,
-			RegularPrice:    course.RegularPrice,
-			SalePrice:       course.SalePrice,
-			ShowCommingSoom: course.ShowCommingSoom,
-			Tags:            course.Tags,
+			ID:          course.ID,
+			Title:       course.Title,
+			Slug:        course.Slug,
+			Summary:     course.Summary,
+			Visibility:  course.Visibility,
+			IsScheduled: *course.IsScheduled,
+			// ScheduleDate:    course.ScheduleDate,
+			// ScheduleTime:    course.ScheduleTime,
+			FeaturedImage: course.FeaturedImage,
+			IntroVideo:    course.IntroVideo,
+			PricingModel:  course.PricingModel,
+			RegularPrice:  course.RegularPrice,
+			SalePrice:     course.SalePrice,
+			// ShowCommingSoom: course.ShowCommingSoom,
+			Tags: course.Tags,
 			GeneralSettings: &response.CourseGeneralSettingsResponse{
 				ID:              course.GeneralSettings.ID,
 				CourseID:        course.GeneralSettings.CourseID,
@@ -187,21 +188,21 @@ func (s *courseService) GetAllPublicByCategory(tenantID uint, categorySlug strin
 
 	for _, course := range modelCourses {
 		res := response.CourseDetailsPublicResponse{
-			ID:              course.ID,
-			Title:           course.Title,
-			Slug:            course.Slug,
-			Summary:         course.Summary,
-			Visibility:      course.Visibility,
-			IsScheduled:     course.IsScheduled,
-			ScheduleDate:    course.ScheduleDate,
-			ScheduleTime:    course.ScheduleTime,
-			FeaturedImage:   course.FeaturedImage,
-			IntroVideo:      course.IntroVideo,
-			PricingModel:    course.PricingModel,
-			RegularPrice:    course.RegularPrice,
-			SalePrice:       course.SalePrice,
-			ShowCommingSoom: course.ShowCommingSoom,
-			Tags:            course.Tags,
+			ID:          course.ID,
+			Title:       course.Title,
+			Slug:        course.Slug,
+			Summary:     course.Summary,
+			Visibility:  course.Visibility,
+			IsScheduled: *course.IsScheduled,
+			// ScheduleDate:    course.ScheduleDate,
+			// ScheduleTime:    course.ScheduleTime,
+			FeaturedImage: course.FeaturedImage,
+			IntroVideo:    course.IntroVideo,
+			PricingModel:  course.PricingModel,
+			RegularPrice:  course.RegularPrice,
+			SalePrice:     course.SalePrice,
+			// ShowCommingSoom: course.ShowCommingSoom,
+			Tags: course.Tags,
 			GeneralSettings: &response.CourseGeneralSettingsResponse{
 				ID:              course.GeneralSettings.ID,
 				CourseID:        course.GeneralSettings.CourseID,
@@ -253,21 +254,21 @@ func (s *courseService) GetAllPublicBySubCategory(tenantID uint, categorySlug st
 
 	for _, course := range modelCourses {
 		res := response.CourseDetailsPublicResponse{
-			ID:              course.ID,
-			Title:           course.Title,
-			Slug:            course.Slug,
-			Summary:         course.Summary,
-			Visibility:      course.Visibility,
-			IsScheduled:     course.IsScheduled,
-			ScheduleDate:    course.ScheduleDate,
-			ScheduleTime:    course.ScheduleTime,
-			FeaturedImage:   course.FeaturedImage,
-			IntroVideo:      course.IntroVideo,
-			PricingModel:    course.PricingModel,
-			RegularPrice:    course.RegularPrice,
-			SalePrice:       course.SalePrice,
-			ShowCommingSoom: course.ShowCommingSoom,
-			Tags:            course.Tags,
+			ID:          course.ID,
+			Title:       course.Title,
+			Slug:        course.Slug,
+			Summary:     course.Summary,
+			Visibility:  course.Visibility,
+			IsScheduled: *course.IsScheduled,
+			// ScheduleDate:    course.ScheduleDate,
+			// ScheduleTime:    course.ScheduleTime,
+			FeaturedImage: course.FeaturedImage,
+			IntroVideo:    course.IntroVideo,
+			PricingModel:  course.PricingModel,
+			RegularPrice:  course.RegularPrice,
+			SalePrice:     course.SalePrice,
+			// ShowCommingSoom: course.ShowCommingSoom,
+			Tags: course.Tags,
 			GeneralSettings: &response.CourseGeneralSettingsResponse{
 				ID:              course.GeneralSettings.ID,
 				CourseID:        course.GeneralSettings.CourseID,
@@ -444,11 +445,14 @@ func (s *courseService) GetBySlugPublic(tenantID uint, slug string) (*response.C
 			CourseID:     instructor.CourseID,
 			InstructorID: instructor.InstructorID,
 			Instructor: response.InstructorResponse{
-				ID:        instructor.Instructor.ID,
-				FirstName: instructor.Instructor.FirstName,
-				LastName:  instructor.Instructor.LastName,
-				Email:     instructor.Instructor.Email,
-				Image:     utils.ZeroToNil(instructor.Instructor.Image),
+				ID:          instructor.Instructor.ID,
+				FirstName:   instructor.Instructor.FirstName,
+				LastName:    instructor.Instructor.LastName,
+				Email:       instructor.Instructor.Email,
+				Image:       utils.ZeroToNil(instructor.Instructor.Image),
+				Phone:       instructor.Instructor.Phone,
+				Role:        instructor.Instructor.Role,
+				Designation: instructor.Instructor.Designation,
 			},
 		}
 	}
@@ -463,22 +467,22 @@ func (s *courseService) GetBySlugPublic(tenantID uint, slug string) (*response.C
 	}
 
 	res := &response.CourseDetailsPublicResponse{
-		ID:              modelCourse.ID,
-		Title:           modelCourse.Title,
-		Summary:         modelCourse.Summary,
-		Description:     modelCourse.Description,
-		Visibility:      modelCourse.Visibility,
-		IsScheduled:     modelCourse.IsScheduled,
-		ScheduleDate:    modelCourse.ScheduleDate,
-		ScheduleTime:    modelCourse.ScheduleTime,
-		FeaturedImage:   modelCourse.FeaturedImage,
-		IntroVideo:      modelCourse.IntroVideo,
-		PricingModel:    modelCourse.PricingModel,
-		RegularPrice:    modelCourse.RegularPrice,
-		SalePrice:       modelCourse.SalePrice,
-		ShowCommingSoom: modelCourse.ShowCommingSoom,
-		Tags:            modelCourse.Tags,
-		Overview:        modelCourse.Overview,
+		ID:          modelCourse.ID,
+		Title:       modelCourse.Title,
+		Summary:     modelCourse.Summary,
+		Description: modelCourse.Description,
+		Visibility:  modelCourse.Visibility,
+		IsScheduled: *modelCourse.IsScheduled,
+		// ScheduleDate:    modelCourse.ScheduleDate,
+		// ScheduleTime:    modelCourse.ScheduleTime,
+		FeaturedImage: modelCourse.FeaturedImage,
+		IntroVideo:    modelCourse.IntroVideo,
+		PricingModel:  modelCourse.PricingModel,
+		RegularPrice:  modelCourse.RegularPrice,
+		SalePrice:     modelCourse.SalePrice,
+		// ShowCommingSoom: modelCourse.ShowCommingSoom,
+		Tags:     modelCourse.Tags,
+		Overview: modelCourse.Overview,
 		GeneralSettings: &response.CourseGeneralSettingsResponse{
 			ID:              modelCourse.GeneralSettings.ID,
 			CourseID:        modelCourse.GeneralSettings.CourseID,
@@ -508,6 +512,13 @@ func (s *courseService) GetBySlugPublic(tenantID uint, slug string) (*response.C
 
 func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
+		var total int64
+		if err := tx.Model(&models.CourseDetails{}).
+			Where("tenant_id = ?", tenantID).
+			Count(&total).Error; err != nil {
+			return err
+		}
+
 		var videoPtr *models.IntroVideo
 
 		var lastID uint
@@ -550,25 +561,60 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 			introVideo = &utils.JSONB[models.IntroVideo]{Data: *input.IntroVideo}
 		}
 
+		var scheduleDateForDB *string
+		var scheduleTimeForDB *string
+
+		if input.IsScheduled == "true" {
+			dateParsed, err := time.Parse(time.RFC3339, *input.ScheduleDate)
+			if err != nil {
+				return errors.New("invalid schedule date format")
+			}
+			dateStr := dateParsed.Format("2006-01-02")
+			scheduleDateForDB = &dateStr
+
+			timeParsed, err := time.Parse("03:04 PM", *input.ScheduleTime)
+			if err != nil {
+				return errors.New("invalid schedule time format")
+			}
+			timeStr := timeParsed.Format("15:04:05")
+			scheduleTimeForDB = &timeStr
+		}
+
 		newCourseDetails := models.CourseDetails{
-			Title:           input.Title,
-			Slug:            utils.Slugify(input.Title) + "-" + strconv.Itoa(int(newID)),
-			Summary:         input.Summary,
-			Description:     utils.ZeroToNil(input.Description),
-			Visibility:      input.Visibility,
-			IsScheduled:     utils.ZeroToNil(input.IsScheduled),
-			ScheduleDate:    utils.ZeroToNil(input.ScheduleDate),
-			ScheduleTime:    utils.ZeroToNil(input.ScheduleTime),
-			PricingModel:    input.PricingModel,
-			RegularPrice:    input.RegularPrice,
-			SalePrice:       input.SalePrice,
-			ShowCommingSoom: input.ShowCommingSoom,
-			Tags:            tagsJSON,
-			Overview:        overviewJSON,
-			FeaturedImage:   input.FeaturedImage,
-			IntroVideo:      introVideo,
-			AuthorID:        userID,
-			TenantID:        tenantID,
+			Title:       input.Title,
+			Slug:        utils.Slugify(input.Title) + "-" + strconv.Itoa(int(newID)),
+			Summary:     input.Summary,
+			Description: utils.ZeroToNil(input.Description),
+			Visibility:  input.Visibility,
+			IsScheduled: func() *bool {
+				if input.IsScheduled == "true" {
+					return &[]bool{true}[0]
+				}
+				return &[]bool{false}[0]
+			}(),
+			ScheduleDate: scheduleDateForDB,
+			ScheduleTime: scheduleTimeForDB,
+			PricingModel: input.PricingModel,
+			RegularPrice: input.RegularPrice,
+			SalePrice:    input.SalePrice,
+			ShowCommingSoon: func() *bool {
+				if input.ShowCommingSoon != nil {
+					b := false
+					if *input.ShowCommingSoon == "true" {
+						b = true
+					}
+					return &b
+				}
+				b := false
+				return &b
+			}(),
+			Tags:          tagsJSON,
+			Overview:      overviewJSON,
+			FeaturedImage: input.FeaturedImage,
+			IntroVideo:    introVideo,
+			AuthorID:      userID,
+			TenantID:      tenantID,
+			Position:      total,
 		}
 
 		if err := tx.Create(&newCourseDetails).Error; err != nil {
@@ -756,26 +802,61 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 		introVideo = &utils.JSONB[models.IntroVideo]{Data: *input.IntroVideo}
 	}
 
+	var scheduleDateForDB *string
+	var scheduleTimeForDB *string
+	visiblity := input.Visibility
+	if input.IsScheduled == "true" {
+		dateParsed, err := time.Parse("2006-01-02", *input.ScheduleDate)
+		if err != nil {
+			return errors.New("invalid schedule date format")
+		}
+		dateStr := dateParsed.Format("2006-01-02")
+		scheduleDateForDB = &dateStr
+
+		timeParsed, err := time.Parse("03:04 PM", *input.ScheduleTime)
+		if err != nil {
+			return errors.New("invalid schedule time format")
+		}
+		timeStr := timeParsed.Format("15:04:05")
+		scheduleTimeForDB = &timeStr
+		visiblity = models.Protected
+	}
+
 	// Update course
 	updateData := models.CourseDetails{
-		Title:           input.Title,
-		Slug:            utils.Slugify(input.Title) + "-" + strconv.Itoa(int(courseID)),
-		Summary:         input.Summary,
-		Description:     utils.ZeroToNil(input.Description),
-		Visibility:      input.Visibility,
-		IsScheduled:     utils.ZeroToNil(input.IsScheduled),
-		ScheduleDate:    utils.ZeroToNil(input.ScheduleDate),
-		ScheduleTime:    utils.ZeroToNil(input.ScheduleTime),
-		PricingModel:    input.PricingModel,
-		RegularPrice:    input.RegularPrice,
-		SalePrice:       input.SalePrice,
-		ShowCommingSoom: input.ShowCommingSoom,
-		Tags:            tagsJSON,
-		Overview:        overviewJSON,
-		FeaturedImage:   input.FeaturedImage,
-		IntroVideo:      introVideo,
-		AuthorID:        userID,
-		TenantID:        tenantID,
+		Title:       input.Title,
+		Slug:        utils.Slugify(input.Title) + "-" + strconv.Itoa(int(courseID)),
+		Summary:     input.Summary,
+		Description: utils.ZeroToNil(input.Description),
+		Visibility:  visiblity,
+		IsScheduled: func() *bool {
+			if input.IsScheduled == "true" {
+				return &[]bool{true}[0]
+			}
+			return &[]bool{false}[0]
+		}(),
+		ScheduleDate: scheduleDateForDB,
+		ScheduleTime: scheduleTimeForDB,
+		PricingModel: input.PricingModel,
+		RegularPrice: input.RegularPrice,
+		SalePrice:    input.SalePrice,
+		ShowCommingSoon: func() *bool {
+			if input.ShowCommingSoon != nil {
+				b := false
+				if *input.ShowCommingSoon == "true" {
+					b = true
+				}
+				return &b
+			}
+			b := false
+			return &b
+		}(),
+		Tags:          tagsJSON,
+		Overview:      overviewJSON,
+		FeaturedImage: input.FeaturedImage,
+		IntroVideo:    introVideo,
+		AuthorID:      userID,
+		TenantID:      tenantID,
 	}
 
 	if err := s.db.Where("id = ?", courseID).Updates(&updateData).Error; err != nil {
