@@ -1,29 +1,32 @@
 package user
 
 import (
-	"dashlearn/internal/models"
-	"dashlearn/internal/utils"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/lucsky/cuid"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-func CheckUser(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"data": "WORKING"})
+type UserHandler struct {
+	service UserService
 }
-func GetUsers(c *gin.Context) {
-	var users []models.User
-	utils.DB.Preload("Tenant").Select("id", "user_id", "name", "phone", "email", "status", "created_at", "updated_at", "tenant_id").Find(&users)
+
+func NewUserHandler(db *gorm.DB) *UserHandler {
+	return &UserHandler{
+		service: NewUserService(db),
+	}
+}
+
+func (h *UserHandler) GetUsers(c *gin.Context) {
+	users := h.service.GetUsers()
 	c.JSON(http.StatusOK, gin.H{"data": users})
 }
 
-func CreateUser(c *gin.Context) {
+func (h *UserHandler) CreateUser(c *gin.Context) {
 	var input CreateUserInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 
@@ -40,15 +43,17 @@ func CreateUser(c *gin.Context) {
 						errorsMap["name"] = "Name is required"
 					}
 				case "Email":
-					if tag == "required" {
+					switch tag {
+					case "required":
 						errorsMap["email"] = "Email is required"
-					} else if tag == "email" {
+					case "email":
 						errorsMap["email"] = "Invalid email format"
 					}
 				case "Password":
-					if tag == "required" {
+					switch tag {
+					case "required":
 						errorsMap["password"] = "Password is required"
-					} else if tag == "min" {
+					case "min":
 						errorsMap["password"] = "Password must be at least 6 characters long"
 					}
 				}
@@ -61,56 +66,15 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	err := h.service.CreateUser(input)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	var existingUser models.User
-	if err := utils.DB.Where("email = ?", input.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email already exists"})
-		return
-	} else if err != gorm.ErrRecordNotFound {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
-		return
-	}
-
-	newTenant := models.Tenant{
-		AppKey: cuid.New(),
-	}
-
-	if err := utils.DB.Create(&newTenant).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
-		return
-	}
-
-	var superadmin models.Role
-	if err := utils.DB.Where("name = ?", "superadmin").First(&superadmin).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
-		return
-	}
-
-	newUser := models.User{
-		UserID:   cuid.New(),
-		Name:     input.Name,
-		Phone:    input.Phone,
-		Email:    input.Email,
-		Password: string(hashedPassword),
-		Status:   true,
-		TenantID: newTenant.ID,
-		RoleID:   &superadmin.ID,
-	}
-
-	if err := utils.DB.Create(&newUser).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-		return
-	}
-
 	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
 }
 
-func LoginUser(c *gin.Context) {
+func (h *UserHandler) LoginUser(c *gin.Context) {
 	var input LoginUserInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -122,15 +86,17 @@ func LoginUser(c *gin.Context) {
 				tag := fieldErr.Tag()
 				switch field {
 				case "Email":
-					if tag == "required" {
+					switch tag {
+					case "required":
 						errorsMap["email"] = "Email is required"
-					} else if tag == "email" {
+					case "email":
 						errorsMap["email"] = "Invalid email format"
 					}
 				case "Password":
-					if tag == "required" {
+					switch tag {
+					case "required":
 						errorsMap["password"] = "Password is required"
-					} else if tag == "min" {
+					case "min":
 						errorsMap["password"] = "Password must be at least 6 characters long"
 					}
 				}
@@ -142,65 +108,143 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	err := utils.DB.Where("email = ?", input.Email).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email not found"})
-		return
-	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
-		return
-	}
-
-	// Compare the provided password with the stored hashed password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
-		return
-	}
-
-	// Generate JWT token
-	token, err := utils.GenerateJWT(user.UserID)
+	user, err := h.service.LoginUser(input)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-		"user": gin.H{
-			"user_id": user.UserID,
-			"name":    user.Name,
-			"phone":   user.Phone,
-			"email":   user.Email,
-		},
-	})
+	c.JSON(http.StatusOK, user)
 
 }
 
-func UploadUser(c *gin.Context) {
-	fileHeader, err := c.FormFile("file")
-	fmt.Println("FILE", fileHeader.Filename)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+// func UploadUser(c *gin.Context) {
+// 	fileHeader, err := c.FormFile("file")
+// 	fmt.Println("FILE", fileHeader.Filename)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+// 		return
+// 	}
+
+// 	// Call your UploadFile util function
+// 	url, err := utils.UploadFile(context.Background(), fileHeader)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	// Return the uploaded file URL
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"url": url,
+// 	})
+// }
+
+func (h *UserHandler) CreateTeamMember(c *gin.Context) {
+	var input CreateTeamMemberInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			errorsMap := make(map[string]string)
+			for _, fieldErr := range validationErrors {
+				field := fieldErr.Field()
+				tag := fieldErr.Tag()
+
+				switch field {
+				case "UserID":
+					if tag == "required" {
+						errorsMap["user_id"] = "User ID is required"
+					}
+				case "Name":
+					if tag == "required" {
+						errorsMap["name"] = "Name is required"
+					}
+				case "Role":
+					if tag == "required" {
+						errorsMap["role"] = "Role is required"
+					}
+				case "Email":
+					switch tag {
+					case "required":
+						errorsMap["email"] = "Email is required"
+					case "email":
+						errorsMap["email"] = "Invalid email format"
+					}
+				case "Password":
+					switch tag {
+					case "required":
+						errorsMap["password"] = "Password is required"
+					case "min":
+						errorsMap["password"] = "Password must be at least 6 characters long"
+					}
+				}
+			}
+			c.JSON(http.StatusBadRequest, gin.H{"errors": errorsMap})
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	file, err := fileHeader.Open()
+	err := h.service.CreateTeamMember(input, c.GetUint("tenant_id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to open file"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	defer file.Close()
+	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
+}
 
-	// Call your UploadFile util function
-	url, err := utils.UploadToBunny(file, fileHeader)
+func (h *UserHandler) GetTeamMembers(c *gin.Context) {
+	users := h.service.GetTeamMembers(c.GetUint("tenant_id"))
+	c.JSON(http.StatusOK, gin.H{"data": users})
+}
+
+func (h *UserHandler) GetTeamMemberByUID(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+	user := h.service.GetTeamMemberByUID(c.GetUint("tenant_id"), uint(userID))
+
+	c.JSON(http.StatusOK, gin.H{"data": user})
+}
+
+func (h *UserHandler) UpdateTeamMember(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
-	// Return the uploaded file URL
-	c.JSON(http.StatusOK, gin.H{
-		"url": url,
-	})
+	fmt.Println("USER", userID)
+
+	var input UpdateTeamMemberInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.service.UpdateTeamMember(c.GetUint("tenant_id"), uint(userID), input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
+}
+
+func (h *UserHandler) DeleteTeamMember(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	err = h.service.DeleteTeamMember(uint(userID), c.GetUint("tenant_id"))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }

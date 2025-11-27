@@ -46,18 +46,20 @@ func (s *instructorService) GetInstructorsLite(tenantID uint) ([]response.Instru
 
 	if err := s.db.
 		Where("tenant_id = ?", tenantID).
-		Select("id", "first_name", "last_name", "email", "image").
+		Select("id", "first_name", "last_name", "email", "image", "role", "designation").
 		Find(&instructors).Error; err != nil {
 		return nil, err
 	}
 
 	for _, instructor := range instructors {
 		res := response.InstructorResponse{
-			ID:        instructor.ID,
-			FirstName: instructor.FirstName,
-			LastName:  instructor.LastName,
-			Email:     instructor.Email,
-			Image:     instructor.Image,
+			ID:          instructor.ID,
+			FirstName:   instructor.FirstName,
+			LastName:    instructor.LastName,
+			Email:       instructor.Email,
+			Image:       instructor.Image,
+			Role:        instructor.Role,
+			Designation: instructor.Designation,
 		}
 		instructorResponses = append(instructorResponses, res)
 	}
@@ -122,29 +124,31 @@ func (s *instructorService) CreateInstructor(input CreateInstructorInput, tenant
 }
 
 func (s *instructorService) UpdateInstructor(input UpdateInstructorInput, tenantID uint, id uint) error {
-
 	var instructor models.Instructor
 	if err := utils.DB.Where("id = ? AND tenant_id = ?", id, tenantID).First(&instructor).Error; err != nil {
 		return errors.New("instructor not found")
 	}
 
-	if input.ImageURL != nil && *input.ImageURL != "" && instructor.Image != nil {
-		if delErr := utils.DeleteFromBunny(*instructor.Image); delErr != nil {
-			// You can log or ignore deletion errors as per your need
-			fmt.Println("Failed to delete old file:", delErr)
+	updates := map[string]interface{}{
+		"first_name":  input.FirstName,
+		"last_name":   utils.EmptyStringToNil(input.LastName),
+		"phone":       utils.EmptyStringToNil(input.Phone),
+		"role":        utils.EmptyStringToNil(input.Role),
+		"designation": utils.EmptyStringToNil(input.Designation), // can be nil → will set DB NULL
+	}
+
+	// Handle image update
+	if input.ImageURL != nil && *input.ImageURL != "" {
+		updates["image"] = input.ImageURL
+
+		if instructor.Image != nil {
+			if delErr := utils.DeleteFromBunny(*instructor.Image); delErr != nil {
+				fmt.Println("Failed to delete old file:", delErr)
+			}
 		}
 	}
 
-	updateUser := models.Instructor{
-		Image:       input.ImageURL,
-		FirstName:   input.FirstName,
-		LastName:    utils.EmptyStringToNil(input.LastName),
-		Phone:       utils.EmptyStringToNil(input.Phone),
-		Role:        utils.EmptyStringToNil(input.Role),
-		Designation: utils.EmptyStringToNil(input.Designation),
-	}
-
-	return utils.DB.Model(&instructor).Updates(updateUser).Error
+	return utils.DB.Model(&instructor).Updates(updates).Error
 }
 
 func (s *instructorService) DeleteInstructor(tenantID uint, id uint) error {

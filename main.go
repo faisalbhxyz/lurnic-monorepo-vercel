@@ -10,6 +10,7 @@ import (
 	"dashlearn/internal/modules/instructor"
 	"dashlearn/internal/modules/order"
 	paymentmethod "dashlearn/internal/modules/payment_method"
+	"dashlearn/internal/modules/role"
 	"dashlearn/internal/modules/student"
 	subcategory "dashlearn/internal/modules/sub_category"
 	"dashlearn/internal/modules/user"
@@ -25,11 +26,11 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-var Version = "v1.0.8"
+var Version = "v1.0.11"
 
 func main() {
 	// Set Gin to release mode
-	// gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	// Load environment variables
 	if gin.Mode() != gin.ReleaseMode {
@@ -81,6 +82,7 @@ func main() {
 
 	// Register routes
 	user.RegisterUserRoutes(apiRoutesGroup)
+	role.RegsiterRoleRoutes(apiRoutesGroup)
 	instructor.RegisterInstructorRoutes(apiRoutesGroup)
 	student.RegisterStudentRoutes(apiRoutesGroup)
 	category.RegisterCategoryRoutes(apiRoutesGroup)
