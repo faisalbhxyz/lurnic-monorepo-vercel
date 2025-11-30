@@ -3,10 +3,49 @@ package course
 import (
 	"dashlearn/internal/models"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
 )
+
+// func NormalizeDate(dateStr string) (string, error) {
+// 	// Case 1: ISO format like "2025-11-28T00:00:00Z"
+// 	if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
+// 		return t.Format("2006-01-02"), nil
+// 	}
+
+// 	// Case 2: simple date like "2025-11-28"
+// 	if t, err := time.Parse("2006-01-02", dateStr); err == nil {
+// 		return t.Format("2006-01-02"), nil
+// 	}
+
+// 	return "", errors.New("invalid date format")
+// }
+
+func NormalizeDate(input string) (string, error) {
+	// Hard clean: remove Z, timezone, milliseconds, \r, \n
+	input = strings.TrimSpace(input)
+	input = strings.ReplaceAll(input, "\r", "")
+	input = strings.ReplaceAll(input, "\n", "")
+	input = strings.ReplaceAll(input, "Z", "")
+
+	// If there's a T, keep only the date part
+	if idx := strings.Index(input, "T"); idx > 0 {
+		input = input[:idx]
+	}
+
+	// Final clean: ensure only YYYY-MM-DD remains
+	input = strings.TrimSpace(input)
+
+	// Validate
+	t, err := time.Parse("2006-01-02", input)
+	if err != nil {
+		return "", fmt.Errorf("invalid date: %s", input)
+	}
+
+	return t.Format("2006-01-02"), nil
+}
 
 // RunCronJobForCourses checks all scheduled courses and makes them public
 func CronJobForCoursesSchedule(db *gorm.DB) error {
@@ -67,8 +106,10 @@ func CronJobForCoursesSchedule(db *gorm.DB) error {
 			err := db.Model(&models.CourseDetails{}).
 				Where("id = ?", course.ID).
 				Updates(map[string]interface{}{
-					"visibility":   models.Public,
-					"is_scheduled": isScheduled,
+					"visibility":    models.Public,
+					"is_scheduled":  isScheduled,
+					"schedule_date": nil,
+					"schedule_time": nil,
 				}).Error
 
 			if err != nil {
@@ -139,8 +180,10 @@ func CronJobForCourseLessonsSchedule(db *gorm.DB) error {
 			err := db.Model(&models.CourseLesson{}).
 				Where("id = ?", lesson.ID).
 				Updates(map[string]any{
-					"is_published": true,
-					"is_scheduled": isScheduled,
+					"is_published":   true,
+					"is_scheduled":   isScheduled,
+					"scheduled_date": nil,
+					"scheduled_time": nil,
 				}).Error
 
 			if err != nil {

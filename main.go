@@ -26,9 +26,10 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-var Version = "v1.0.11"
+var Version = "v1.0.24"
 
 func main() {
+	fmt.Println("🚀 DashLearn Server Starting... Version:", Version)
 	// Set Gin to release mode
 	gin.SetMode(gin.ReleaseMode)
 

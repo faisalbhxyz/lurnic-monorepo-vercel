@@ -766,12 +766,11 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 		var scheduleTimeForDB *string
 
 		if input.IsScheduled == "true" {
-			dateParsed, err := time.Parse("2006-01-02", *input.ScheduleDate)
+			cleanDate, err := NormalizeDate(*input.ScheduleDate)
 			if err != nil {
 				return errors.New("invalid schedule date format")
 			}
-			dateStr := dateParsed.Format("2006-01-02")
-			scheduleDateForDB = &dateStr
+			scheduleDateForDB = &cleanDate
 
 			timeParsed, err := time.Parse("03:04 PM", *input.ScheduleTime)
 			if err != nil {
@@ -845,13 +844,11 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 
 				if lesson.IsScheduled && lesson.ScheduleDate != nil && lesson.ScheduleTime != nil {
 
-					// Parse date: "2025-11-27"
-					dateParsed, err := time.Parse("2006-01-02", *lesson.ScheduleDate)
+					cleanDate, err := NormalizeDate(*lesson.ScheduleDate)
 					if err != nil {
 						return errors.New("invalid schedule date format")
 					}
-					dateStr := dateParsed.Format("2006-01-02") // convert to string
-					lessonDateForDB = &dateStr                 // assign pointer to string
+					lessonDateForDB = &cleanDate
 
 					// Parse time: "08:00 AM"
 					timeParsed, err := time.Parse("03:04 PM", *lesson.ScheduleTime)
@@ -1018,11 +1015,25 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 		return err
 	}
 
-	if input.FeaturedImage != nil && *input.FeaturedImage != "" && existing.FeaturedImage != nil {
-		if delErr := utils.DeleteFromBunny(*existing.FeaturedImage); delErr != nil {
-			// You can log or ignore deletion errors as per your need
-			fmt.Println("Failed to delete old file:", delErr)
+	if input.FeaturedImage != nil {
+		if *input.FeaturedImage != "" { // new image uploaded
+			if existing.FeaturedImage != nil && *existing.FeaturedImage != "" {
+				if delErr := utils.DeleteFromBunny(*existing.FeaturedImage); delErr != nil {
+					fmt.Println("Failed to delete old file:", delErr)
+				}
+			}
+		} else {
+			// input.FeaturedImage is empty string -> user cleared the image
+			if existing.FeaturedImage != nil && *existing.FeaturedImage != "" {
+				if delErr := utils.DeleteFromBunny(*existing.FeaturedImage); delErr != nil {
+					fmt.Println("Failed to delete old file:", delErr)
+				}
+			}
+			input.FeaturedImage = nil // ensure DB gets null
 		}
+	} else {
+		// input.FeaturedImage is nil -> user didn't touch image, keep existing
+		input.FeaturedImage = existing.FeaturedImage
 	}
 
 	// Normalize & assign values
@@ -1036,62 +1047,55 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 
 	var scheduleDateForDB *string
 	var scheduleTimeForDB *string
-	visiblity := input.Visibility
+	visibility := input.Visibility
 	if input.IsScheduled == "true" {
-		dateParsed, err := time.Parse("2006-01-02", *input.ScheduleDate)
-		if err != nil {
-			return errors.New("invalid schedule date format")
+		if input.ScheduleDate != nil && *input.ScheduleDate != "" {
+			cleanDate, err := NormalizeDate(*input.ScheduleDate)
+			if err != nil {
+				return errors.New("invalid schedule date format")
+			}
+			scheduleDateForDB = &cleanDate
 		}
-		dateStr := dateParsed.Format("2006-01-02")
-		scheduleDateForDB = &dateStr
 
-		timeParsed, err := time.Parse("03:04 PM", *input.ScheduleTime)
-		if err != nil {
-			return errors.New("invalid schedule time format")
+		if input.ScheduleTime != nil && *input.ScheduleTime != "" {
+			timeParsed, err := time.Parse("03:04 PM", *input.ScheduleTime)
+			if err != nil {
+				return errors.New("invalid schedule time format")
+			}
+			timeStr := timeParsed.Format("15:04:05")
+			scheduleTimeForDB = &timeStr
 		}
-		timeStr := timeParsed.Format("15:04:05")
-		scheduleTimeForDB = &timeStr
-		visiblity = models.Protected
+
+		visibility = models.Protected
+	} else {
+		scheduleDateForDB = nil
+		scheduleTimeForDB = nil
 	}
 
-	// Update course
-	updateData := models.CourseDetails{
-		Title:       input.Title,
-		Slug:        utils.Slugify(input.Title) + "-" + strconv.Itoa(int(courseID)),
-		Summary:     input.Summary,
-		Description: utils.ZeroToNil(input.Description),
-		Visibility:  visiblity,
-		IsScheduled: func() *bool {
-			if input.IsScheduled == "true" {
-				return &[]bool{true}[0]
-			}
-			return &[]bool{false}[0]
-		}(),
-		ScheduleDate: scheduleDateForDB,
-		ScheduleTime: scheduleTimeForDB,
-		PricingModel: input.PricingModel,
-		RegularPrice: input.RegularPrice,
-		SalePrice:    input.SalePrice,
-		ShowCommingSoon: func() *bool {
-			if input.ShowCommingSoon != nil {
-				b := false
-				if *input.ShowCommingSoon == "true" {
-					b = true
-				}
-				return &b
-			}
-			b := false
-			return &b
-		}(),
-		Tags:          tagsJSON,
-		Overview:      overviewJSON,
-		FeaturedImage: input.FeaturedImage,
-		IntroVideo:    introVideo,
-		AuthorID:      userID,
-		TenantID:      tenantID,
+	// Build update map (use concrete values, not pointers, so GORM gets clean data)
+	updates := map[string]interface{}{
+		"title":             input.Title,
+		"slug":              utils.Slugify(input.Title) + "-" + strconv.Itoa(int(courseID)),
+		"summary":           input.Summary,
+		"description":       utils.ZeroToNil(input.Description),
+		"visibility":        visibility,
+		"is_scheduled":      input.IsScheduled == "true",
+		"pricing_model":     input.PricingModel,
+		"regular_price":     input.RegularPrice,
+		"sale_price":        input.SalePrice,
+		"show_comming_soon": input.ShowCommingSoon != nil && *input.ShowCommingSoon == "true",
+		"tags":              tagsJSON,
+		"overview":          overviewJSON,
+		"featured_image":    input.FeaturedImage,
+		"intro_video":       introVideo,
+		"author_id":         userID,
+		"tenant_id":         tenantID,
+		"schedule_date":     scheduleDateForDB,
+		"schedule_time":     scheduleTimeForDB,
 	}
 
-	if err := s.db.Where("id = ?", courseID).Updates(&updateData).Error; err != nil {
+	// Apply course-level updates
+	if err := s.db.Model(&models.CourseDetails{}).Where("id = ?", courseID).Updates(updates).Error; err != nil {
 		return err
 	}
 
@@ -1168,6 +1172,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 	}
 
 	for chIdx, chapter := range input.CourseChapters {
+		fmt.Println("🔄 Processing chapter:", chapter.Title)
 		// Handle chapter update or create
 		var chapterID uint
 		if chapter.ID != nil && *chapter.ID != 0 {
@@ -1203,97 +1208,96 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 
 		// Handle lessons inside chapter
 		for lIdx, lesson := range chapter.CourseLessons {
+
+			fmt.Println("🔄 Processing lesson:", lesson.Title)
+
 			sourceJSON := utils.JSONB[models.Source]{Data: lesson.Source}
 
 			var lessonDateForDB *string
 			var lessonTimeForDB *string
 
-			if lesson.IsScheduled && lesson.ScheduleDate != nil && lesson.ScheduleTime != nil {
-				// Parse date: "2025-11-27"
-				dateParsed, err := time.Parse("2006-01-02", *lesson.ScheduleDate)
-				if err != nil {
-					return errors.New("invalid schedule date format")
-				}
-				dateStr := dateParsed.Format("2006-01-02") // convert to string
-				lessonDateForDB = &dateStr                 // assign pointer to string
+			fmt.Println("✅ Processing lesson:", lesson.IsScheduled)
 
-				// Parse time: "08:00 AM"
-				timeParsed, err := time.Parse("03:04 PM", *lesson.ScheduleTime)
-				if err != nil {
-					return errors.New("invalid schedule time format")
+			// Normalize lesson date/time if scheduled
+			if lesson.IsScheduled {
+				cleanDate, err := NormalizeDate(*lesson.ScheduleDate)
+				if lesson.ScheduleDate != nil && *lesson.ScheduleDate != "" {
+					if err != nil {
+						return errors.New("invalid lesson schedule date format")
+					}
+					lessonDateForDB = &cleanDate
+					fmt.Println("🎉 lesson cleaned date:", cleanDate)
 				}
-				timeStr := timeParsed.Format("15:04:05") // convert to 24h format
-				lessonTimeForDB = &timeStr               // assign pointer to string
+				if lesson.ScheduleTime != nil && *lesson.ScheduleTime != "" {
+					tp, err := time.Parse("03:04 PM", *lesson.ScheduleTime)
+					if err != nil {
+						return errors.New("invalid lesson schedule time format")
+					}
+					ts := tp.Format("15:04:05")
+					lessonTimeForDB = &ts
+				}
+			} else {
+				lessonDateForDB = nil
+				lessonTimeForDB = nil
 			}
 
+			// If lesson exists -> update
 			if lesson.ID != nil && *lesson.ID != 0 {
 				lessonID := uint(*lesson.ID)
 				incomingLessonIDs[lessonID] = true
 
-				if existingLesson, found := lessonMap[lessonID]; found {
-					// Update
+				if existingLesson, ok := lessonMap[lessonID]; ok {
+					// Overwrite existingLesson fields explicitly with cleaned values
 					existingLesson.Title = lesson.Title
 					existingLesson.Description = utils.EmptyStringToNil(lesson.Description)
 					existingLesson.Position = lIdx
 					existingLesson.LessonType = lesson.LessonType
 					existingLesson.SourceType = lesson.SourceType
 					existingLesson.Source = sourceJSON
-					existingLesson.IsPublished = func() bool {
-						if lesson.IsScheduled && lesson.ScheduleDate != nil && lesson.ScheduleTime != nil {
-							return false
-						}
-						return lesson.IsPublished
-					}()
+					existingLesson.IsPublished = !lesson.IsScheduled
 					existingLesson.IsPublic = lesson.IsPublic
 					existingLesson.ChapterID = chapterID
 					existingLesson.IsScheduled = &lesson.IsScheduled
+					// CRITICAL: assign cleaned pointers (may be nil)
 					existingLesson.ScheduleDate = lessonDateForDB
 					existingLesson.ScheduleTime = lessonTimeForDB
 					existingLesson.ShowCommingSoon = lesson.ShowCommingSoon
 
+					// Save existing lesson
 					if err := s.db.Save(&existingLesson).Error; err != nil {
 						return err
 					}
 
-					if len(lesson.Resources) > 0 {
-						for _, res := range lesson.Resources {
-
-							if res.FileName == "" {
-								continue
-							}
-
-							newResource := models.LessonResource{
-								CourseID: courseID,
-								LessonID: existingLesson.ID,
-								MimeType: res.MimeType,
-								Title:    res.FileName,
-								FilePath: res.URL,
-								Position: res.Position,
-								FileSize: res.Size,
-							}
-
-							if err := s.db.Create(&newResource).Error; err != nil {
-								return err
-							}
+					// resources (unchanged)
+					for _, res := range lesson.Resources {
+						if res.FileName == "" {
+							continue
+						}
+						newResource := models.LessonResource{
+							CourseID: courseID,
+							LessonID: existingLesson.ID,
+							MimeType: res.MimeType,
+							Title:    res.FileName,
+							FilePath: res.URL,
+							Position: res.Position,
+							FileSize: res.Size,
+						}
+						if err := s.db.Create(&newResource).Error; err != nil {
+							return err
 						}
 					}
 				}
 			} else {
-				// Create new lesson
+				// Create new lesson - use cleaned fields (lessonDateForDB / lessonTimeForDB)
 				newLesson := models.CourseLesson{
-					ChapterID:   chapterID,
-					Title:       lesson.Title,
-					Description: utils.EmptyStringToNil(lesson.Description),
-					Position:    lIdx,
-					LessonType:  lesson.LessonType,
-					SourceType:  lesson.SourceType,
-					Source:      sourceJSON,
-					IsPublished: func() bool {
-						if lesson.IsScheduled && lesson.ScheduleDate != nil && lesson.ScheduleTime != nil {
-							return false
-						}
-						return lesson.IsPublished
-					}(),
+					ChapterID:       chapterID,
+					Title:           lesson.Title,
+					Description:     utils.EmptyStringToNil(lesson.Description),
+					Position:        lIdx,
+					LessonType:      lesson.LessonType,
+					SourceType:      lesson.SourceType,
+					Source:          sourceJSON,
+					IsPublished:     !lesson.IsScheduled,
 					IsPublic:        lesson.IsPublic,
 					IsScheduled:     &lesson.IsScheduled,
 					ScheduleDate:    lessonDateForDB,
@@ -1304,32 +1308,28 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					return err
 				}
 
-				if len(lesson.Resources) > 0 {
-					for _, res := range lesson.Resources {
-
-						if res.FileName == "" {
-							continue
-						}
-
-						newResource := models.LessonResource{
-							CourseID: courseID,
-							LessonID: newLesson.ID,
-							MimeType: res.MimeType,
-							Title:    res.FileName,
-							FilePath: res.URL,
-							Position: res.Position,
-							FileSize: res.Size,
-						}
-
-						if err := s.db.Create(&newResource).Error; err != nil {
-							return err
-						}
+				// resources
+				for _, res := range lesson.Resources {
+					if res.FileName == "" {
+						continue
+					}
+					newResource := models.LessonResource{
+						CourseID: courseID,
+						LessonID: newLesson.ID,
+						MimeType: res.MimeType,
+						Title:    res.FileName,
+						FilePath: res.URL,
+						Position: res.Position,
+						FileSize: res.Size,
+					}
+					if err := s.db.Create(&newResource).Error; err != nil {
+						return err
 					}
 				}
 
 				incomingLessonIDs[newLesson.ID] = true
 			}
-		}
+		} // end lessons loop
 
 		// Handle assignments inside chapter
 		for _, assignment := range chapter.Assignments {
