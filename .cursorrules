@@ -3,6 +3,9 @@
 - Always guard for a missing/expired token before calling protected endpoints; if missing, force re-auth (sign out / redirect) and skip the request.
 - Prefer centralized auth header injection (e.g. Axios request interceptor) and centralized 401 handling to prevent scattered, inconsistent request code.
 
+## NextAuth session objects can be partially defined
+- Do not assume `session.user` exists even if `session` exists. Always use `session?.user?.<field>` (or explicit guards) in Client Components to prevent `undefined` property crashes in production.
+
 ## Never read or print secrets (.env, credentials)
 - Do not read `.env`, `.env.*`, or any file that may contain secrets (keys/tokens/passwords) in chat output. Validate required env vars by checking presence/emptiness via code or targeted non-secret config files (like `.env.example`) instead.
 

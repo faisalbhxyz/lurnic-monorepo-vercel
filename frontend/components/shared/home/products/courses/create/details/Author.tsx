@@ -15,8 +15,8 @@ export default function Author() {
           height={30}
         />
         <div className="text-sm">
-          <p>{session?.user.name}</p>
-          <p className="text-gray-600 text-xs">{session?.user.email}</p>
+          <p>{session?.user?.name}</p>
+          <p className="text-gray-600 text-xs">{session?.user?.email}</p>
         </div>
       </div>
       {/* <IoIosArrowDown /> */}

@@ -43,8 +43,8 @@ export default function Profile() {
           />
         </div>
         <div className="text-sm truncate">
-          <p className="font-semibold">{session?.user.name}</p>
-          <p className="truncate text-gray-600">{session?.user.email}</p>
+          <p className="font-semibold">{session?.user?.name}</p>
+          <p className="truncate text-gray-600">{session?.user?.email}</p>
         </div>
       </>
     );
