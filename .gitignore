@@ -1,3 +1,48 @@
-*.zip
+.DS_Store
+
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Go
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Logs
+*.log
+
+# Uploads (local)
+/uploads/*
+!/uploads/.gitkeep
+
+# Node / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Common frontend build outputs
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/build/
+frontend/.turbo/
+frontend/.vercel/
+frontend/.cache/
+
+# e2e
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.playwright/
+*.zip
 /tmp

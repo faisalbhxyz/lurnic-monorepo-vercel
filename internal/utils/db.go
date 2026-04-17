@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"log"
 	"os"
 
 	"gorm.io/driver/mysql"
@@ -10,16 +9,25 @@ import (
 
 var DB *gorm.DB
 
-func ConnectDatabase() {
+func ConnectDatabase() error {
 	dsn := os.Getenv("GOOSE_DBSTRING")
 	if dsn == "" {
-		log.Fatal("GOOSE_DBSTRING not found in environment")
+		return &ConfigError{Message: "GOOSE_DBSTRING not found in environment"}
 	}
 
 	database, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		return err
 	}
 
 	DB = database
+	return nil
+}
+
+type ConfigError struct {
+	Message string
+}
+
+func (e *ConfigError) Error() string {
+	return e.Message
 }
