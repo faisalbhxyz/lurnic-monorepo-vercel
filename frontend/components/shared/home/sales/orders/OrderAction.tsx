@@ -3,7 +3,7 @@ import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { HiDotsVertical } from "react-icons/hi";
 import { BiEditAlt } from "react-icons/bi";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import axiosInstance from "@/lib/axiosInstance";
 import { toast } from "sonner";
 
@@ -17,23 +17,40 @@ export default function OrderAction({
   const router = useRouter();
   const { data: session } = useSession();
 
+  const ensureAuth = async (): Promise<string | null> => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) {
+      toast.error("Session expired. Please sign in again.");
+      await signOut({ callbackUrl: "/" });
+      return null;
+    }
+    return accessToken;
+  };
+
   const handleDelete = () => {
     const isConfirm = confirm("Are you sure you want to delete this banner?");
     if (!isConfirm) return;
-    axiosInstance
-      .delete(`/private/order/delete/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      })
-      .then((res) => {
-        toast.success(res.data.message);
-        router.refresh();
-      })
-      .catch((error) => {
-        toast.error(error.response.data.error || "Something went wrong.");
-      });
+    ensureAuth().then((accessToken) => {
+      if (!accessToken) return;
+      axiosInstance
+        .delete(`/private/order/delete/${id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+        .then((res) => {
+          toast.success(res.data.message);
+          router.refresh();
+        })
+        .catch((error) => {
+          const message =
+            error?.response?.data?.error ||
+            error?.response?.data?.message ||
+            "Something went wrong.";
+          toast.error(message);
+        });
+    });
   };
 
   const handleMarkAsPaid = (id: number) => {
@@ -41,26 +58,31 @@ export default function OrderAction({
       "Are you sure you want to mark this order as paid?"
     );
     if (!isConfirm) return;
-    axiosInstance
-      .put(
-        `/private/order/mark-as-paid/${id}`,
-        {},
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        }
-      )
-      .then((res) => {
-        toast.success(res.data.message);
-        router.refresh();
-      })
-      .catch((error) => {
-        console.log("[ERROR]", error);
-
-        toast.error(error.response.data.error || "Something went wrong.");
-      });
+    ensureAuth().then((accessToken) => {
+      if (!accessToken) return;
+      axiosInstance
+        .put(
+          `/private/order/mark-as-paid/${id}`,
+          {},
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        )
+        .then((res) => {
+          toast.success(res.data.message);
+          router.refresh();
+        })
+        .catch((error) => {
+          const message =
+            error?.response?.data?.error ||
+            error?.response?.data?.message ||
+            "Something went wrong.";
+          toast.error(message);
+        });
+    });
   };
 
   return (

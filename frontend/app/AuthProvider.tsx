@@ -1,11 +1,8 @@
 "use client";
 
-// import { doCretendentialLogout, getSubscriptionData } from "@/lib/actions";
-// import { useSubscriptionStore } from "@/zustand-store/useSubscription";
-import { Session } from "next-auth";
+import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
-import { usePathname } from "next/navigation";
-import React, { useEffect } from "react";
+import React from "react";
 
 export default function AuthProvider({
   children,

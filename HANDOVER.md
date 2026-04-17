@@ -10,7 +10,7 @@
 * **Database:** MySQL
 * **ORM & Migrations:** GORM and Goose
 * **Auth:** JWT (JSON Web Tokens)
-* **Storage/Cloud:** DigitalOcean Spaces / BunnyCDN (via AWS SDK for Go)
+* **Storage/Cloud:** DigitalOcean Spaces / Cloudflare R2 (S3-compatible via AWS SDK for Go)
 
 ## 2. Infrastructure & Access
 **Repository:** [abukhalidrifat/dashlearn-server](https://github.com/abukhalidrifat/dashlearn-server)
@@ -31,19 +31,14 @@ GOOSE_DRIVER=mysql
 GOOSE_DBSTRING=root:@tcp(127.0.0.1:3306)/dashlearn?charset=utf8mb4&parseTime=True&loc=Local
 JWT_SECRET=your_jwt_secret_here
 
-# Digital Ocean / Storage Configuration
-DO_BUCKET_NAME=your_bucket_name
-DO_REGION=your_region
-DO_SECRET=your_do_secret
-DO_ACCESS_KEY=your_do_access_key
-DO_UPLOAD_FOLDER=your_folder
-
-# BUNNY CDN Configuration
-BUNNY_STORAGE_ZONE=your_bunny_zone
-BUNNY_STORAGE_HOSTNAME=your_bunny_hostname
-BUNNY_API_KEY=your_bunny_api_key
-BUNNY_UPLOAD_FOLDER=your_upload_folder
-BUNNY_PULL_ZONE=your_bunny_pull_zone
+# Cloudflare R2 Configuration (S3-compatible)
+R2_PUBLIC_BASE_URL=https://cdn.lurnic.com
+R2_ACCOUNT_ID=your_cloudflare_account_id
+R2_ACCESS_KEY_ID=your_r2_access_key_id
+R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
+R2_BUCKET=lurnic
+R2_UPLOAD_PREFIX=
+R2_REGION=auto
 ```
 
 ## 4. Database Schema
@@ -74,7 +69,7 @@ BUNNY_PULL_ZONE=your_bunny_pull_zone
 * **Student Enrollment & Payment Flow:**
   When a student purchases a course, the `order` module processes the transaction (storing `transaction_id`), and upon success, an entry is created in the `enrollment` table, granting the student access to the course content.
 * **File Uploads & Storage:**
-  Files (like banners or course images) can use S3-compatible endpoints, integrating either DigitalOcean or BunnyCDN.
+  Files (like banners or course images) can use S3-compatible endpoints, integrating either DigitalOcean Spaces or Cloudflare R2.
 
 ## 6. Local Setup Guide
 1. **Clone the repository:**

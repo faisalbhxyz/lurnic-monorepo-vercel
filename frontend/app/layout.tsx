@@ -39,11 +39,7 @@ export default async function RootLayout({
     <html lang="en">
       <body className={`${geistSans.className} antialiased`}>
         <Toaster richColors />
-        {session ? (
-          <AuthProvider session={session}>{children}</AuthProvider>
-        ) : (
-          children
-        )}
+        <AuthProvider session={session}>{children}</AuthProvider>
       </body>
     </html>
   );

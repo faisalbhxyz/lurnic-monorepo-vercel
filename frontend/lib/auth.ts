@@ -45,13 +45,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.user = user.user;
       }
 
-      const decodedAccessToken = JSON.parse(
-        //@ts-ignore
-        Buffer.from(token.accessToken.split(".")[1], "base64").toString()
-      );
+      // If access token is missing or malformed, keep token and let the client handle re-auth.
+      // Returning `null` here can lead to "Bearer undefined" headers and confusing UX.
+      //@ts-ignore
+      const accessToken: unknown = token.accessToken;
+      if (typeof accessToken === "string") {
+        try {
+          const decodedAccessToken = JSON.parse(
+            Buffer.from(accessToken.split(".")[1], "base64").toString()
+          ) as { exp?: number };
 
-      if (decodedAccessToken.exp < Math.round(Date.now() / 1000)) {
-        return null;
+          if (
+            typeof decodedAccessToken?.exp === "number" &&
+            decodedAccessToken.exp < Math.round(Date.now() / 1000)
+          ) {
+            //@ts-ignore
+            token.error = "AccessTokenExpired";
+          }
+        } catch {
+          //@ts-ignore
+          token.error = "AccessTokenInvalid";
+        }
+      } else {
+        //@ts-ignore
+        token.error = "AccessTokenMissing";
       }
 
       return token;
@@ -62,6 +79,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.accessToken = token.accessToken;
         //@ts-ignore
         session.user = token.user;
+        //@ts-ignore
+        session.error = token.error;
       }
       return session;
     },

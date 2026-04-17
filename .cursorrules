@@ -1,0 +1,8 @@
+## Authenticated API calls must never send empty Bearer tokens
+- Never construct `Authorization: Bearer ${maybeToken}` with optional chaining (e.g. `session?.accessToken`) because it can produce `Bearer undefined` and trigger confusing "Invalid/expired token" errors.
+- Always guard for a missing/expired token before calling protected endpoints; if missing, force re-auth (sign out / redirect) and skip the request.
+- Prefer centralized auth header injection (e.g. Axios request interceptor) and centralized 401 handling to prevent scattered, inconsistent request code.
+
+## Never read or print secrets (.env, credentials)
+- Do not read `.env`, `.env.*`, or any file that may contain secrets (keys/tokens/passwords) in chat output. Validate required env vars by checking presence/emptiness via code or targeted non-secret config files (like `.env.example`) instead.
+
