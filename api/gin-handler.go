@@ -1,11 +1,11 @@
-// Package main implements the Vercel Go serverless entrypoint for the Gin API.
-package main
+// Package handler implements the Vercel Go serverless entrypoint for the Gin API.
+package handler
 
 import (
 	"net/http"
 	"strings"
 
-	"dashlearn/internal/server"
+	"dashlearn/pkg/server"
 )
 
 const handlerVersion = "v1.0.24"

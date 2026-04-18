@@ -1,0 +1,13 @@
+{
+  "name": "lurnic-monorepo",
+  "private": true,
+  "description": "Root package.json so Vercel can detect Next.js; app lives in frontend/",
+  "dependencies": {
+    "next": "^15.5.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "scripts": {
+    "build": "npm run build --prefix frontend"
+  }
+}

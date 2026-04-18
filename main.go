@@ -1,7 +1,7 @@
 package main
 
 import (
-	"dashlearn/internal/server"
+	"dashlearn/pkg/server"
 	"fmt"
 	"log"
 	"os"
