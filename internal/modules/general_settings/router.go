@@ -13,7 +13,7 @@ func RegisterGeneralSettingsRoutes(rg *gin.RouterGroup) {
 
 	authGroup := rg.Group("/private/general-settings", middleware.AuthMiddleware())
 	{
-		authGroup.GET("/", handler.Get)
+		authGroup.GET("", handler.Get)
 		authGroup.PUT("/update", handler.UpdateOrCreate)
 	}
 }

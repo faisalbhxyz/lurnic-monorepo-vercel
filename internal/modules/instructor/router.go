@@ -13,7 +13,7 @@ func RegisterInstructorRoutes(rg *gin.RouterGroup) {
 
 	authGroup := rg.Group("/private/instructor", middleware.AuthMiddleware())
 	{
-		authGroup.GET("/", handler.GetInstructors)
+		authGroup.GET("", handler.GetInstructors)
 		authGroup.GET("/lite", handler.GetInstructorsLite)
 		authGroup.GET("/details/:id", handler.GetInstructorDetails)
 		authGroup.POST("/register", handler.CreateInstructor)

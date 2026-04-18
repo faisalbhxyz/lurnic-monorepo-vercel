@@ -13,7 +13,7 @@ func RegisterEnrollmentRoutes(rg *gin.RouterGroup) {
 
 	authGroup := rg.Group("/private/enrollment", middleware.AuthMiddleware())
 	{
-		authGroup.GET("/", handler.GetEnrollments)
+		authGroup.GET("", handler.GetEnrollments)
 		authGroup.POST("/create", handler.CreateEnrollment)
 		authGroup.DELETE("/delete/:id", handler.Delete)
 	}

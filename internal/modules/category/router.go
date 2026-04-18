@@ -13,7 +13,7 @@ func RegisterCategoryRoutes(rg *gin.RouterGroup) {
 
 	authgroup := rg.Group("/private/category", middleware.AuthMiddleware())
 	{
-		authgroup.GET("/", handler.GetAll)
+		authgroup.GET("", handler.GetAll)
 		authgroup.GET("/:id", handler.GetByID)
 		authgroup.POST("/create", handler.Create)
 		authgroup.PUT("/update/:id", handler.Update)
@@ -22,7 +22,7 @@ func RegisterCategoryRoutes(rg *gin.RouterGroup) {
 
 	publicGroup := rg.Group("/category", middleware.GetTenantID())
 	{
-		publicGroup.GET("/", handler.GetAll)
+		publicGroup.GET("", handler.GetAll)
 		// publicGroup.GET("/:id", GetCategoryByIDPublic)
 	}
 }

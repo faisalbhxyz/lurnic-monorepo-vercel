@@ -13,7 +13,7 @@ func RegisterCourseRoutes(rg *gin.RouterGroup) {
 
 	authGroup := rg.Group("/private/order", middleware.AuthMiddleware())
 	{
-		authGroup.GET("/", handler.GetAll)
+		authGroup.GET("", handler.GetAll)
 		authGroup.POST("/create", handler.Create)
 		authGroup.PUT("/mark-as-paid/:id", handler.MarkAsPaid)
 		authGroup.DELETE("/delete/:id", handler.Delete)

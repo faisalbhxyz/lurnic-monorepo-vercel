@@ -10,6 +10,7 @@
 - Deploy the monorepo **root** (not `frontend/` alone) when using `/api/*.go` + root `vercel.json` rewrites (`/v1/*` → `/api/gin-handler?path=*`).
 - Next.js `middleware.ts` must **not** run on `/v1/*` (exclude `v1` from the matcher); otherwise unauthenticated users get redirected to `/login` before the rewrite reaches the Go API.
 - Gin’s default trailing-slash redirects can loop with Vercel (`/v1/foo` ↔ `/v1/foo/`); set `router.RedirectTrailingSlash = false` on the Gin engine used for serverless.
+- For route groups, prefer `GET ""` (not `GET "/"`) for collection endpoints so `/v1/resource` matches after Vercel normalizes away trailing slashes.
 - Do not add a real `main()` in `api/` (Vercel invokes `Handler`); `go build ./api` may fail—CI should `go build .` for the binary and rely on Vercel to compile `api/`.
 - `VERCEL` is set by Vercel: cron is disabled in `pkg/server` for cold-start functions; use external cron or Vercel Cron hitting an HTTP route if scheduling is required. Use `pkg/server` (not `internal/server`) so Vercel’s `api/` package can import the router without Go `internal` visibility errors.
 

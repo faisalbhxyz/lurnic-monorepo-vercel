@@ -9,7 +9,7 @@ import (
 func RegisterStudentRoutes(rg *gin.RouterGroup) {
 	authGroup := rg.Group("/private/student", middleware.AuthMiddleware())
 	{
-		authGroup.GET("/", GetStudents)
+		authGroup.GET("", GetStudents)
 		authGroup.GET("/lite", GetStudentLite)
 		authGroup.GET("/details/:id", GetStudentDetailsByID)
 		authGroup.POST("/register", CreateStudent)
