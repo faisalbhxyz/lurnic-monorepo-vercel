@@ -47,3 +47,7 @@ e2e/.playwright/
 *.zip
 /tmp
 .vercel
+
+# Local database dumps (large; may contain PII)
+lurnic-Database backup.sql
+**/lurnic-Database*.sql
