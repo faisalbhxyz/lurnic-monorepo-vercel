@@ -1,12 +1,12 @@
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import React from "react";
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { Menu, MenuButton, MenuItems } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import { HiOutlineCalendar } from "react-icons/hi";
-import { LuClock } from "react-icons/lu";
 import Checkbox from "@/components/ui/Checkbox";
-import { Controller, useFormContext, UseFormReturn } from "react-hook-form";
+import { Controller, UseFormReturn } from "react-hook-form";
 import { TCourseLessonSchema } from "@/schema/course.schema";
+import ScheduleTimeField from "../ScheduleTimeField";
 
 export default function LessonSchedule({
   formMethods,
@@ -15,7 +15,6 @@ export default function LessonSchedule({
 }) {
   const isSchedule = formMethods.watch("is_scheduled");
   const date = formMethods.watch("schedule_date");
-  const time = formMethods.watch("schedule_time");
 
   const toLocalDateString = (d: Date) => {
     const year = d.getFullYear();
@@ -32,18 +31,6 @@ export default function LessonSchedule({
         day: "numeric",
       })
     : "Select date";
-
-  // Format times
-  const formatTime = (hour: number): string => {
-    const period = hour < 12 ? "AM" : "PM";
-    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-    return `${hour12.toString().padStart(2, "0")}:00 ${period}`;
-  };
-
-  const times = Array.from({ length: 24 }, (_, i) => formatTime(i));
-
-  // Convert Date to ISO (fixes Go parsing)
-  const toISO = (d: Date) => d.toISOString();
 
   return (
     <div className="border border-gray-300 rounded-md bg-white">
@@ -92,32 +79,10 @@ export default function LessonSchedule({
 
             <div className="w-px h-9 bg-gray-300" />
 
-            {/* TIME PICKER */}
-            <Menu>
-              <MenuButton className="w-full flex items-center justify-center gap-2 text-sm py-2">
-                <LuClock size={18} className="text-gray-500" />
-                {typeof time === "string" ? time : "Select Time"}
-              </MenuButton>
-
-              <MenuItems
-                transition
-                anchor="bottom end"
-                className="origin-top-right border bg-white h-80 rounded-xl p-1 transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0"
-              >
-                {times.map((t) => (
-                  <MenuItem key={t}>
-                    <button
-                      onClick={() =>
-                        formMethods.setValue("schedule_time", t as any)
-                      }
-                      className="group flex w-full items-center gap-2 text-sm rounded-lg py-1.5 px-3 data-[focus]:bg-gray-100"
-                    >
-                      {t}
-                    </button>
-                  </MenuItem>
-                ))}
-              </MenuItems>
-            </Menu>
+            <ScheduleTimeField
+              control={formMethods.control}
+              name="schedule_time"
+            />
           </div>
 
           {/* SHOW COMING SOON */}

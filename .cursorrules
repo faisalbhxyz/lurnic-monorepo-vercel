@@ -23,6 +23,9 @@
 ## TiDB/MySQL DDL compatibility
 - Avoid combining `ADD COLUMN` + `ADD CONSTRAINT` in a single `ALTER TABLE` statement. Split into separate `ALTER TABLE` statements to prevent TiDB DDL ordering/compat errors during migrations.
 
+## Course / lesson `schedule_time` (Go + Next.js)
+- The API parses `schedule_time` with `time.Parse("03:04 PM", …)` and stores `TIME` as `15:04:05`. The admin UI must send strings like `10:05 AM` / `10:05 PM` (minute-capable), not only whole hours. Use `hhmmToScheduleTime` / `scheduleTimeToHHMM` in `frontend/lib/helpers.ts` with `<input type="time" step={60} />` so native picking and typing stay aligned with the backend.
+
 ## TiDB: importing phpMyAdmin SQL dumps
 - `GOOSE_DBSTRING` must use the Go driver form `user:pass@tcp(host:port)/db?tls=true&parseTime=true&loc=Local&charset=utf8mb4`, not `mysql://` URLs (GORM/`database/sql` will not parse those).
 - Homebrew `mysql` 9+ may fail to connect to TiDB with `mysql_native_password`; use `go run ./cmd/importdump/` (or another client that supports that auth) for large dumps.

@@ -22,7 +22,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import UploadResources from "./UploadResources";
 import Schedule from "../details/Schedule";
 import LessonSchedule from "../lesson/LessonSchedule";
-import { dbTimeToPickerFormat } from "@/lib/helpers";
 
 const mediaOptions = [
   { id: 1, name: "Video", value: "video" },
