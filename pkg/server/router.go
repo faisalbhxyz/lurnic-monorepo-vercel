@@ -46,6 +46,9 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	flush, sentryEnabled := observability.InitSentry(observability.EnvSentryConfig(version))
 
 	router := gin.Default()
+	// Avoid /path <-> /path/ redirect loops when behind Vercel rewrites (serverless).
+	router.RedirectTrailingSlash = false
+
 	if sentryEnabled {
 		router.Use(sentrygin.New(sentrygin.Options{
 			Repanic:         true,
