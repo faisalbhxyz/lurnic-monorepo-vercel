@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -842,21 +843,23 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 				var lessonDateForDB *string
 				var lessonTimeForDB *string
 
-				if lesson.IsScheduled && lesson.ScheduleDate != nil && lesson.ScheduleTime != nil {
-
-					cleanDate, err := NormalizeDate(*lesson.ScheduleDate)
+				if lesson.IsScheduled {
+					if lesson.ScheduleDate == nil || strings.TrimSpace(*lesson.ScheduleDate) == "" ||
+						lesson.ScheduleTime == nil || strings.TrimSpace(*lesson.ScheduleTime) == "" {
+						return errors.New("scheduled lesson requires schedule_date and schedule_time")
+					}
+					cleanDate, err := NormalizeDate(strings.TrimSpace(*lesson.ScheduleDate))
 					if err != nil {
 						return errors.New("invalid schedule date format")
 					}
 					lessonDateForDB = &cleanDate
 
-					// Parse time: "08:00 AM"
-					timeParsed, err := time.Parse("03:04 PM", *lesson.ScheduleTime)
+					timeParsed, err := time.Parse("03:04 PM", strings.TrimSpace(*lesson.ScheduleTime))
 					if err != nil {
 						return errors.New("invalid schedule time format")
 					}
-					timeStr := timeParsed.Format("15:04:05") // convert to 24h format
-					lessonTimeForDB = &timeStr               // assign pointer to string
+					timeStr := timeParsed.Format("15:04:05")
+					lessonTimeForDB = &timeStr
 				}
 
 				newCourseLesson := models.CourseLesson{
@@ -868,7 +871,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 					SourceType:  lesson.SourceType,
 					Source:      sourceJSON,
 					IsPublished: func() bool {
-						if lesson.IsScheduled && lesson.ScheduleDate != nil && lesson.ScheduleTime != nil {
+						if lesson.IsScheduled {
 							return false
 						}
 						return lesson.IsPublished
@@ -1218,24 +1221,24 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 
 			fmt.Println("✅ Processing lesson:", lesson.IsScheduled)
 
-			// Normalize lesson date/time if scheduled
+			// Normalize lesson date/time if scheduled (must not deref nil pointers)
 			if lesson.IsScheduled {
-				cleanDate, err := NormalizeDate(*lesson.ScheduleDate)
-				if lesson.ScheduleDate != nil && *lesson.ScheduleDate != "" {
-					if err != nil {
-						return errors.New("invalid lesson schedule date format")
-					}
-					lessonDateForDB = &cleanDate
-					fmt.Println("🎉 lesson cleaned date:", cleanDate)
+				if lesson.ScheduleDate == nil || strings.TrimSpace(*lesson.ScheduleDate) == "" ||
+					lesson.ScheduleTime == nil || strings.TrimSpace(*lesson.ScheduleTime) == "" {
+					return errors.New("scheduled lesson requires schedule_date and schedule_time")
 				}
-				if lesson.ScheduleTime != nil && *lesson.ScheduleTime != "" {
-					tp, err := time.Parse("03:04 PM", *lesson.ScheduleTime)
-					if err != nil {
-						return errors.New("invalid lesson schedule time format")
-					}
-					ts := tp.Format("15:04:05")
-					lessonTimeForDB = &ts
+				cleanDate, err := NormalizeDate(strings.TrimSpace(*lesson.ScheduleDate))
+				if err != nil {
+					return errors.New("invalid lesson schedule date format")
 				}
+				lessonDateForDB = &cleanDate
+				fmt.Println("🎉 lesson cleaned date:", cleanDate)
+				tp, err := time.Parse("03:04 PM", strings.TrimSpace(*lesson.ScheduleTime))
+				if err != nil {
+					return errors.New("invalid lesson schedule time format")
+				}
+				ts := tp.Format("15:04:05")
+				lessonTimeForDB = &ts
 			} else {
 				lessonDateForDB = nil
 				lessonTimeForDB = nil
@@ -1254,7 +1257,11 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					existingLesson.LessonType = lesson.LessonType
 					existingLesson.SourceType = lesson.SourceType
 					existingLesson.Source = sourceJSON
-					existingLesson.IsPublished = !lesson.IsScheduled
+					if lesson.IsScheduled {
+						existingLesson.IsPublished = false
+					} else {
+						existingLesson.IsPublished = lesson.IsPublished
+					}
 					existingLesson.IsPublic = lesson.IsPublic
 					existingLesson.ChapterID = chapterID
 					existingLesson.IsScheduled = &lesson.IsScheduled

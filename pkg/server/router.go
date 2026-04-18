@@ -99,7 +99,7 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 		c.Start()
 		log.Println("Cron started for scheduled courses and lessons")
 	} else {
-		log.Println("VERCEL=1: cron disabled (use external scheduler or Vercel Cron + HTTP)")
+		log.Println("VERCEL=1: in-process cron disabled; use Vercel Cron → GET /v1/internal/cron/publish-scheduled with CRON_SECRET")
 	}
 
 	CreateSuperadminIfNotExists()
@@ -111,6 +111,30 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	category.RegisterCategoryRoutes(apiRoutesGroup)
 	subcategory.RegisterSubCategoryRoutes(apiRoutesGroup)
 	course.RegisterCourseRoutes(apiRoutesGroup)
+
+	// Vercel/serverless: in-process cron is disabled when VERCEL=1; schedule this path in vercel.json
+	// and set CRON_SECRET (Vercel sends Authorization: Bearer <CRON_SECRET>).
+	apiRoutesGroup.GET("/internal/cron/publish-scheduled", func(c *gin.Context) {
+		secret := os.Getenv("CRON_SECRET")
+		if secret == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "CRON_SECRET is not configured"})
+			return
+		}
+		if c.GetHeader("Authorization") != "Bearer "+secret {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		if err := course.CronJobForCoursesSchedule(utils.DB); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if err := course.CronJobForCourseLessonsSchedule(utils.DB); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
 	enrollment.RegisterEnrollmentRoutes(apiRoutesGroup)
 	banner.RegisterBannerRoutes(apiRoutesGroup)
 	order.RegisterCourseRoutes(apiRoutesGroup)

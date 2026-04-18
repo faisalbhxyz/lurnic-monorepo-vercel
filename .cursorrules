@@ -26,6 +26,10 @@
 ## Course / lesson `schedule_time` (Go + Next.js)
 - The API parses `schedule_time` with `time.Parse("03:04 PM", …)` and stores `TIME` as `15:04:05`. The admin UI must send strings like `10:05 AM` / `10:05 PM` (minute-capable), not only whole hours. Use `hhmmToScheduleTime` / `scheduleTimeToHHMM` in `frontend/lib/helpers.ts` with `<input type="time" step={60} />` so native picking and typing stay aligned with the backend.
 
+## Course lesson scheduled publish (`course_lessons`)
+- DB columns are `schedule_date` and `schedule_time` (not `scheduled_*`). Any GORM `Updates` that clear schedule after publish must use those names or SQL will fail and lessons will never auto-publish.
+- When `is_scheduled` is true, `Update`/`Create` must require non-empty `schedule_date` and `schedule_time` before dereferencing pointers; never call `NormalizeDate(*ScheduleDate)` when `ScheduleDate` may be nil.
+
 ## TiDB: importing phpMyAdmin SQL dumps
 - `GOOSE_DBSTRING` must use the Go driver form `user:pass@tcp(host:port)/db?tls=true&parseTime=true&loc=Local&charset=utf8mb4`, not `mysql://` URLs (GORM/`database/sql` will not parse those).
 - Homebrew `mysql` 9+ may fail to connect to TiDB with `mysql_native_password`; use `go run ./cmd/importdump/` (or another client that supports that auth) for large dumps.

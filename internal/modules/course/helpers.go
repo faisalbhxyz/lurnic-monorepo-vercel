@@ -136,7 +136,7 @@ func CronJobForCourseLessonsSchedule(db *gorm.DB) error {
 	var lessons []models.CourseLesson
 	if err := db.Model(&models.CourseLesson{}).
 		Select("id", "is_published", "is_scheduled", "schedule_date", "schedule_time").
-		Where("is_scheduled = ? && is_published = ?", true, false).
+		Where("is_scheduled = ? AND is_published = ?", true, false).
 		Find(&lessons).Error; err != nil {
 		return err
 	}
@@ -182,8 +182,8 @@ func CronJobForCourseLessonsSchedule(db *gorm.DB) error {
 				Updates(map[string]any{
 					"is_published":   true,
 					"is_scheduled":   isScheduled,
-					"scheduled_date": nil,
-					"scheduled_time": nil,
+					"schedule_date":  nil,
+					"schedule_time":  nil,
 				}).Error
 
 			if err != nil {
