@@ -35,6 +35,9 @@
 - Homebrew `mysql` 9+ may fail to connect to TiDB with `mysql_native_password`; use `go run ./cmd/importdump/` (or another client that supports that auth) for large dumps.
 - phpMyAdmin dumps often include `ALTER TABLE ... MODIFY ... AUTO_INCREMENT=...` blocks; TiDB can return Error 8200 on those. Strip that section before import (see `cmd/importdump`) or import will fail mid-file.
 
+## GORM slow SQL logs (`internal/utils/db.go`)
+- Default `SlowThreshold` is 1000ms (not GORM’s 200ms) so cross-region TiDB RTT does not spam logs; tune with `GORM_SLOW_SQL_MS`.
+
 ## Gin production defaults (`pkg/server/router.go`)
 - **GIN_MODE**: Do not default to `debug` when unset; use `release` unless `GIN_MODE=debug` or `test`. Local `.env.example` keeps `GIN_MODE=debug`.
 - **Trusted proxies**: Gin 1.10 ships with `0.0.0.0/0` trusted (unsafe warning on `Run`). Call `SetTrustedProxies` with private ranges + loopback, or `GIN_TRUSTED_PROXIES=none` for direct exposure.
