@@ -35,3 +35,9 @@
 - Homebrew `mysql` 9+ may fail to connect to TiDB with `mysql_native_password`; use `go run ./cmd/importdump/` (or another client that supports that auth) for large dumps.
 - phpMyAdmin dumps often include `ALTER TABLE ... MODIFY ... AUTO_INCREMENT=...` blocks; TiDB can return Error 8200 on those. Strip that section before import (see `cmd/importdump`) or import will fail mid-file.
 
+## Go `time.LoadLocation` in containers / minimal images
+- If cron or scheduling uses `time.LoadLocation("Asia/Dhaka")` (or any IANA name), add a blank import `_ "time/tzdata"` in `main.go` so the binary embeds zoneinfo when `/usr/share/zoneinfo` is missing (common on scratch, distroless, or misconfigured runtimes). The Dockerfile may already install `tzdata`; the embed is the portable backstop.
+
+## Coolify + GitHub App
+- For **private** GitHub repos, the Coolify GitHub App **installation** must explicitly include that repository (GitHub → Settings → Integrations → Applications → Coolify → Configure → Repository access). Coolify API errors like `Repository not found or not accessible by the GitHub App` usually mean the app cannot see the repo, not that the clone URL is wrong.
+

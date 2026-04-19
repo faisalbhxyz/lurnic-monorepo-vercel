@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"time"
+	_ "time/tzdata" // embed IANA tz DB so time.LoadLocation works without OS zoneinfo (Alpine/scratch/minimal hosts)
 
 	"github.com/joho/godotenv"
 	"github.com/getsentry/sentry-go"
