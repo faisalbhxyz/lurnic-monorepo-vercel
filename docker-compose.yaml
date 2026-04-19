@@ -10,7 +10,7 @@
 # 5. Set shared/build env (see .env.example): NEXT_PUBLIC_API_URL, AUTH_SECRET, AUTH_URL, plus API DB/JWT vars.
 # 6. Deploy / rebuild so `web` rebuilds with NEXT_PUBLIC_* baked in.
 #
-# Local: copy .env.example → .env, then: docker compose -f docker-compose.yaml up --build
+# Local: copy .env.example → .env, then from repo root: docker compose -f docker-compose.yaml up --build
 
 name: lurnic
 
@@ -42,9 +42,11 @@ services:
       start_period: 30s
 
   web:
+    # Repo root context so Coolify (and `docker compose` from root) always resolves `frontend/`
+    # even when the compose file lives outside a full clone path.
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to your public API base e.g. https://api.example.com/v1}
         NEXT_PUBLIC_APP_KEY: ${NEXT_PUBLIC_APP_KEY:-}

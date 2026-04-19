@@ -1,3 +1,6 @@
+# Build context must be the monorepo ROOT (where `frontend/` lives). See docker-compose.yaml `web.build`.
+# Do not use `docker build` with context `frontend/` unless you adjust COPY paths below.
+#
 # Stage 1: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -8,9 +11,9 @@ ARG NEXT_PUBLIC_APP_KEY
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_APP_KEY=${NEXT_PUBLIC_APP_KEY}
 
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm install --force
-COPY . .
+COPY frontend/ .
 
 # Build standalone
 RUN npm run build
