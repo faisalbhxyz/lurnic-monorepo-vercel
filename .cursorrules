@@ -61,6 +61,7 @@
 ## Coolify: API + Next.js dashboard (`docker-compose.yaml`)
 - Root **`Dockerfile`** is API-only. For the admin UI + API together, use a **Docker Compose** resource (not Nixpacks “Application”) and deploy **`docker-compose.yaml`**: services **`api`** (Go, port 5000) and **`web`** (Next standalone, port 3000). Assign **two FQDNs** in Coolify (API + dashboard) or one host with path routing—browsers must reach the API at the URL baked into **`NEXT_PUBLIC_API_URL`** (must end with **`/v1`**).
 - If Coolify builds with **Nixpacks / “go” only**, you get **API without the dashboard**; switch the resource type or create a new **Docker Compose** deployment pointing at this file.
+- If **`docker compose pull` fails** with *pull access denied for `api`/`web`*, Compose is trying to pull non-existent Hub images named after services—ensure deploy **builds** from the repo (`docker compose build` / Coolify “build” step). `docker-compose.yaml` sets **`pull_policy: never`** on built services to avoid bogus pulls.
 - **`NEXT_PUBLIC_API_URL`** is build-time for `web` and **must include `/v1`** (e.g. `https://api.example.com/v1`). Set it as a **build argument / env** for the `web` service before build. **`AUTH_URL`** must be the **public dashboard URL**; set **`AUTH_SECRET`** for NextAuth. **`trustHost: true`** is set in `frontend/lib/auth.ts` for reverse-proxy deployments.
 - The **`api`** service uses optional `env_file: .env` (`required: false`) so Coolify can rely on injected env without a repo `.env` file; locally, copy **`.env.example`** → **`.env`**.
 

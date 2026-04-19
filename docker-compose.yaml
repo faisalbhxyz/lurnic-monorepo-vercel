@@ -19,6 +19,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Coolify/other hosts often run `docker compose pull` first; without this, Compose may try to
+    # pull non-existent images named like the service (api/web) from Docker Hub and fail.
+    pull_policy: never
     restart: unless-stopped
     env_file:
       - path: .env
@@ -45,6 +48,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to your public API base e.g. https://api.example.com/v1}
         NEXT_PUBLIC_APP_KEY: ${NEXT_PUBLIC_APP_KEY:-}
+    pull_policy: never
     restart: unless-stopped
     environment:
       NODE_ENV: production
