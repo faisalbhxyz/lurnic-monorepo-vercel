@@ -81,6 +81,20 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 		AllowCredentials: false,
 	}))
 
+	// Public root + health: API routes live under /v1 only; without this, GET / returns Gin's 404
+	// (confusing when opening the Coolify URL or bare domain in a browser).
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"ok":      true,
+			"service": "lurnic-api",
+			"version": version,
+			"api":     "/v1",
+		})
+	})
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	apiRoutesGroup := router.Group("/v1")
 
 	if debugRoutesEnabled {
