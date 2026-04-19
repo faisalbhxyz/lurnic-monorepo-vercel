@@ -19,6 +19,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -32,8 +33,14 @@ import (
 // and by Vercel serverless (no cron when VERCEL is set).
 // flush should be called on shutdown in long-running processes (main); serverless can ignore it.
 func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
-	if os.Getenv("GIN_MODE") == "" {
+	// Default release when unset so production (Docker/Coolify) is not verbose; use GIN_MODE=debug locally.
+	switch os.Getenv("GIN_MODE") {
+	case "debug":
 		gin.SetMode(gin.DebugMode)
+	case "test":
+		gin.SetMode(gin.TestMode)
+	default:
+		gin.SetMode(gin.ReleaseMode)
 	}
 
 	if err := godotenv.Load(); err != nil {
@@ -48,6 +55,10 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	router := gin.Default()
 	// Avoid /path <-> /path/ redirect loops when behind Vercel rewrites (serverless).
 	router.RedirectTrailingSlash = false
+
+	if err := router.SetTrustedProxies(trustedProxyCIDRs()); err != nil {
+		log.Printf("SetTrustedProxies: %v", err)
+	}
 
 	if sentryEnabled {
 		router.Use(sentrygin.New(sentrygin.Options{
@@ -149,5 +160,33 @@ func CreateSuperadminIfNotExists() {
 	err := utils.DB.FirstOrCreate(&r, models.Role{Name: "superadmin", TenantID: nil}).Error
 	if err != nil {
 		panic("Failed to create or find superadmin role: " + err.Error())
+	}
+}
+
+// trustedProxyCIDRs configures Gin for X-Forwarded-* behind Docker/reverse proxies.
+// Gin 1.10 defaults to 0.0.0.0/0 (unsafe); we replace with RFC1918 + loopback unless overridden.
+// GIN_TRUSTED_PROXIES=none|off → SetTrustedProxies(nil) (do not trust forwarded client IP headers).
+func trustedProxyCIDRs() []string {
+	raw := strings.TrimSpace(os.Getenv("GIN_TRUSTED_PROXIES"))
+	if raw == "none" || raw == "off" {
+		return nil // Gin: nil ⇒ no trusted CIDRs; ClientIP() uses RemoteAddr only
+	}
+	if raw != "" {
+		parts := strings.Split(raw, ",")
+		out := make([]string, 0, len(parts))
+		for _, p := range parts {
+			if t := strings.TrimSpace(p); t != "" {
+				out = append(out, t)
+			}
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	return []string{
+		"127.0.0.1", "::1",
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
 	}
 }
