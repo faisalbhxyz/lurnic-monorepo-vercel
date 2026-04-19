@@ -16,6 +16,7 @@ import (
 	"dashlearn/internal/modules/user"
 	"dashlearn/internal/observability"
 	"dashlearn/internal/utils"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -43,8 +44,9 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	if err := godotenv.Load(); err != nil {
-		log.Println("Info: No .env file found; relying on process environment")
+	// Optional local .env; production (Coolify/Docker) typically has no file—only injected env. Skip noise for missing file.
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Printf("Warning: could not load .env: %v", err)
 	}
 
 	debugRoutesEnabled := os.Getenv("ENABLE_DEBUG_ROUTES") == "true"

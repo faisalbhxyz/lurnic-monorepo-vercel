@@ -8,7 +8,6 @@ import (
 	"time"
 	_ "time/tzdata" // embed IANA tz DB so time.LoadLocation works without OS zoneinfo (Alpine/scratch/minimal hosts)
 
-	"github.com/joho/godotenv"
 	"github.com/getsentry/sentry-go"
 )
 
@@ -17,9 +16,7 @@ var Version = "v1.0.24"
 func main() {
 	fmt.Println("🚀 DashLearn Server Starting... Version:", Version)
 
-	if err := godotenv.Load(); err != nil {
-		log.Println("Info: No .env file found; relying on process environment")
-	}
+	// Optional .env is loaded inside server.NewEngine (also used by Vercel handler); Coolify/Docker use injected env only.
 
 	debugRoutesEnabled := os.Getenv("ENABLE_DEBUG_ROUTES") == "true"
 

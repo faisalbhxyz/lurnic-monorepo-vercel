@@ -48,6 +48,10 @@
 ## Coolify + GitHub App
 - For **private** GitHub repos, the Coolify GitHub App **installation** must explicitly include that repository (GitHub → Settings → Integrations → Applications → Coolify → Configure → Repository access). Coolify API errors like `Repository not found or not accessible by the GitHub App` usually mean the app cannot see the repo, not that the clone URL is wrong.
 
+## Optional `.env` in Docker/Coolify (godotenv)
+- `godotenv.Load()` must run in **one place** (here: `server.NewEngine`, shared with Vercel `api/`). Do **not** duplicate `Load()` in `main.go` or logs will repeat.
+- Missing `.env` is **normal** in production; only log when `Load` fails for reasons other than `os.ErrNotExist` (e.g. parse/permission). Coolify injects env vars—no file required.
+
 ## Coolify: Traefik port vs app listen port (502 Bad Gateway)
 - Nixpacks/defaults often expose **3000** to Traefik. The Go server must listen on the **same** port (e.g. set `APP_PORT` / `PORT` in Coolify env to match **Ports** / exposed port) or Traefik returns 502. After changing port env, **redeploy** so the runtime picks it up.
 
