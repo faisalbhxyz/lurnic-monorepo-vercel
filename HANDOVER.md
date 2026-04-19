@@ -97,7 +97,7 @@ R2_REGION=auto
    ```
    The backend will be available at `http://localhost:5000`.
 
-*Alternatively, use docker-compose:*
+*Alternatively, use Docker Compose (full stack: API + dashboard):*
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yaml up -d --build
 ```

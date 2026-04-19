@@ -1,3 +1,5 @@
+# API only (Gin). For API + Next.js dashboard together, deploy with docker-compose.yaml on Coolify (Docker Compose), not Nixpacks-only.
+#
 # ---------- BUILD STAGE ----------
 FROM golang:1.24-alpine AS builder
 

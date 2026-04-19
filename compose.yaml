@@ -1,25 +1,4 @@
-services:
-  backend:
-    build:
-      context: ./backend
-    ports:
-      - '3005:3000'
-    depends_on:
-      - server
-    env_file:
-      - ./backend/.env
-    networks:
-      - app-network
-  server:
-    build:
-      context: ./server
-    ports:
-      - '8080:8080'
-    network_mode: "host"
-    env_file:
-      - ./server/.env
-   
-networks:
-  app-network:
-    driver: bridge
-
+# Optional entrypoint: `docker compose up` resolves compose.yaml before docker-compose.yaml.
+# Stack definition lives in docker-compose.yaml (also the file Coolify defaults to).
+include:
+  - docker-compose.yaml

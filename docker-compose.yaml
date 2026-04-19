@@ -1,12 +1,18 @@
-# API (Go/Gin) + admin dashboard (Next.js). Use this on Coolify: New Resource → Docker Compose → point to this file.
+# Full stack: Go API + Next.js dashboard.
 #
-# Before first deploy:
-# 1. Copy .env.example → .env and set GOOSE_DBSTRING, JWT_SECRET, and the variables below.
-# 2. Set NEXT_PUBLIC_API_URL to your *public* API base including /v1 (must match how browsers reach the API).
-#    Example: https://api.yourdomain.com/v1  (Coolify: assign a domain to the `api` service, use that URL)
-# 3. Set AUTH_URL to your dashboard URL (same origin you open in the browser), e.g. https://app.yourdomain.com
+# Coolify (required for dashboard):
+# 1. New resource → Docker Compose (do NOT use "Application" / Nixpacks for this repo if you want the UI).
+# 2. Repository: this repo, branch: master.
+# 3. Compose file: docker-compose.yaml (Coolify default path).
+# 4. Create TWO domains in the UI:
+#    - attach one FQDN to service `api` (container port 5000) → use that origin in NEXT_PUBLIC_API_URL + /v1
+#    - attach one FQDN to service `web` (container port 3000) → set AUTH_URL to this URL (https)
+# 5. Set shared/build env (see .env.example): NEXT_PUBLIC_API_URL, AUTH_SECRET, AUTH_URL, plus API DB/JWT vars.
+# 6. Deploy / rebuild so `web` rebuilds with NEXT_PUBLIC_* baked in.
 #
-# Coolify: add Build Arguments / Environment for service `web` for NEXT_PUBLIC_* (build-time) and AUTH_SECRET, AUTH_URL (runtime).
+# Local: copy .env.example → .env, then: docker compose -f docker-compose.yaml up --build
+
+name: lurnic
 
 services:
   api:
@@ -14,7 +20,6 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    # Local: copy `.env.example` → `.env`. Coolify: variables from the UI are injected; `.env` is optional.
     env_file:
       - path: .env
         required: false
@@ -43,7 +48,6 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      # NextAuth v5 — required in production
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET e.g. openssl rand -base64 32}
       AUTH_URL: ${AUTH_URL:?Set AUTH_URL to the dashboard public URL e.g. https://app.example.com}
     depends_on:
