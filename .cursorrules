@@ -45,6 +45,13 @@
 ## Go `time.LoadLocation` in containers / minimal images
 - If cron or scheduling uses `time.LoadLocation("Asia/Dhaka")` (or any IANA name), add a blank import `_ "time/tzdata"` in `main.go` so the binary embeds zoneinfo when `/usr/share/zoneinfo` is missing (common on scratch, distroless, or misconfigured runtimes). The Dockerfile may already install `tzdata`; the embed is the portable backstop.
 
+## Coolify + Next.js `output: "standalone"` (runtime / 503)
+- Production must **not** use `next start` when `next.config` sets **`output: "standalone"`**; Next logs a warning and behavior is wrong. Use **`node .next/standalone/server.js`** (e.g. `package.json` `"start"` script). In Docker/Coolify, set **`HOSTNAME=0.0.0.0`** if the app only binds to localhost and Traefik returns **502/503**.
+
+## Coolify + Next.js: deploy fails at “Collecting build traces” (exit 255)
+- If logs show `✓ Compiled successfully` then stall on **Collecting build traces** and Coolify reports **exit code 255** with no Node stack trace, treat as **resource exhaustion (OOM)** or **disk pressure** during output file tracing (worse with `output: "standalone"`). **Not** caused by prior Edge/axios *warnings*.
+- Mitigation: raise build container/host RAM or set build env **`NODE_OPTIONS=--max-old-space-size=6144`** (or `8192`) on the Coolify app; ensure enough free disk on the build server. Redeploy after changing env.
+
 ## Coolify + GitHub App
 - For **private** GitHub repos, the Coolify GitHub App **installation** must explicitly include that repository (GitHub → Settings → Integrations → Applications → Coolify → Configure → Repository access). Coolify API errors like `Repository not found or not accessible by the GitHub App` usually mean the app cannot see the repo, not that the clone URL is wrong.
 
