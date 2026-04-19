@@ -58,3 +58,8 @@
 ## Gin: bare URL 404 (“page not found”) on `/`
 - If all API routes are under `/v1`, **GET /** has no handler unless registered. Opening the deployment URL in a browser shows Gin’s default **404**. Add **`GET /`** (and optionally **`GET /health`**) in `pkg/server/router.go` for a clear JSON response and load-balancer probes.
 
+## Coolify: API + Next.js dashboard (`docker-compose.yml`)
+- Root **`Dockerfile`** is API-only. For the admin UI + API together, deploy **`docker-compose.yml`**: services **`api`** (Go) and **`web`** (Next standalone). Assign **two domains** in Coolify (e.g. API + app) or one host with path routing—browsers must reach the API at the URL baked into **`NEXT_PUBLIC_API_URL`**.
+- **`NEXT_PUBLIC_API_URL`** is build-time for `web` and **must include `/v1`** (e.g. `https://api.example.com/v1`). Set it as a **build argument / env** for the `web` service before build. **`AUTH_URL`** must be the **public dashboard URL**; set **`AUTH_SECRET`** for NextAuth. **`trustHost: true`** is set in `frontend/lib/auth.ts` for reverse-proxy deployments.
+- The **`api`** service uses optional `env_file: .env` (`required: false`) so Coolify can rely on injected env without a repo `.env` file; locally, copy **`.env.example`** → **`.env`**.
+

@@ -3,6 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import axiosInstance from "./axiosInstance";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Required behind Coolify/Traefik or any reverse proxy so callback URLs resolve correctly.
+  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: 2 * 60 * 60,
