@@ -10,6 +10,11 @@
 # 5. Set shared/build env (see .env.example): NEXT_PUBLIC_API_URL, AUTH_SECRET, AUTH_URL, plus API DB/JWT vars.
 # 6. Deploy / rebuild so `web` rebuilds with NEXT_PUBLIC_* baked in.
 #
+# If Coolify errors with `lstat .../frontend: no such file`, the build cwd is not a full git clone.
+# Set BUILD_SOURCE_CONTEXT in Coolify env to your repo (BuildKit clones it), e.g.:
+#   https://github.com/OWNER/REPO.git#master
+# (Private repos: use a PAT or ensure Coolify’s Git source can clone — see docs.)
+#
 # Local: copy .env.example → .env, then from repo root: docker compose -f docker-compose.yaml up --build
 
 name: lurnic
@@ -17,7 +22,7 @@ name: lurnic
 services:
   api:
     build:
-      context: .
+      context: ${BUILD_SOURCE_CONTEXT:-.}
       dockerfile: Dockerfile
     # Coolify/other hosts often run `docker compose pull` first; without this, Compose may try to
     # pull non-existent images named like the service (api/web) from Docker Hub and fail.
@@ -42,10 +47,8 @@ services:
       start_period: 30s
 
   web:
-    # Repo root context so Coolify (and `docker compose` from root) always resolves `frontend/`
-    # even when the compose file lives outside a full clone path.
     build:
-      context: .
+      context: ${BUILD_SOURCE_CONTEXT:-.}
       dockerfile: frontend/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to your public API base e.g. https://api.example.com/v1}
