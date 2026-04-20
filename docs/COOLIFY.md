@@ -10,7 +10,7 @@ This matches what you get on **Vercel** (Next UI + Gin API under `/v1`), but on 
 | API | Serverless `/api/vercel/gin-handler` → Gin | `api` service → root `Dockerfile` → `./main` on port **5000** |
 | Browser → API | Often same origin; `/v1/*` rewritten to Gin | **Public URL** must match `NEXT_PUBLIC_API_URL` (usually `https://api.<domain>/v1`) |
 | Cron | `vercel.json` `crons` | Schedule HTTP GET to **`/v1/internal/cron/publish-scheduled`** with `Authorization: Bearer <CRON_SECRET>` (see below) |
-| DB | External (you configure) | Bundled **`mysql`** in compose, or external DSN via `GOOSE_DBSTRING` |
+| DB | External (you configure) | **External MySQL** via `GOOSE_DBSTRING` (default `docker-compose.yaml`). Optional local **`docker-compose.mysql.yaml`** merge for a bundled MySQL container |
 
 ## 1. Create the resource
 
@@ -48,8 +48,8 @@ Set these in the Coolify UI (shared across services; compose substitutes into bu
 
 **Database**
 
-- With **bundled MySQL**: set **`MYSQL_*`** and **`GOOSE_DBSTRING`** so credentials match (hostname **`mysql`** inside the stack).
-- With **external MySQL**: remove the `mysql` service from compose (or use a prod override), set **`GOOSE_DBSTRING`** to the provider DSN reachable from **`api`**.
+- **Default (`docker-compose.yaml`)**: **external MySQL** — set **`GOOSE_DBSTRING`** to a DSN the **`api`** container can reach (managed DB, same-host `host.docker.internal`, etc.).
+- **Optional bundled MySQL (local only)**: use **`docker compose -f docker-compose.yaml -f docker-compose.mysql.yaml`** and align **`MYSQL_*`** / **`GOOSE_DBSTRING`** (hostname **`mysql`** inside that stack).
 
 **Optional**
 

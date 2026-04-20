@@ -1,0 +1,50 @@
+# Optional bundled MySQL for local dev (not for production / external DB).
+#
+# Merge with the main compose file:
+#   docker compose -f docker-compose.yaml -f docker-compose.mysql.yaml up --build -d
+#
+# This adds the `mysql` service, `mysql_data` volume, and wires `api` to wait for MySQL
+# with a default DSN hostname `mysql`.
+
+name: lurnic
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stop_grace_period: 15s
+    networks:
+      - lurnic
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lurnic}
+      MYSQL_USER: ${MYSQL_USER:-lurnic}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-lurnic_local_dev}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-lurnic_root_local_only}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD:-lurnic_root_local_only}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  api:
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      GOOSE_DBSTRING: ${GOOSE_DBSTRING:-lurnic:lurnic_local_dev@tcp(mysql:3306)/lurnic?charset=utf8mb4&parseTime=True&loc=UTC}
+
+volumes:
+  mysql_data:

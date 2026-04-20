@@ -1,19 +1,22 @@
-# Full stack: MySQL + Go API (`api`) + Next.js dashboard (`web`) — two apps, one Compose file.
+# Go API (`api`) + Next.js (`web`). MySQL is NOT bundled — use a third-party / managed DB.
+#
+# Set GOOSE_DBSTRING in `.env` to your MySQL host (e.g. RDS, PlanetScale-compatible via MySQL,
+# `host.docker.internal:3306` if MySQL runs on the Docker host, or any `tcp(host:port)` DSN).
+#
+# Optional local MySQL in Docker: merge `docker-compose.mysql.yaml` (see that file).
 #
 # Prerequisites: Docker Compose v2.24+ (for `env_file` + `required: false`) or ensure `.env` exists.
 #
 # Quick start (repo root):
 #   cp .env.example .env
-#   # Edit .env: JWT_SECRET, AUTH_SECRET (required); NEXT_PUBLIC_API_URL + AUTH_URL must match host:ports
+#   # Set JWT_SECRET, AUTH_SECRET, GOOSE_DBSTRING (external MySQL), NEXT_PUBLIC_API_URL, AUTH_URL
 #   docker compose up --build -d
 #   API: http://localhost:${API_PUBLISH_PORT:-5000}  |  UI: http://localhost:${WEB_PUBLISH_PORT:-3000}
 #
 # Coolify:
-# - Resource type: Docker Compose (not Nixpacks-only “Application” if you need the UI).
-# - Two domains: API → container port 5000, Web → 3000. Rebuild `web` after changing NEXT_PUBLIC_*.
-#
-# External MySQL: remove `mysql` + `mysql_data` + `api.depends_on.mysql`, set GOOSE_DBSTRING to your DSN.
-# Build context issues (lstat .../frontend): set BUILD_SOURCE_CONTEXT=https://github.com/ORG/REPO.git#branch
+# - Resource type: Docker Compose. Set GOOSE_DBSTRING to your external MySQL DSN in the UI.
+# - Two domains: API → 5000, Web → 3000. Rebuild `web` after changing NEXT_PUBLIC_*.
+# - Build context issues (lstat .../frontend): set BUILD_SOURCE_CONTEXT=https://github.com/ORG/REPO.git#branch
 
 name: lurnic
 
@@ -22,42 +25,10 @@ networks:
     driver: bridge
 
 services:
-  mysql:
-    image: mysql:8.0
-    restart: unless-stopped
-    pull_policy: if_not_present
-    stop_grace_period: 15s
-    networks:
-      - lurnic
-    environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-lurnic}
-      MYSQL_USER: ${MYSQL_USER:-lurnic}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-lurnic_local_dev}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-lurnic_root_local_only}
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "127.0.0.1",
-          "-uroot",
-          "-p${MYSQL_ROOT_PASSWORD:-lurnic_root_local_only}",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-
   api:
     build:
       context: ${BUILD_SOURCE_CONTEXT:-.}
       dockerfile: Dockerfile
-    # Coolify/other hosts often run `docker compose pull` first; without this, Compose may try to
-    # pull non-existent images named like the service (api/web) from Docker Hub and fail.
     pull_policy: never
     restart: unless-stopped
     networks:
@@ -69,14 +40,9 @@ services:
       APP_PORT: "5000"
       GIN_MODE: ${GIN_MODE:-release}
       GOOSE_DRIVER: mysql
-      # Matches COPY path in root Dockerfile (explicit so `goose` never picks the wrong dir).
       GOOSE_MIGRATION_DIR: /app/migrations
-      # Default DSN matches bundled `mysql` defaults (MYSQL_* above). Override when you change DB user/pass/name or use external MySQL.
-      GOOSE_DBSTRING: ${GOOSE_DBSTRING:-lurnic:lurnic_local_dev@tcp(mysql:3306)/lurnic?charset=utf8mb4&parseTime=True&loc=UTC}
+      GOOSE_DBSTRING: ${GOOSE_DBSTRING:?Set GOOSE_DBSTRING in .env to your MySQL DSN (e.g. user:pass@tcp(db.example.com:3306)/dbname?charset=utf8mb4&parseTime=True&loc=UTC)}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET (e.g. openssl rand -base64 48)}
-    depends_on:
-      mysql:
-        condition: service_healthy
     ports:
       - "${API_PUBLISH_PORT:-5000}:5000"
     healthcheck:
@@ -107,11 +73,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      # Next standalone behind Traefik/Coolify must listen on all interfaces (see .cursorrules).
       HOSTNAME: "0.0.0.0"
-      # Server-side API calls (NextAuth) should use internal network for reliability.
       API_INTERNAL_URL: "http://api:5000/v1"
-      # Also keep the public API URL at runtime (client reads it; some server code may fall back to it).
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to your public API base e.g. https://api.example.com/v1}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET e.g. openssl rand -base64 32}
       AUTH_URL: ${AUTH_URL:?Set AUTH_URL to the dashboard public URL e.g. https://app.example.com}
@@ -130,6 +93,3 @@ services:
       timeout: 5s
       retries: 5
       start_period: 45s
-
-volumes:
-  mysql_data:
