@@ -15,8 +15,8 @@ RUN go mod download
 # Copy source code
 COPY api/ .
 
-# Install goose CLI
-RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+# Install goose CLI (pin — @latest may require a newer Go than the builder image)
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
 
 # Build the Go app
 RUN go build -o main .
