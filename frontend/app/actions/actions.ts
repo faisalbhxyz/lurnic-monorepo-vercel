@@ -2,19 +2,53 @@
 
 import { signIn, signOut } from "@/lib/auth";
 import axiosInstance from "@/lib/axiosInstance";
+import axios from "axios";
 import { Session } from "next-auth";
 import { redirect } from "next/navigation";
 
 export const doCretendentialLogin = async (email: string, password: string) => {
   try {
-    await signIn("credentials", {
+    const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
     });
-  } catch (error: any) {
+
+    // Auth.js/NextAuth signIn() can return an error payload without throwing.
+    if (result && typeof result === "object" && "error" in result) {
+      const signInError = (result as { error?: unknown }).error;
+      if (typeof signInError === "string" && signInError.trim()) {
+        return {
+          error:
+            signInError === "CredentialsSignin"
+              ? "Invalid email or password."
+              : signInError,
+        };
+      }
+    }
+  } catch (error: unknown) {
+    const maybeAxiosErr = (error as any)?.cause?.err ?? error;
+    const apiMessage = axios.isAxiosError(maybeAxiosErr)
+      ? ((maybeAxiosErr.response?.data as any)?.message ??
+          (maybeAxiosErr.response?.data as any)?.error)
+      : undefined;
+
+    const errCode =
+      (axios.isAxiosError(maybeAxiosErr) ? maybeAxiosErr.code : undefined) ??
+      (typeof (maybeAxiosErr as any)?.code === "string"
+        ? (maybeAxiosErr as any).code
+        : undefined);
+
     return {
-      error: error.cause?.err.response.data.message || "Something went wrong.",
+      error:
+        (typeof apiMessage === "string" && apiMessage.trim()) ||
+        (errCode === "ECONNREFUSED" &&
+          "API unreachable. Check API_INTERNAL_URL / NEXT_PUBLIC_API_URL and that the API is running.") ||
+        (errCode === "ENOTFOUND" &&
+          "API host not found. Check API_INTERNAL_URL / NEXT_PUBLIC_API_URL.") ||
+        (errCode === "ERR_INVALID_URL" &&
+          "API base URL invalid/missing. Check API_INTERNAL_URL / NEXT_PUBLIC_API_URL.") ||
+        "Something went wrong.",
     };
   }
 };

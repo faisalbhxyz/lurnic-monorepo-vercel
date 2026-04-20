@@ -6,6 +6,18 @@
 ## NextAuth session objects can be partially defined
 - Do not assume `session.user` exists even if `session` exists. Always use `session?.user?.<field>` (or explicit guards) in Client Components to prevent `undefined` property crashes in production.
 
+## Auth.js / NextAuth dev: AUTH_URL must match the running origin
+- In local dev, keep `AUTH_URL` / `NEXTAUTH_URL` aligned with the actual dev server URL (including the port). A mismatch (e.g. server runs on `localhost:3000` but env says `localhost:3002`) can cause `ClientFetchError: Failed to fetch` when `SessionProvider` calls `/api/auth/session`.
+- Avoid running multiple `next dev` instances on different ports at the same time; they can silently steal `:3000` and make the browser talk to the wrong server. Prefer `PORT=3000 npm run dev` and kill older dev servers first.
+
+## Auth.js signIn() errors: never assume Axios response shape
+- `signIn("credentials")` can throw an `AuthError` whose payload shape varies; do **not** drill into `error.cause.err.response.data.*` without guards.
+- When extracting server messages, treat the error as `unknown` and use `axios.isAxiosError(err)` + `err.response?.data?.message` with fallbacks to prevent `Cannot read properties of undefined (reading 'data')`.
+
+## NextAuth CredentialsProvider: `authorize()` must not throw on bad credentials
+- If the upstream login API returns **400/401** for invalid credentials, `authorize()` should **return `null`** (not throw). Throwing causes Auth.js to report a generic **"Configuration"** error to the client and breaks UX/error messaging.
+- Only throw for unexpected failures (5xx, network, invalid env like missing API base URL) so the error remains actionable.
+
 ## Vercel + Go (Gin) serverless (Option A)
 - Deploy the monorepo **root** (not `frontend/` alone) when using `/api/**/*.go` + root `vercel.json` rewrites (`/v1/*` → `/api/vercel/gin-handler?path=*`).
 - Next.js `middleware.ts` must **not** run on `/v1/*` (exclude `v1` from the matcher); otherwise unauthenticated users get redirected to `/login` before the rewrite reaches the Go API.
@@ -22,6 +34,7 @@
 
 ## TiDB/MySQL DDL compatibility
 - Avoid combining `ADD COLUMN` + `ADD CONSTRAINT` in a single `ALTER TABLE` statement. Split into separate `ALTER TABLE` statements to prevent TiDB DDL ordering/compat errors during migrations.
+- For TiDB Cloud, avoid **multi-statement** migrations (e.g. multiple `CREATE INDEX` inside a single `-- +goose StatementBegin/End`) because TiDB defaults to `tidb_multi_statement_mode=OFF` (Error 8130). Prefer one statement per migration chunk.
 
 ## Course / lesson `schedule_time` (Go + Next.js)
 - The API parses `schedule_time` with `time.Parse("03:04 PM", …)` and stores `TIME` as `15:04:05`. The admin UI must send strings like `10:05 AM` / `10:05 PM` (minute-capable), not only whole hours. Use `hhmmToScheduleTime` / `scheduleTimeToHHMM` in `frontend/lib/helpers.ts` with `<input type="time" step={60} />` so native picking and typing stay aligned with the backend.
@@ -69,12 +82,14 @@
 ## Coolify: API + Next.js dashboard (`docker-compose.yaml`)
 - **MySQL**: Default compose is **api + web only** — use an **external** DB and set **`GOOSE_DBSTRING`** in Coolify to that DSN. **Local bundled MySQL** (optional): `docker compose -f docker-compose.yaml -f docker-compose.mysql.yaml up` and matching **`MYSQL_*`** / DSN hostname **`mysql`**.
 - **`web` build** uses **`dockerfile: frontend/Dockerfile`** and **`BUILD_SOURCE_CONTEXT`** (default `.`). If Coolify errors with *`lstat .../frontend`*, the service dir is not a full clone—set **`BUILD_SOURCE_CONTEXT`** to the Git URL (e.g. `https://github.com/org/repo.git#master`) so BuildKit clones during build. `frontend/Dockerfile` uses `COPY frontend/...` from repo root.
+- In Coolify’s **domain/service UI**, do not type random values into the **Image** field for build-based services. Wrong casing like `Web` can cause Docker “invalid reference format … must be lowercase” when Coolify tries to pull an image. Leave Image empty/auto when using `build:`.
 - Root **`Dockerfile`** is API-only (build context = repo root; **`COPY api/...`** into the image). **`go install …/goose@latest`** can fail when **`@latest`** bumps to a release requiring **newer Go** than **`golang:1.24-alpine`** — pin **`goose@v3.26.0`** (or bump the builder image to **Go 1.25+**). The **final stage** must copy **`migrations/`** with **`COPY --from=builder /app/migrations`**—not **`COPY ./migrations`** from the host (there is no `migrations/` at repo root after moving SQL to **`api/migrations`**). For the admin UI + API together, use a **Docker Compose** resource (not Nixpacks “Application”) and deploy **`docker-compose.yaml`**: services **`api`** (Go, port 5000) and **`web`** (Next standalone, port 3000). Assign **two FQDNs** in Coolify (API + dashboard) or one host with path routing—browsers must reach the API at the URL baked into **`NEXT_PUBLIC_API_URL`** (must end with **`/v1`**).
 - If Coolify builds with **Nixpacks / “go” only**, you get **API without the dashboard**; switch the resource type or create a new **Docker Compose** deployment pointing at this file.
 - If **`docker compose pull` fails** with *pull access denied for `api`/`web`*, Compose is trying to pull non-existent Hub images named after services—ensure deploy **builds** from the repo (`docker compose build` / Coolify “build” step). `docker-compose.yaml` sets **`pull_policy: never`** on built services to avoid bogus pulls.
 - **`NEXT_PUBLIC_API_URL`** is build-time for `web` and **must include `/v1`** (e.g. `https://api.example.com/v1`). Set it as a **build argument / env** for the `web` service before build. **`AUTH_URL`** must be the **public dashboard URL**; set **`AUTH_SECRET`** for NextAuth. **`trustHost: true`** is set in `frontend/lib/auth.ts` for reverse-proxy deployments.
 - If the dashboard loads **unstyled** (plain HTML) and **`/_next/static/**` returns **404**, the running HTML does not match the image’s static assets — **rebuild/redeploy `web`** (no partial deploy); ensure Traefik targets the **`web`** service on **3000**, not a stale container.
 - The **`api`** service uses optional `env_file: .env` (`required: false`) so Coolify can rely on injected env without a repo `.env` file; locally, copy **`.env.example`** → **`.env`**.
+- When using TiDB Cloud / serverless MySQL, verify the `goose_db_version` table schema early. If `id` is not `AUTO_INCREMENT`, goose cannot record versions (`Field 'id' doesn't have a default value`). TiDB may block `ALTER ... AUTO_INCREMENT` (Error 8200); workaround: create a new version table with `AUTO_INCREMENT`, copy rows, and `RENAME TABLE` swap.
 
 ## Notion MCP: wiki DB parent + secrets
 - Creating pages under a **wiki** database: if `parent: { type: "page_id", page_id }` (from the database URL’s UUID) returns **object_not_found**, use **`parent: { type: "database_id", database_id }`** with the same database ID from the URL instead.

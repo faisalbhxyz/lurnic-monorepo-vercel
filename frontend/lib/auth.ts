@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import axiosInstance from "./axiosInstance";
+import axios from "axios";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // Required behind Coolify/Traefik or any reverse proxy so callback URLs resolve correctly.
@@ -29,7 +30,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           } else {
             throw new Error("Invalid credentials");
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
+          // For invalid credentials, return null so NextAuth returns `CredentialsSignin`
+          // instead of bubbling as a "Configuration" error.
+          if (axios.isAxiosError(error)) {
+            const status = error.response?.status;
+            if (status === 400 || status === 401) return null;
+          }
           throw error;
         }
       },

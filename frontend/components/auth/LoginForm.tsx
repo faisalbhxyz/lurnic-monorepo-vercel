@@ -7,9 +7,9 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LuLoaderCircle } from "react-icons/lu";
-import { doCretendentialLogin } from "@/app/actions/actions";
 import { toast } from "sonner";
 import ValidationErrorMsg from "../ValidationErrorMsg";
+import { signIn } from "next-auth/react";
 
 const LoginSchema = z.object({
   email: z
@@ -28,6 +28,7 @@ type TLoginSchema = z.infer<typeof LoginSchema>;
 const LoginForm = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -39,14 +40,31 @@ const LoginForm = () => {
 
   const handleOnSubmit = async (data: TLoginSchema) => {
     setLoading(true);
-    const result = await doCretendentialLogin(data.email, data.password);
+    setSubmitError(null);
+    try {
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      toast.error(result.error);
-      setLoading(false);
-    } else {
+      if (result?.error) {
+        const message =
+          result.error === "CredentialsSignin"
+            ? "Invalid email or password."
+            : result.error;
+        setSubmitError(message);
+        toast.error(message);
+        return;
+      }
+
       toast.success("Logged in successfully. Redirecting...");
       router.push("/");
+    } catch {
+      setSubmitError("Something went wrong.");
+      toast.error("Something went wrong.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,6 +110,9 @@ const LoginForm = () => {
           "Login"
         )}
       </button>
+      {submitError ? (
+        <p className="mt-3 text-sm text-red-600">{submitError}</p>
+      ) : null}
     </form>
   );
 };

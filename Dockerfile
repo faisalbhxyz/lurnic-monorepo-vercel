@@ -21,6 +21,9 @@ RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
 # Build the Go app
 RUN go build -o main .
 
+# Build TiDB AUTO_INCREMENT fixer (shadow-table swap; safe to run multiple times)
+RUN go build -o fixautoinc ./cmd/fixautoinc
+
 # ---------- FINAL STAGE ----------
 FROM alpine:3.20
 
@@ -33,6 +36,7 @@ WORKDIR /app
 
 # Copy built app and goose from builder
 COPY --from=builder /app/main .
+COPY --from=builder /app/fixautoinc .
 COPY --from=builder /go/bin/goose /usr/local/bin/goose
 
 # Migration SQL (module lives under api/; do not COPY from build context — root has no migrations/)
@@ -41,5 +45,6 @@ COPY --from=builder /app/migrations ./migrations
 # Expose the port your Gin app listens on (must match APP_PORT, default 5000)
 EXPOSE 5000
 
-# Run DB migrations first, then start app (explicit -dir: cwd-independent; exec for clean signals)
-CMD ["sh", "-c", "goose -dir /app/migrations up && exec ./main"]
+# TiDB cannot ALTER an existing column to add AUTO_INCREMENT (Error 8200).
+# Run the idempotent fixer first, then migrations, then start.
+CMD ["sh", "-c", "./fixautoinc || true; goose -dir /app/migrations up && exec ./main"]

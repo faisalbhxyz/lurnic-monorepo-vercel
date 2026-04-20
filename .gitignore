@@ -29,6 +29,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.bin/
+.go-cache/
+.go-modcache/
 
 # Common frontend build outputs
 frontend/.next/
@@ -47,6 +50,9 @@ e2e/.playwright/
 *.zip
 /tmp
 .vercel
+
+# TestSprite artifacts (generated)
+frontend/testsprite_tests/
 
 # Local database dumps (large; may contain PII)
 lurnic-Database backup.sql

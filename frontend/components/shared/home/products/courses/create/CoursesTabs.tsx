@@ -287,6 +287,32 @@ export default function CoursesTabs({
 
   const handleSave = (data: TCourseSchema) => {
     console.log(data);
+    // #region agent log
+    fetch("/api/debug-log", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "01d620",
+      },
+      body: JSON.stringify({
+        sessionId: "01d620",
+        runId: "pre-fix",
+        hypothesisId: "H1",
+        location: "CoursesTabs.tsx:handleSave(entry)",
+        message: "Course save submit payload (schedule fields)",
+        data: {
+          isEdit,
+          hasAccessToken: Boolean(session?.accessToken),
+          is_scheduled: data.is_scheduled,
+          schedule_date: data.schedule_date,
+          schedule_time: data.schedule_time,
+          visibility: data.visibility,
+          show_comming_soon: data.show_comming_soon,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
     if (loading) return;
     setLoading(true);
     const fd = new FormData();
@@ -341,11 +367,54 @@ export default function CoursesTabs({
           },
         })
         .then((res) => {
+          // #region agent log
+          fetch("/api/debug-log", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Debug-Session-Id": "01d620",
+              },
+              body: JSON.stringify({
+                sessionId: "01d620",
+                runId: "pre-fix",
+                hypothesisId: "H1",
+                location: "CoursesTabs.tsx:handleSave(edit-success)",
+                message: "Course edit success",
+                data: {
+                  status: res.status,
+                  ok: Boolean(res.data?.success ?? res.data?.ok),
+                  message: res.data?.message,
+                },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          // #endregion agent log
           toast.success(res.data.message);
           router.push(`/courses`);
         })
         .catch((error) => {
           console.log("[ERROR]", error);
+          // #region agent log
+          fetch("/api/debug-log", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Debug-Session-Id": "01d620",
+              },
+              body: JSON.stringify({
+                sessionId: "01d620",
+                runId: "pre-fix",
+                hypothesisId: "H1",
+                location: "CoursesTabs.tsx:handleSave(edit-error)",
+                message: "Course edit failed",
+                data: {
+                  status: error?.response?.status,
+                  error: error?.response?.data?.error ?? "unknown",
+                },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          // #endregion agent log
           toast.error(error.response.data.error || "Something went wrong.");
         })
         .finally(() => setLoading(false));
@@ -358,11 +427,54 @@ export default function CoursesTabs({
           },
         })
         .then((res) => {
+          // #region agent log
+          fetch("/api/debug-log", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Debug-Session-Id": "01d620",
+              },
+              body: JSON.stringify({
+                sessionId: "01d620",
+                runId: "pre-fix",
+                hypothesisId: "H1",
+                location: "CoursesTabs.tsx:handleSave(create-success)",
+                message: "Course create success",
+                data: {
+                  status: res.status,
+                  ok: Boolean(res.data?.success ?? res.data?.ok),
+                  message: res.data?.message,
+                },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          // #endregion agent log
           toast.success(res.data.message);
           router.push(`/courses`);
         })
         .catch((error) => {
           console.log("[ERROR]", error);
+          // #region agent log
+          fetch("/api/debug-log", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Debug-Session-Id": "01d620",
+              },
+              body: JSON.stringify({
+                sessionId: "01d620",
+                runId: "pre-fix",
+                hypothesisId: "H1",
+                location: "CoursesTabs.tsx:handleSave(create-error)",
+                message: "Course create failed",
+                data: {
+                  status: error?.response?.status,
+                  error: error?.response?.data?.error ?? "unknown",
+                },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          // #endregion agent log
           toast.error(error.response.data.error || "Something went wrong.");
         })
         .finally(() => setLoading(false));
