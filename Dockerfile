@@ -24,8 +24,8 @@ RUN go build -o main .
 # ---------- FINAL STAGE ----------
 FROM alpine:3.20
 
-# tzdata (IANA zones) + wget (docker-compose healthcheck hits /health)
-RUN apk add --no-cache tzdata wget
+# tzdata (IANA zones) + wget (docker-compose healthcheck hits /health) + CA roots (TiDB Cloud / managed DB TLS)
+RUN apk add --no-cache tzdata wget ca-certificates
 ENV TZ=UTC
 
 # Working directory
