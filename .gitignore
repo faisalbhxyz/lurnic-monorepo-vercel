@@ -20,8 +20,8 @@
 *.log
 
 # Uploads (local)
-/uploads/*
-!/uploads/.gitkeep
+/api/uploads/*
+!/api/uploads/.gitkeep
 
 # Node / Frontend
 node_modules/

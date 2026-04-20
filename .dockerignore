@@ -28,3 +28,10 @@
 **/values.dev.yaml
 LICENSE
 README.md
+
+# Smaller build context (monorepo root is shared by `api` + `web` images)
+e2e/
+docs/
+frontend/.next/
+# Large local DB dumps at repo root (never needed in images)
+**/lurnic-Database*.sql

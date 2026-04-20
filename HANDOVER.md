@@ -15,7 +15,7 @@
 ## 2. Infrastructure & Access
 **Repository:** [abukhalidrifat/dashlearn-server](https://github.com/abukhalidrifat/dashlearn-server)
 
-**Hosting:** Needs to be configured (e.g., DigitalOcean App Platform, Render, AWS, Hetzner VPS). It includes a `Dockerfile` and `compose.yaml` for containerized deployments.
+**Hosting:** Production on **[Coolify](docs/COOLIFY.md)** (Docker Compose: Go API + Next.js + optional MySQL) mirrors Vercel’s split (UI + `/v1` API) using two services. The repo includes root `Dockerfile` (API), `frontend/Dockerfile` (Next standalone), and `docker-compose.yaml`.
 
 **Domain Provider:** To be configured.
 
@@ -97,7 +97,8 @@ R2_REGION=auto
    ```
    The backend will be available at `http://localhost:5000`.
 
-*Alternatively, use Docker Compose (full stack: API + dashboard):*
+*Alternatively, use Docker Compose (full stack: API + dashboard) — see [docs/COOLIFY.md](docs/COOLIFY.md) for Coolify env and domains:*
 ```bash
+cp .env.example .env   # set JWT_SECRET, AUTH_SECRET, NEXT_PUBLIC_API_URL, AUTH_URL
 docker compose -f docker-compose.yaml up -d --build
 ```

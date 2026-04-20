@@ -1,6 +1,8 @@
 package server
 
 import (
+	"path/filepath"
+
 	"dashlearn/internal/models"
 	"dashlearn/internal/modules/banner"
 	"dashlearn/internal/modules/category"
@@ -23,9 +25,9 @@ import (
 	"strings"
 	"time"
 
+	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 )
@@ -45,8 +47,16 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	}
 
 	// Optional local .env; production (Coolify/Docker) typically has no file—only injected env. Skip noise for missing file.
-	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Printf("Warning: could not load .env: %v", err)
+	// Monorepo: single `.env` at repo root; local dev often runs with cwd `api/`.
+	if cwd, err := os.Getwd(); err == nil {
+		if filepath.Base(cwd) == "api" {
+			if err := godotenv.Load(filepath.Join(cwd, "..", ".env")); err != nil && !errors.Is(err, os.ErrNotExist) {
+				log.Printf("Warning: could not load %s: %v", filepath.Join(cwd, "..", ".env"), err)
+			}
+		}
+		if err := godotenv.Load(filepath.Join(cwd, ".env")); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Printf("Warning: could not load %s: %v", filepath.Join(cwd, ".env"), err)
+		}
 	}
 
 	debugRoutesEnabled := os.Getenv("ENABLE_DEBUG_ROUTES") == "true"

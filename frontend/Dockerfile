@@ -15,12 +15,20 @@ COPY frontend/package*.json ./
 RUN npm install --force
 COPY frontend/ .
 
+# Coolify/small build hosts: Next "Collecting build traces" + standalone can OOM without a higher heap.
+ENV NODE_OPTIONS=--max-old-space-size=6144
+
 # Build standalone
 RUN npm run build
 
 # Stage 2: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
+
+# Must match Coolify “Ports” / Traefik upstream (default 3000). Bind all interfaces so the proxy can reach the process.
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 # Copy standalone build
 COPY --from=builder /app/.next/standalone ./   

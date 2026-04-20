@@ -42,13 +42,13 @@ SENTRY_TRACES_SAMPLE_RATE=0
 ### 3) Run migrations (create schema)
 
 ```bash
-goose -dir migrations mysql "$GOOSE_DBSTRING" up
+goose -dir api/migrations mysql "$GOOSE_DBSTRING" up
 ```
 
 ### 4) Start the API server
 
 ```bash
-go run main.go
+cd api && go run .
 ```
 
 Server runs at `http://localhost:${APP_PORT}` (default `5000`).

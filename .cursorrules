@@ -7,11 +7,11 @@
 - Do not assume `session.user` exists even if `session` exists. Always use `session?.user?.<field>` (or explicit guards) in Client Components to prevent `undefined` property crashes in production.
 
 ## Vercel + Go (Gin) serverless (Option A)
-- Deploy the monorepo **root** (not `frontend/` alone) when using `/api/*.go` + root `vercel.json` rewrites (`/v1/*` → `/api/gin-handler?path=*`).
+- Deploy the monorepo **root** (not `frontend/` alone) when using `/api/**/*.go` + root `vercel.json` rewrites (`/v1/*` → `/api/vercel/gin-handler?path=*`).
 - Next.js `middleware.ts` must **not** run on `/v1/*` (exclude `v1` from the matcher); otherwise unauthenticated users get redirected to `/login` before the rewrite reaches the Go API.
 - Gin’s default trailing-slash redirects can loop with Vercel (`/v1/foo` ↔ `/v1/foo/`); set `router.RedirectTrailingSlash = false` on the Gin engine used for serverless.
 - For route groups, prefer `GET ""` (not `GET "/"`) for collection endpoints so `/v1/resource` matches after Vercel normalizes away trailing slashes.
-- Do not add a real `main()` in `api/` (Vercel invokes `Handler`); `go build ./api` may fail—CI should `go build .` for the binary and rely on Vercel to compile `api/`.
+- Go module root is `api/` (`main.go` + `api/vercel/gin-handler.go` for Vercel serverless). Build or run with `go build .` / `go run .` from `api/`, or `go -C api run .` from repo root. Do not put `package main` and `package handler` in the same directory—they break `go build`.
 - `VERCEL` is set by Vercel: cron is disabled in `pkg/server` for cold-start functions; use external cron or Vercel Cron hitting an HTTP route if scheduling is required. Use `pkg/server` (not `internal/server`) so Vercel’s `api/` package can import the router without Go `internal` visibility errors.
 
 ## Never read or print secrets (.env, credentials)
@@ -32,18 +32,18 @@
 
 ## TiDB: importing phpMyAdmin SQL dumps
 - `GOOSE_DBSTRING` must use the Go driver form `user:pass@tcp(host:port)/db?tls=true&parseTime=true&loc=Local&charset=utf8mb4`, not `mysql://` URLs (GORM/`database/sql` will not parse those).
-- Homebrew `mysql` 9+ may fail to connect to TiDB with `mysql_native_password`; use `go run ./cmd/importdump/` (or another client that supports that auth) for large dumps.
+- Homebrew `mysql` 9+ may fail to connect to TiDB with `mysql_native_password`; use `go run -C api ./cmd/importdump/` (or another client that supports that auth) for large dumps.
 - phpMyAdmin dumps often include `ALTER TABLE ... MODIFY ... AUTO_INCREMENT=...` blocks; TiDB can return Error 8200 on those. Strip that section before import (see `cmd/importdump`) or import will fail mid-file.
 
-## GORM slow SQL logs (`internal/utils/db.go`)
+## GORM slow SQL logs (`api/internal/utils/db.go`)
 - Default `SlowThreshold` is 1000ms (not GORM’s 200ms) so cross-region TiDB RTT does not spam logs; tune with `GORM_SLOW_SQL_MS`.
 
-## Gin production defaults (`pkg/server/router.go`)
+## Gin production defaults (`api/pkg/server/router.go`)
 - **GIN_MODE**: Do not default to `debug` when unset; use `release` unless `GIN_MODE=debug` or `test`. Local `.env.example` keeps `GIN_MODE=debug`.
 - **Trusted proxies**: Gin 1.10 ships with `0.0.0.0/0` trusted (unsafe warning on `Run`). Call `SetTrustedProxies` with private ranges + loopback, or `GIN_TRUSTED_PROXIES=none` for direct exposure.
 
 ## Go `time.LoadLocation` in containers / minimal images
-- If cron or scheduling uses `time.LoadLocation("Asia/Dhaka")` (or any IANA name), add a blank import `_ "time/tzdata"` in `main.go` so the binary embeds zoneinfo when `/usr/share/zoneinfo` is missing (common on scratch, distroless, or misconfigured runtimes). The Dockerfile may already install `tzdata`; the embed is the portable backstop.
+- If cron or scheduling uses `time.LoadLocation("Asia/Dhaka")` (or any IANA name), add a blank import `_ "time/tzdata"` in `api/main.go` so the binary embeds zoneinfo when `/usr/share/zoneinfo` is missing (common on scratch, distroless, or misconfigured runtimes). The Dockerfile may already install `tzdata`; the embed is the portable backstop.
 
 ## Coolify + Next.js `output: "standalone"` (runtime / 503)
 - Production must **not** use `next start` when `next.config` sets **`output: "standalone"`**; Next logs a warning and behavior is wrong. Use **`node .next/standalone/server.js`** (e.g. `package.json` `"start"` script). In Docker/Coolify, set **`HOSTNAME=0.0.0.0`** if the app only binds to localhost and Traefik returns **502/503**.
@@ -56,20 +56,27 @@
 - For **private** GitHub repos, the Coolify GitHub App **installation** must explicitly include that repository (GitHub → Settings → Integrations → Applications → Coolify → Configure → Repository access). Coolify API errors like `Repository not found or not accessible by the GitHub App` usually mean the app cannot see the repo, not that the clone URL is wrong.
 
 ## Optional `.env` in Docker/Coolify (godotenv)
-- `godotenv.Load()` must run in **one place** (here: `server.NewEngine`, shared with Vercel `api/`). Do **not** duplicate `Load()` in `main.go` or logs will repeat.
+- `godotenv` loads only in **`server.NewEngine`** (`api/pkg/server/router.go`): when cwd is **`api/`**, load **`../.env`** then **`./.env`** (repo root first, then overrides); when cwd is repo root, load **`./.env`** only. Do **not** duplicate `Load()` in `main.go`.
 - Missing `.env` is **normal** in production; only log when `Load` fails for reasons other than `os.ErrNotExist` (e.g. parse/permission). Coolify injects env vars—no file required.
 
 ## Coolify: Traefik port vs app listen port (502 Bad Gateway)
 - Nixpacks/defaults often expose **3000** to Traefik. The Go server must listen on the **same** port (e.g. set `APP_PORT` / `PORT` in Coolify env to match **Ports** / exposed port) or Traefik returns 502. After changing port env, **redeploy** so the runtime picks it up.
+- **Next.js `web` (standalone):** Traefik must forward to container port **3000** (`PORT=3000`, `HOSTNAME=0.0.0.0`). **502/503** usually means no listener, wrong **Ports** mapping in Coolify, **`web` never started** (e.g. `api` unhealthy so `depends_on` blocks), or container crash — check **Logs** and that the domain is attached to the **`web`** service, not `api`.
 
 ## Gin: bare URL 404 (“page not found”) on `/`
-- If all API routes are under `/v1`, **GET /** has no handler unless registered. Opening the deployment URL in a browser shows Gin’s default **404**. Add **`GET /`** (and optionally **`GET /health`**) in `pkg/server/router.go` for a clear JSON response and load-balancer probes.
+- If all API routes are under `/v1`, **GET /** has no handler unless registered. Opening the deployment URL in a browser shows Gin’s default **404**. Add **`GET /`** (and optionally **`GET /health`**) in `api/pkg/server/router.go` for a clear JSON response and load-balancer probes.
 
 ## Coolify: API + Next.js dashboard (`docker-compose.yaml`)
+- **Bundled MySQL**: `docker-compose.yaml` includes a **`mysql`** service and **`GOOSE_DBSTRING`** defaults that match **`MYSQL_*`** (`lurnic:lurnic_local_dev@tcp(mysql:3306)/lurnic…`). If you change **`MYSQL_PASSWORD`** (production), set **`GOOSE_DBSTRING`** in Coolify to the same credentials. **External DB**: remove the **`mysql`** service, **`mysql_data`**, and **`api.depends_on.mysql`**, then set **`GOOSE_DBSTRING`** only.
 - **`web` build** uses **`dockerfile: frontend/Dockerfile`** and **`BUILD_SOURCE_CONTEXT`** (default `.`). If Coolify errors with *`lstat .../frontend`*, the service dir is not a full clone—set **`BUILD_SOURCE_CONTEXT`** to the Git URL (e.g. `https://github.com/org/repo.git#master`) so BuildKit clones during build. `frontend/Dockerfile` uses `COPY frontend/...` from repo root.
-- Root **`Dockerfile`** is API-only. For the admin UI + API together, use a **Docker Compose** resource (not Nixpacks “Application”) and deploy **`docker-compose.yaml`**: services **`api`** (Go, port 5000) and **`web`** (Next standalone, port 3000). Assign **two FQDNs** in Coolify (API + dashboard) or one host with path routing—browsers must reach the API at the URL baked into **`NEXT_PUBLIC_API_URL`** (must end with **`/v1`**).
+- Root **`Dockerfile`** is API-only (build context = repo root; **`COPY api/...`** into the image). The **final stage** must copy **`migrations/`** with **`COPY --from=builder /app/migrations`**—not **`COPY ./migrations`** from the host (there is no `migrations/` at repo root after moving SQL to **`api/migrations`**). For the admin UI + API together, use a **Docker Compose** resource (not Nixpacks “Application”) and deploy **`docker-compose.yaml`**: services **`api`** (Go, port 5000) and **`web`** (Next standalone, port 3000). Assign **two FQDNs** in Coolify (API + dashboard) or one host with path routing—browsers must reach the API at the URL baked into **`NEXT_PUBLIC_API_URL`** (must end with **`/v1`**).
 - If Coolify builds with **Nixpacks / “go” only**, you get **API without the dashboard**; switch the resource type or create a new **Docker Compose** deployment pointing at this file.
 - If **`docker compose pull` fails** with *pull access denied for `api`/`web`*, Compose is trying to pull non-existent Hub images named after services—ensure deploy **builds** from the repo (`docker compose build` / Coolify “build” step). `docker-compose.yaml` sets **`pull_policy: never`** on built services to avoid bogus pulls.
 - **`NEXT_PUBLIC_API_URL`** is build-time for `web` and **must include `/v1`** (e.g. `https://api.example.com/v1`). Set it as a **build argument / env** for the `web` service before build. **`AUTH_URL`** must be the **public dashboard URL**; set **`AUTH_SECRET`** for NextAuth. **`trustHost: true`** is set in `frontend/lib/auth.ts` for reverse-proxy deployments.
+- If the dashboard loads **unstyled** (plain HTML) and **`/_next/static/**` returns **404**, the running HTML does not match the image’s static assets — **rebuild/redeploy `web`** (no partial deploy); ensure Traefik targets the **`web`** service on **3000**, not a stale container.
 - The **`api`** service uses optional `env_file: .env` (`required: false`) so Coolify can rely on injected env without a repo `.env` file; locally, copy **`.env.example`** → **`.env`**.
+
+## Notion MCP: wiki DB parent + secrets
+- Creating pages under a **wiki** database: if `parent: { type: "page_id", page_id }` (from the database URL’s UUID) returns **object_not_found**, use **`parent: { type: "database_id", database_id }`** with the same database ID from the URL instead.
+- Never paste real `.env` values into chat; if the user asks to sync `.env` to Notion, put content only via the Notion MCP call and warn that Notion is **not** a secrets vault—prefer **private** pages and **rotate** cloud credentials if the page could be shared.
 

@@ -20,8 +20,8 @@ func init() {
 	ginHandler = eng
 }
 
-// Handler is invoked by Vercel for each request to /api/gin-handler.
-// Rewrites map /v1/* -> /api/gin-handler?path=* ; we restore the real path for Gin.
+// Handler is invoked by Vercel for each request to /api/vercel/gin-handler.
+// Rewrites map /v1/* -> /api/vercel/gin-handler?path=* ; we restore the real path for Gin.
 func Handler(w http.ResponseWriter, r *http.Request) {
 	r2 := normalizeRequestForGin(r)
 	ginHandler.ServeHTTP(w, r2)
@@ -39,8 +39,8 @@ func normalizeRequestForGin(r *http.Request) *http.Request {
 		return out
 	}
 
-	// Fallback: path under /api/gin-handler/... -> /v1/...
-	const prefix = "/api/gin-handler"
+	// Fallback: path under /api/vercel/gin-handler/... -> /v1/...
+	const prefix = "/api/vercel/gin-handler"
 	if strings.HasPrefix(r.URL.Path, prefix) {
 		rest := strings.TrimPrefix(r.URL.Path, prefix)
 		rest = strings.TrimPrefix(rest, "/")

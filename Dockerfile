@@ -8,12 +8,12 @@ RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Copy go module files & download deps
-COPY go.mod go.sum ./
+# Copy go module files & download deps (module root is api/)
+COPY api/go.mod api/go.sum ./
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY api/ .
 
 # Install goose CLI
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
@@ -24,8 +24,8 @@ RUN go build -o main .
 # ---------- FINAL STAGE ----------
 FROM alpine:3.20
 
-# Install tzdata
-RUN apk add --no-cache tzdata
+# tzdata (IANA zones) + wget (docker-compose healthcheck hits /health)
+RUN apk add --no-cache tzdata wget
 ENV TZ=UTC
 
 # Working directory
@@ -35,11 +35,11 @@ WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /go/bin/goose /usr/local/bin/goose
 
-# Copy migration files
-COPY ./migrations ./migrations
+# Migration SQL (module lives under api/; do not COPY from build context — root has no migrations/)
+COPY --from=builder /app/migrations ./migrations
 
 # Expose the port your Gin app listens on (must match APP_PORT, default 5000)
 EXPOSE 5000
 
-# Run DB migrations first, then start app
-CMD goose up && ./main
+# Run DB migrations first, then start app (explicit -dir: cwd-independent; exec for clean signals)
+CMD ["sh", "-c", "goose -dir /app/migrations up && exec ./main"]

@@ -6,14 +6,14 @@
   "outputDirectory": "frontend/.next",
   "crons": [
     {
-      "path": "/api/gin-handler?path=internal/cron/publish-scheduled",
+      "path": "/api/vercel/gin-handler?path=internal/cron/publish-scheduled",
       "schedule": "* * * * *"
     }
   ],
   "rewrites": [
     {
       "source": "/v1/:path*",
-      "destination": "/api/gin-handler?path=:path*"
+      "destination": "/api/vercel/gin-handler?path=:path*"
     }
   ]
 }
