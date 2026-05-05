@@ -116,7 +116,7 @@ axiosInstance.interceptors.response.use(
     if (typeof window !== "undefined" && error?.response?.status === 401) {
       try {
         const { signOut } = await import("next-auth/react");
-        await signOut({ callbackUrl: "/" });
+        await signOut({ callbackUrl: "/login" });
       } catch {
         // ignore
       }

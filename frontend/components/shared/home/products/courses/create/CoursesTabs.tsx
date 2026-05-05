@@ -30,6 +30,7 @@ import UpdateAssignmentModal from "./curriculum/UpdateAssignmentModal";
 import UpdateQuizModal from "./curriculum/UpdateQuizModal";
 import UpdateQuestion from "./curriculum/UpdateQuestion";
 import { dbTimeToPickerFormat } from "@/lib/helpers";
+import axios from "axios";
 
 const tabs = [
   { id: 1, label: "Details" },
@@ -285,7 +286,37 @@ export default function CoursesTabs({
 
   const [loading, setLoading] = useState(false);
 
+  const getErrorMessage = (err: unknown): string => {
+    if (axios.isAxiosError(err)) {
+      const data = err.response?.data as
+        | { error?: unknown; message?: unknown }
+        | undefined;
+      const msg =
+        (typeof data?.error === "string" && data.error.trim()) ||
+        (typeof data?.message === "string" && data.message.trim());
+      if (msg) return msg;
+
+      const status = err.response?.status;
+      if (status === 401) return "Unauthorized. Please login again.";
+      if (status === 413) return "Upload too large.";
+      if (status) return `Request failed (HTTP ${status}).`;
+
+      const code = err.code;
+      if (code === "ECONNABORTED") return "Request timed out. Try again.";
+      if (code === "ERR_NETWORK") return "Network error. Check connection/API.";
+    }
+
+    if (err instanceof Error && err.message.trim()) return err.message;
+    return "Something went wrong.";
+  };
+
   const handleSave = (data: TCourseSchema) => {
+    if (!session?.accessToken) {
+      toast.error("Session expired. Please login again.");
+      router.push("/login");
+      return;
+    }
+
     console.log(data);
     // #region agent log
     fetch("/api/debug-log", {
@@ -315,47 +346,57 @@ export default function CoursesTabs({
     // #endregion agent log
     if (loading) return;
     setLoading(true);
-    const fd = new FormData();
-    fd.append("title", data.title);
-    fd.append("summary", data.summary);
-    if (data.description) {
-      fd.append("description", data.description);
-    }
-    fd.append("visibility", data.visibility);
-    fd.append("is_scheduled", String(data.is_scheduled));
-    if (data.is_scheduled) {
-      fd.append("schedule_date", String(data.schedule_date));
-      fd.append("schedule_time", String(data.schedule_time));
-      fd.append("show_comming_soon", String(data.show_comming_soon));
-    }
-    fd.append("pricing_model", data.pricing_model);
-    fd.append("regular_price", String(data.regular_price));
-    fd.append("sale_price", String(data.sale_price));
-    if (data.featured_image && !data.featured_image.isDBImg) {
-      fd.append("featured_image", data.featured_image);
-    }
-    if (data.intro_video) {
-      fd.append("intro_video", JSON.stringify(data.intro_video));
-    }
-    fd.append("tags", JSON.stringify(data.tags || []));
-    fd.append("author_id", String(data.author_id));
-    fd.append("overview", JSON.stringify(data.overview));
-    fd.append("course_chapters", JSON.stringify(data.course_chapters));
-    fd.append("general_settings", JSON.stringify(data.general_settings));
-    fd.append("course_instructors", JSON.stringify(data.course_instructors));
-    data.course_chapters.forEach((chapter, chapterIndex) => {
-      chapter.course_lessons?.forEach((lesson, lessonIndex) => {
-        lesson.resources?.forEach((file, resourceIndex) => {
-          if (!file.isDBImg) {
-            fd.append(
-              `resources[${chapterIndex}][${lessonIndex}][]`,
-              file,
-              file.name
-            );
-          }
+    let fd: FormData;
+    try {
+      fd = new FormData();
+      fd.append("title", data.title);
+      fd.append("summary", data.summary);
+      if (data.description) {
+        fd.append("description", data.description);
+      }
+      fd.append("visibility", data.visibility);
+      fd.append("is_scheduled", String(data.is_scheduled));
+      if (data.is_scheduled) {
+        fd.append("schedule_date", String(data.schedule_date));
+        fd.append("schedule_time", String(data.schedule_time));
+        fd.append("show_comming_soon", String(data.show_comming_soon));
+      }
+      fd.append("pricing_model", data.pricing_model);
+      fd.append("regular_price", String(data.regular_price));
+      fd.append("sale_price", String(data.sale_price));
+      if (data.featured_image && !data.featured_image.isDBImg) {
+        fd.append("featured_image", data.featured_image);
+      }
+      if (data.intro_video) {
+        fd.append("intro_video", JSON.stringify(data.intro_video));
+      }
+      fd.append("tags", JSON.stringify(data.tags || []));
+      fd.append("author_id", String(data.author_id));
+      fd.append("overview", JSON.stringify(data.overview));
+      fd.append("course_chapters", JSON.stringify(data.course_chapters));
+      fd.append("general_settings", JSON.stringify(data.general_settings));
+      fd.append("course_instructors", JSON.stringify(data.course_instructors));
+
+      // Only append actual new uploads; ignore DB-backed resource objects.
+      data.course_chapters.forEach((chapter, chapterIndex) => {
+        chapter.course_lessons?.forEach((lesson, lessonIndex) => {
+          lesson.resources?.forEach((file) => {
+            if (file instanceof File) {
+              fd.append(
+                `resources[${chapterIndex}][${lessonIndex}][]`,
+                file,
+                file.name
+              );
+            }
+          });
         });
       });
-    });
+    } catch (e: unknown) {
+      console.log("[ERROR] build FormData", e);
+      toast.error(getErrorMessage(e));
+      setLoading(false);
+      return;
+    }
 
     if (isEdit && courseDetails) {
       // console.log("[EDIT]", data);
@@ -363,7 +404,7 @@ export default function CoursesTabs({
         .put(`/private/course/update/${courseDetails.id}`, fd, {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${session?.accessToken}`,
+            Authorization: `Bearer ${session.accessToken}`,
           },
         })
         .then((res) => {
@@ -415,7 +456,7 @@ export default function CoursesTabs({
               }),
             }).catch(() => {});
           // #endregion agent log
-          toast.error(error.response.data.error || "Something went wrong.");
+          toast.error(getErrorMessage(error));
         })
         .finally(() => setLoading(false));
     } else {
@@ -423,7 +464,7 @@ export default function CoursesTabs({
         .post("/private/course/create", fd, {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${session?.accessToken}`,
+            Authorization: `Bearer ${session.accessToken}`,
           },
         })
         .then((res) => {
@@ -475,7 +516,7 @@ export default function CoursesTabs({
               }),
             }).catch(() => {});
           // #endregion agent log
-          toast.error(error.response.data.error || "Something went wrong.");
+          toast.error(getErrorMessage(error));
         })
         .finally(() => setLoading(false));
     }

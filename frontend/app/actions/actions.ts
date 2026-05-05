@@ -54,7 +54,7 @@ export const doCretendentialLogin = async (email: string, password: string) => {
 };
 
 export const doCretendentialLogout = async () => {
-  await signOut();
+  await signOut({ redirectTo: "/login" });
 };
 
 export const getAllCategories = async (

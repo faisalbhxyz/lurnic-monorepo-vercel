@@ -4,6 +4,12 @@ import axiosInstance from "./axiosInstance";
 import axios from "axios";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Auth.js requires a secret for signing/encrypting cookies/tokens.
+  // In local dev, provide a deterministic fallback to avoid runtime crashes.
+  secret:
+    process.env.AUTH_SECRET ??
+    process.env.NEXTAUTH_SECRET ??
+    (process.env.NODE_ENV === "development" ? "dev-secret-change-me" : undefined),
   // Required behind Coolify/Traefik or any reverse proxy so callback URLs resolve correctly.
   trustHost: true,
   session: {
@@ -95,6 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   pages: {
-    signOut: "/",
+    signIn: "/login",
+    signOut: "/login",
   },
 });

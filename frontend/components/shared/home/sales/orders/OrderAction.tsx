@@ -21,7 +21,7 @@ export default function OrderAction({
     const accessToken = session?.accessToken;
     if (!accessToken) {
       toast.error("Session expired. Please sign in again.");
-      await signOut({ callbackUrl: "/" });
+      await signOut({ callbackUrl: "/login" });
       return null;
     }
     return accessToken;

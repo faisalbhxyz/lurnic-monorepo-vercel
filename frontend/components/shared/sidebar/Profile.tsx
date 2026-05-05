@@ -1,9 +1,7 @@
-import { doCretendentialLogout } from "@/app/actions/actions";
 import { cn } from "@/lib/cn";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { FiUser } from "react-icons/fi";
 import { IoIosArrowDown } from "react-icons/io";
@@ -87,8 +85,7 @@ export default function Profile() {
           <button
             className="hover:bg-gray-100 flex items-center gap-2 px-2 py-1 w-full rounded-md"
             onClick={async () => {
-              await doCretendentialLogout();
-              redirect("/login");
+              await signOut({ callbackUrl: "/login" });
             }}
           >
             <LuLogOut />
