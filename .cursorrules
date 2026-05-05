@@ -47,6 +47,7 @@
 - `GOOSE_DBSTRING` must use the Go driver form `user:pass@tcp(host:port)/db?tls=true&parseTime=true&loc=Local&charset=utf8mb4`, not `mysql://` URLs (GORM/`database/sql` will not parse those).
 - Homebrew `mysql` 9+ may fail to connect to TiDB with `mysql_native_password`; use `go run -C api ./cmd/importdump/` (or another client that supports that auth) for large dumps.
 - phpMyAdmin dumps often include `ALTER TABLE ... MODIFY ... AUTO_INCREMENT=...` blocks; TiDB can return Error 8200 on those. Strip that section before import (see `cmd/importdump`) or import will fail mid-file.
+- Remote MySQL/TiDB TLS certs can be self-signed/non-compliant; if `tls=true` fails with x509 verification errors, use `tls=skip-verify` (encrypted transport without cert validation) or install the proper CA.
 
 ## GORM slow SQL logs (`api/internal/utils/db.go`)
 - Default `SlowThreshold` is 1000ms (not GORM’s 200ms) so cross-region TiDB RTT does not spam logs; tune with `GORM_SLOW_SQL_MS`.

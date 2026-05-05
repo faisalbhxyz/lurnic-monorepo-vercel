@@ -95,9 +95,11 @@ func ensureTLS(q string) string {
 		return q
 	}
 	if q == "" {
-		return "tls=true"
+		// Many managed/remote MySQL installs use self-signed or non-compliant certs.
+		// Default to encrypted transport without certificate verification.
+		return "tls=skip-verify"
 	}
-	return q + "&tls=true"
+	return q + "&tls=skip-verify"
 }
 
 // parseToParts accepts either mysql:// URL or Go driver DSN user:pass@tcp(host:port)/db?params

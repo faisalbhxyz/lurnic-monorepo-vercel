@@ -139,7 +139,42 @@ export const CourseLessonSchema = z
       .optional()
       .nullable(),
   })
-  .superRefine(({ source }, ctx) => {
+  .superRefine(({ source, is_scheduled, schedule_date, schedule_time }, ctx) => {
+    // Keep client validation aligned with Go API:
+    // - schedule_date must be YYYY-MM-DD
+    // - schedule_time must be "03:04 PM" (12h with minutes)
+    if (is_scheduled) {
+      if (!schedule_date || String(schedule_date).trim() === "") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["schedule_date"],
+          message: "Schedule date is required.",
+        });
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(String(schedule_date).trim())) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["schedule_date"],
+          message: "Schedule date must be YYYY-MM-DD.",
+        });
+      }
+
+      if (!schedule_time || String(schedule_time).trim() === "") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["schedule_time"],
+          message: "Schedule time is required.",
+        });
+      } else if (
+        !/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(String(schedule_time).trim())
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["schedule_time"],
+          message: 'Schedule time must look like "10:05 AM".',
+        });
+      }
+    }
+
     if (source.isFile) {
       if (!source.data) {
         ctx.addIssue({
@@ -301,6 +336,36 @@ export const CourseSchema = z.object({
       message: "At least one instructor is required",
     }),
   general_settings: GeneralSettingsSchema,
+}).superRefine(({ is_scheduled, schedule_date, schedule_time }, ctx) => {
+  if (!is_scheduled) return;
+
+  if (!schedule_date || String(schedule_date).trim() === "") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["schedule_date"],
+      message: "Schedule date is required.",
+    });
+  } else if (!/^\d{4}-\d{2}-\d{2}$/.test(String(schedule_date).trim())) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["schedule_date"],
+      message: "Schedule date must be YYYY-MM-DD.",
+    });
+  }
+
+  if (!schedule_time || String(schedule_time).trim() === "") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["schedule_time"],
+      message: "Schedule time is required.",
+    });
+  } else if (!/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(String(schedule_time).trim())) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["schedule_time"],
+      message: 'Schedule time must look like "10:05 AM".',
+    });
+  }
 });
 
 export type TCourseSchema = z.infer<typeof CourseSchema>;
