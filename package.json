@@ -3,7 +3,7 @@
   "private": true,
   "description": "Root package.json so Vercel can detect Next.js; app lives in frontend/",
   "dependencies": {
-    "next": "^15.5.9",
+    "next": "^15.5.18",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
