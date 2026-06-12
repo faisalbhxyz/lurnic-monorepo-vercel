@@ -10,6 +10,7 @@ import { IoIosArrowDown } from "react-icons/io";
 import { LuLogOut, LuWallet } from "react-icons/lu";
 
 export default function Profile() {
+  const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -29,26 +30,22 @@ export default function Profile() {
     };
   }, []);
 
-  const User = () => {
-    const { data: session } = useSession();
-
-    return (
-      <>
-        <div className="w-10 min-w-10 h-10 rounded-md">
-          <Image
-            src={"/images/profile.png"}
-            alt={"image"}
-            width={200}
-            height={200}
-          />
-        </div>
-        <div className="text-sm truncate">
-          <p className="font-semibold">{session?.user?.name}</p>
-          <p className="truncate text-gray-600">{session?.user?.email}</p>
-        </div>
-      </>
-    );
-  };
+  const userSummary = (
+    <>
+      <div className="w-10 min-w-10 h-10 rounded-md">
+        <Image
+          src={"/images/profile.png"}
+          alt={"image"}
+          width={200}
+          height={200}
+        />
+      </div>
+      <div className="text-sm truncate">
+        <p className="font-semibold">{session?.user?.name}</p>
+        <p className="truncate text-gray-600">{session?.user?.email}</p>
+      </div>
+    </>
+  );
 
   return (
     <div ref={dropdownRef} className="relative">
@@ -56,7 +53,7 @@ export default function Profile() {
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex items-center gap-3 hover:bg-slate-200 p-1 rounded-md cursor-pointer"
       >
-        <User />
+        {userSummary}
         <div>
           <IoIosArrowDown />
         </div>
@@ -68,7 +65,7 @@ export default function Profile() {
         )}
       >
         <div className="p-3 border-b border-gray-200 flex items-center gap-3">
-          <User />
+          {userSummary}
         </div>
         <div className="p-3">
           <Link
