@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef, useState } from "react";
 import { ImFilePlay } from "react-icons/im";
 import { RiUploadCloud2Line } from "react-icons/ri";

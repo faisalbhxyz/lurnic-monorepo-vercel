@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/cn";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";

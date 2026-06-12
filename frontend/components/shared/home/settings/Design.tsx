@@ -1,3 +1,5 @@
+"use client";
+
 import Checkbox from "@/components/ui/Checkbox";
 import InputField from "@/components/ui/InputField";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";

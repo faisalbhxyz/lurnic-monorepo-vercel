@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef, useState } from "react";
 import InputField from "@/components/ui/InputField";
 import { FiUpload } from "react-icons/fi";

@@ -1,3 +1,5 @@
+"use client";
+
 import InputField from "@/components/ui/InputField";
 import React, { useState } from "react";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { RxCross2 } from "react-icons/rx";

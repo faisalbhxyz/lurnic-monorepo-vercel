@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 import { HiOutlineDotsHorizontal } from "react-icons/hi";

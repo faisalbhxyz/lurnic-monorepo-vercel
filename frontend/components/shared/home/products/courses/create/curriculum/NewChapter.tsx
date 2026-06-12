@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { useCoursesStore } from "@/hooks/useCoursesStore";

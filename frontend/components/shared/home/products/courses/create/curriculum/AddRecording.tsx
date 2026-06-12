@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef, useState } from "react";
 import { LuFile } from "react-icons/lu";
 import { RiUploadCloud2Line } from "react-icons/ri";

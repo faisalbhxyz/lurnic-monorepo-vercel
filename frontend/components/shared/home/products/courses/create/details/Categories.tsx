@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import Checkbox from "@/components/ui/Checkbox";
 import { Menu, MenuButton, MenuItems } from "@headlessui/react";

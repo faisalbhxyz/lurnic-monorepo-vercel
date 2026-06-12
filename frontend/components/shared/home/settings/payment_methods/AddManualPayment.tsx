@@ -1,3 +1,5 @@
+"use client";
+
 import Button from "@/components/ui/Button";
 import InputField from "@/components/ui/InputField";
 import Label from "@/components/ui/Label";

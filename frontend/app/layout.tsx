@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import "react-datepicker/dist/react-datepicker.css";
-import { Toaster } from "sonner";
 import { auth } from "@/lib/auth";
 import AuthProvider from "./AuthProvider";
+import ToasterProvider from "./ToasterProvider";
 import { getGeneralSettings } from "./actions/actions";
 
 // Root layout reads session via auth(); static prerender triggers Next.js 15
@@ -42,7 +42,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.className} antialiased`}>
-        <Toaster richColors />
+        <ToasterProvider />
         <AuthProvider session={session}>{children}</AuthProvider>
       </body>
     </html>

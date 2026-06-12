@@ -1,3 +1,5 @@
+"use client";
+
 import TextEditor from "@/components/shared/text-editor/TextEditor";
 import Button from "@/components/ui/Button";
 import InputField from "@/components/ui/InputField";

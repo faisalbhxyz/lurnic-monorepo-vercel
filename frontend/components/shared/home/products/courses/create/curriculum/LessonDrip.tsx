@@ -1,3 +1,5 @@
+"use client";
+
 import Button from "@/components/ui/Button";
 import SelectList from "@/components/ui/SelectList";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";

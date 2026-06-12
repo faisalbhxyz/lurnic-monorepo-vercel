@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { FiSearch } from "react-icons/fi";
 // import CouponsAction from "./CouponsAction";

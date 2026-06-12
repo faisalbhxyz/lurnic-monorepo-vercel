@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import SelectList from "@/components/ui/SelectList";
 import InputField from "@/components/ui/InputField";

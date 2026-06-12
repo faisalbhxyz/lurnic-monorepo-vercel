@@ -1,3 +1,5 @@
+"use client";
+
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
