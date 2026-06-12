@@ -1,0 +1,11 @@
+# Coolify/Nixpacks: build only frontend/ to avoid duplicate React from root node_modules
+# (root package.json exists for Vercel routing; do not npm ci react/next at repo root).
+
+[phases.install]
+cmds = ["npm ci --prefix frontend --include=dev"]
+
+[phases.build]
+cmds = ["npm run build --prefix frontend"]
+
+[start]
+cmd = "npm run start --prefix frontend"
