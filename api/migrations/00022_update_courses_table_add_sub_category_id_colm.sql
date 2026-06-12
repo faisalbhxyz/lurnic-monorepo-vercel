@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 ALTER TABLE course_general_settings
-ADD COLUMN IF NOT EXISTS sub_category_id INT UNSIGNED NULL DEFAULT NULL;
+ADD COLUMN sub_category_id INT UNSIGNED NULL DEFAULT NULL;
 
 -- +goose StatementEnd
 -- +goose StatementBegin

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE users
-ADD COLUMN IF NOT EXISTS tenant_id INT UNSIGNED NOT NULL;
+ADD COLUMN tenant_id INT UNSIGNED NOT NULL;
 
 -- +goose StatementEnd
 -- +goose StatementBegin
