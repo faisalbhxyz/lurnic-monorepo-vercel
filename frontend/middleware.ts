@@ -18,5 +18,5 @@ export default auth((req) => {
 
 export const config = {
   // Exclude /v1 so rewrites to the Go API (see root vercel.json) are not intercepted by NextAuth.
-  matcher: ["/((?!api|v1|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|v1|health|_next/static|_next/image|favicon.ico).*)"],
 };

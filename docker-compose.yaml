@@ -82,12 +82,12 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "${WEB_PUBLISH_PORT:-3000}:3000"
+      - "3000:3000"
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+          "wget -qO- http://127.0.0.1:3000/health >/dev/null 2>&1 || exit 1",
         ]
       interval: 15s
       timeout: 5s
