@@ -9,10 +9,14 @@ const nextConfig: NextConfig = {
   // Monorepo: trace from repo root, but resolve React only from frontend/node_modules.
   outputFileTracingRoot: path.join(frontendDir, ".."),
   webpack: (config) => {
+    const react = path.join(frontendDir, "node_modules/react");
+    const reactDom = path.join(frontendDir, "node_modules/react-dom");
     config.resolve.alias = {
       ...config.resolve.alias,
-      react: path.join(frontendDir, "node_modules/react"),
-      "react-dom": path.join(frontendDir, "node_modules/react-dom"),
+      react,
+      "react-dom": reactDom,
+      "react/jsx-runtime": path.join(react, "jsx-runtime.js"),
+      "react/jsx-dev-runtime": path.join(react, "jsx-dev-runtime.js"),
     };
     return config;
   },
