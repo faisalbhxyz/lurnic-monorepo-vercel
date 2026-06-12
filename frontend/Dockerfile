@@ -30,8 +30,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Copy standalone build
-COPY --from=builder /app/.next/standalone ./   
+# Standalone output nests server.js under the app dir name (`app/` here because
+# WORKDIR is /app and outputFileTracingRoot is the filesystem root). Do not copy
+# the whole standalone tree or CMD looks for /app/server.js and crashes.
+COPY --from=builder /app/.next/standalone/app ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 

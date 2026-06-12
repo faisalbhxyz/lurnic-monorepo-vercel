@@ -57,3 +57,6 @@ frontend/testsprite_tests/
 # Local database dumps (large; may contain PII)
 lurnic-Database backup.sql
 **/lurnic-Database*.sql
+api/seeds/*.dmp
+api/seeds/*.sql
+data_coolify_backups*.dmp

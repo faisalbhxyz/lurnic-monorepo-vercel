@@ -12,7 +12,10 @@ import (
 )
 
 func main() {
-	dumpPath := "lurnic-Database backup.sql"
+	dumpPath := "../api/seeds/lurnic-default.dmp"
+	if v := strings.TrimSpace(os.Getenv("SEED_DUMP_PATH")); v != "" {
+		dumpPath = v
+	}
 	if len(os.Args) > 1 {
 		dumpPath = os.Args[1]
 	}
@@ -76,6 +79,13 @@ func main() {
 	if _, err := dumpDB.Exec(sqlStr); err != nil {
 		log.Fatal("import:", err)
 	}
+
+	// phpMyAdmin dumps often omit AUTO_INCREMENT on CREATE; we strip MODIFY blocks for TiDB compat,
+	// so goose_db_version.id may lack AUTO_INCREMENT and goose cannot insert new version rows.
+	if _, err := dumpDB.Exec("ALTER TABLE goose_db_version MODIFY id bigint UNSIGNED NOT NULL AUTO_INCREMENT"); err != nil {
+		log.Printf("warning: goose_db_version AUTO_INCREMENT fix: %v", err)
+	}
+
 	log.Println("import finished OK")
 }
 
@@ -147,10 +157,10 @@ func parseToParts(raw string) (user, pass, host, port, dbName, query string) {
 	host, port = hp[0], hp[1]
 
 	after := rest[end+1:]
-	if !strings.HasPrefix(after, ")/") {
-		log.Fatal("invalid GOOSE_DBSTRING: expected )/ after host:port")
+	if !strings.HasPrefix(after, "/") {
+		log.Fatal("invalid GOOSE_DBSTRING: expected /dbname after host:port)")
 	}
-	after = after[len(")/"):]
+	after = strings.TrimPrefix(after, "/")
 	if i := strings.Index(after, "?"); i >= 0 {
 		dbName = after[:i]
 		query = after[i+1:]
