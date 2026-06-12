@@ -7,6 +7,10 @@ import { auth } from "@/lib/auth";
 import AuthProvider from "./AuthProvider";
 import { getGeneralSettings } from "./actions/actions";
 
+// Root layout reads session via auth(); static prerender triggers Next.js 15
+// workUnitAsyncStorage invariant errors on protected pages.
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
