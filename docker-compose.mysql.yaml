@@ -14,8 +14,6 @@ services:
     restart: unless-stopped
     pull_policy: if_not_present
     stop_grace_period: 15s
-    networks:
-      - lurnic
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-lurnic}
       MYSQL_USER: ${MYSQL_USER:-lurnic}

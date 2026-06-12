@@ -30,6 +30,8 @@ Create **two** FQDNs (recommended):
 
 Attach each domain to the **correct** service in Coolify. Wrong mapping → **502** or login/API failures.
 
+**504 Gateway Timeout** while container logs look healthy (e.g. Gin `/health` 200): usually Traefik routing to the wrong Docker network when the compose file defines a **custom** `networks:` bridge. This repo intentionally omits that — Coolify creates the compose network and joins Traefik to it. If you add your own network, set `traefik.docker.network` to Coolify’s network or remove the custom network.
+
 ## 3. Required environment variables (Coolify project env)
 
 Set these in the Coolify UI (shared across services; compose substitutes into builds and containers). Align with `.env.example`.

@@ -20,9 +20,9 @@
 
 name: lurnic
 
-networks:
-  lurnic:
-    driver: bridge
+# Do not define a custom bridge network here. Coolify attaches Traefik to its compose
+# network; an extra network (e.g. lurnic) makes Traefik pick the wrong container IP
+# → intermittent 504 Gateway Timeout while in-container healthchecks still pass.
 
 services:
   api:
@@ -31,8 +31,6 @@ services:
       dockerfile: Dockerfile
     pull_policy: never
     restart: unless-stopped
-    networks:
-      - lurnic
     env_file:
       - path: .env
         required: false
@@ -65,8 +63,6 @@ services:
         NEXT_PUBLIC_APP_KEY: ${NEXT_PUBLIC_APP_KEY:-}
     pull_policy: never
     restart: unless-stopped
-    networks:
-      - lurnic
     env_file:
       - path: .env
         required: false
