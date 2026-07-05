@@ -22,7 +22,7 @@ func RegisterQuizRoutes(rg *gin.RouterGroup) {
 
 	adminGroup := rg.Group("/private/course", middleware.AuthMiddleware())
 	{
-		adminGroup.GET("/:courseId/quiz-submissions", handler.ListCourseSubmissions)
-		adminGroup.GET("/:courseId/quiz-submissions/:submissionId", handler.GetCourseSubmission)
+		adminGroup.GET("/:id/quiz-submissions", handler.ListCourseSubmissions)
+		adminGroup.GET("/:id/quiz-submissions/:submissionId", handler.GetCourseSubmission)
 	}
 }

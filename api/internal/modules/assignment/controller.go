@@ -116,7 +116,7 @@ func (h *AssignmentHandler) ListStudentSubmissions(c *gin.Context) {
 }
 
 func (h *AssignmentHandler) ListCourseSubmissions(c *gin.Context) {
-	courseID, err := strconv.ParseUint(c.Param("courseId"), 10, 64)
+	courseID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
 		return
@@ -131,7 +131,7 @@ func (h *AssignmentHandler) ListCourseSubmissions(c *gin.Context) {
 }
 
 func (h *AssignmentHandler) GetCourseSubmission(c *gin.Context) {
-	courseID, err := strconv.ParseUint(c.Param("courseId"), 10, 64)
+	courseID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
 		return
@@ -155,7 +155,7 @@ func (h *AssignmentHandler) GetCourseSubmission(c *gin.Context) {
 }
 
 func (h *AssignmentHandler) GradeSubmission(c *gin.Context) {
-	courseID, err := strconv.ParseUint(c.Param("courseId"), 10, 64)
+	courseID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
 		return

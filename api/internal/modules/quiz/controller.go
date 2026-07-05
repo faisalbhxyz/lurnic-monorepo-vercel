@@ -102,7 +102,7 @@ func (h *QuizHandler) ListStudentSubmissions(c *gin.Context) {
 }
 
 func (h *QuizHandler) ListCourseSubmissions(c *gin.Context) {
-	courseID, err := strconv.ParseUint(c.Param("courseId"), 10, 64)
+	courseID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
 		return
@@ -117,7 +117,7 @@ func (h *QuizHandler) ListCourseSubmissions(c *gin.Context) {
 }
 
 func (h *QuizHandler) GetCourseSubmission(c *gin.Context) {
-	courseID, err := strconv.ParseUint(c.Param("courseId"), 10, 64)
+	courseID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
 		return

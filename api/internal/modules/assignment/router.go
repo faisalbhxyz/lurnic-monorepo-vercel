@@ -22,8 +22,8 @@ func RegisterAssignmentRoutes(rg *gin.RouterGroup) {
 
 	adminGroup := rg.Group("/private/course", middleware.AuthMiddleware())
 	{
-		adminGroup.GET("/:courseId/assignment-submissions", handler.ListCourseSubmissions)
-		adminGroup.GET("/:courseId/assignment-submissions/:submissionId", handler.GetCourseSubmission)
-		adminGroup.POST("/:courseId/assignment-submissions/:submissionId/grade", handler.GradeSubmission)
+		adminGroup.GET("/:id/assignment-submissions", handler.ListCourseSubmissions)
+		adminGroup.GET("/:id/assignment-submissions/:submissionId", handler.GetCourseSubmission)
+		adminGroup.POST("/:id/assignment-submissions/:submissionId/grade", handler.GradeSubmission)
 	}
 }
