@@ -1,6 +1,5 @@
 -- +goose Up
--- +goose StatementBegin
-CREATE TABLE assignment_submissions (
+CREATE TABLE IF NOT EXISTS assignment_submissions (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT UNSIGNED NOT NULL,
     course_id INT UNSIGNED NOT NULL,
@@ -25,9 +24,5 @@ CREATE TABLE assignment_submissions (
     UNIQUE KEY uniq_assignment_submissions_assignment_student (assignment_id, student_id)
 );
 
--- +goose StatementEnd
 -- +goose Down
--- +goose StatementBegin
-DROP TABLE assignment_submissions;
-
--- +goose StatementEnd
+DROP TABLE IF EXISTS assignment_submissions;

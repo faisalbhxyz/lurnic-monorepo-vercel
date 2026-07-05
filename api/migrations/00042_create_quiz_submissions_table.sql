@@ -1,6 +1,5 @@
 -- +goose Up
--- +goose StatementBegin
-CREATE TABLE quiz_submissions (
+CREATE TABLE IF NOT EXISTS quiz_submissions (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT UNSIGNED NOT NULL,
     course_id INT UNSIGNED NOT NULL,
@@ -23,9 +22,5 @@ CREATE TABLE quiz_submissions (
     INDEX idx_quiz_submissions_tenant_id (tenant_id)
 );
 
--- +goose StatementEnd
 -- +goose Down
--- +goose StatementBegin
-DROP TABLE quiz_submissions;
-
--- +goose StatementEnd
+DROP TABLE IF EXISTS quiz_submissions;

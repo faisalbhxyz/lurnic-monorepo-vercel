@@ -36,6 +36,7 @@ func main() {
 	}
 
 	tables := []string{
+		"goose_db_version",
 		"course_details",
 		"course_chapters",
 		"course_lessons",
@@ -69,7 +70,7 @@ func fixTable(db *sql.DB, table string) error {
 		return err
 	}
 	if len(cols) == 0 {
-		return fmt.Errorf("no columns found for %s", table)
+		return nil // table does not exist yet; skip
 	}
 
 	createSQL, err := showCreateTable(db, table)

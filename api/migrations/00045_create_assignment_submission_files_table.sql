@@ -1,6 +1,5 @@
 -- +goose Up
--- +goose StatementBegin
-CREATE TABLE assignment_submission_files (
+CREATE TABLE IF NOT EXISTS assignment_submission_files (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     submission_id INT UNSIGNED NOT NULL,
     url VARCHAR(512) NOT NULL,
@@ -12,9 +11,5 @@ CREATE TABLE assignment_submission_files (
     INDEX idx_assignment_submission_files_submission_id (submission_id)
 );
 
--- +goose StatementEnd
 -- +goose Down
--- +goose StatementBegin
-DROP TABLE assignment_submission_files;
-
--- +goose StatementEnd
+DROP TABLE IF EXISTS assignment_submission_files;

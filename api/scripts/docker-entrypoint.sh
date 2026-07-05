@@ -36,16 +36,19 @@ case "$GOOSE_DBSTRING" in
 esac
 export GOOSE_DBSTRING
 
-log 'running fixautoinc (non-fatal on failure)...'
+log 'running fixautoinc (TiDB AUTO_INCREMENT repair)...'
 if ! ./fixautoinc; then
-  log 'fixautoinc failed or skipped; continuing'
+  log 'WARNING: fixautoinc failed; continuing'
 fi
 
+log 'current migration status:'
+goose -dir /app/migrations status 2>&1 || true
+
 log 'running goose migrations...'
-if ! goose -dir /app/migrations up; then
-  log 'ERROR: goose migration failed'
+if ! goose -dir /app/migrations up 2>&1; then
+  log 'ERROR: goose migration failed (see output above)'
   exit 1
 fi
 
-log 'migrations complete; starting API'
+log 'migrations complete; starting API on port '"${APP_PORT:-5000}"
 exec ./main
