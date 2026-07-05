@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Profile from "./Profile";
@@ -66,19 +66,39 @@ const menuItems: MenuItem[] = [
     submenu: [
       { label: "Banner", href: "/banner" },
       { label: "Class-wise Notes", href: "/class-notes" },
+      { label: "Add Class Note", href: "/class-notes/create" },
     ],
   },
 ];
 
 export default function Sidebar({ orgLogo }: { orgLogo: string | null }) {
   const pathname = usePathname();
+  const websiteMenuIndex = menuItems.findIndex((item) => item.label === "Website");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (
+      pathname.startsWith("/banner") ||
+      pathname.startsWith("/class-notes")
+    ) {
+      setOpenIndex(websiteMenuIndex);
+    }
+  }, [pathname, websiteMenuIndex]);
 
   const toggleMenu = (index: number) => {
     setOpenIndex((prev) => (prev === index ? null : index));
   };
 
-  const isActive = (href?: string) => href && pathname === href;
+  const isSubmenuActive = (href?: string) => {
+    if (!href) return false;
+    if (href === "/class-notes") {
+      return (
+        pathname === "/class-notes" ||
+        /^\/class-notes\/\d+\/edit/.test(pathname)
+      );
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <div className="w-64 h-screen bg-slate-100 flex flex-col sticky top-0">
@@ -144,10 +164,10 @@ export default function Sidebar({ orgLogo }: { orgLogo: string | null }) {
                       href={submenu.href || "#"}
                       className={cn(
                         "relative block text-gray-700 font-medium px-3 py-1.5 hover:text-primary rounded-md",
-                        isActive(submenu.href) && "text-primary"
+                        isSubmenuActive(submenu.href) && "text-primary"
                       )}
                     >
-                      {isActive(submenu.href) && (
+                      {isSubmenuActive(submenu.href) && (
                         <div className="absolute left-0 h-6 w-0.5 bg-primary" />
                       )}
                       {submenu.label}
@@ -164,7 +184,7 @@ export default function Sidebar({ orgLogo }: { orgLogo: string | null }) {
           href="/settings"
           className={cn(
             "px-4 py-2 font-medium text-sm hover:bg-primary/10 flex items-center gap-2",
-            isActive("/settings")
+            pathname === "/settings"
               ? "text-primary"
               : "text-gray-800 hover:text-primary"
           )}

@@ -7,6 +7,7 @@ import { Controller, useFormContext } from "react-hook-form";
 import { FiUpload } from "react-icons/fi";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 import { TCourseSchema } from "@/schema/course.schema";
+import CertificatePreview from "./CertificatePreview";
 
 const certificates = [
   { id: 1, name: "/images/Certificat-14.jpg" },
@@ -30,6 +31,10 @@ export default function CertificatesTab() {
 
   const isEnabled = watch("certificate_settings.is_enabled");
   const selectedTemplate = watch("certificate_settings.template_path");
+  const certificateTitle = watch("certificate_settings.title");
+  const subtitleOne = watch("certificate_settings.subtitle_one");
+  const subtitleTwo = watch("certificate_settings.subtitle_two");
+  const courseTitle = watch("title");
   const ownerSignature = watch("certificate_settings.owner_signature");
   const instructorSignature = watch("certificate_settings.instructor_signature");
 
@@ -132,13 +137,15 @@ export default function CertificatesTab() {
         </div>
 
         <p className="font-medium mb-2">Choose a design</p>
-        <div className="border rounded-md overflow-hidden mb-4">
-          <Image
-            src={selectedTemplate || certificates[0].name}
-            alt="Selected Certificate"
-            width={500}
-            height={500}
-            className="w-full h-auto object-cover"
+        <div className="mb-4">
+          <CertificatePreview
+            templatePath={selectedTemplate || certificates[0].name}
+            title={certificateTitle}
+            subtitleOne={subtitleOne}
+            subtitleTwo={subtitleTwo}
+            courseTitle={courseTitle}
+            ownerSignatureSrc={ownerPreview}
+            instructorSignatureSrc={instructorPreview}
           />
         </div>
 
