@@ -44,6 +44,7 @@ export default function QuizQuestionAnswerFields({
   const { fields, append, remove } = useFieldArray({
     control,
     name: "options",
+    keyName: "uid",
   });
 
   useEffect(() => {
@@ -127,7 +128,7 @@ export default function QuizQuestionAnswerFields({
 
       <div className="space-y-2">
         {fields.map((field, index) => (
-          <div key={field.id} className="flex items-start gap-2">
+          <div key={field.uid} className="flex items-start gap-2">
             <div className="pt-2">
               {questionType === "single_choice" ? (
                 <input

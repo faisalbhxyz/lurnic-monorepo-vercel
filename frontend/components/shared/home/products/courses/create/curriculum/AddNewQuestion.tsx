@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ChangeEvent, useRef, useState, DragEvent } from "react";
+import React, { ChangeEvent, useEffect, useRef, useState, DragEvent } from "react";
 import { useCoursesStore } from "@/hooks/useCoursesStore";
 import Modal from "@/components/ui/Modal";
 import { RxCross2 } from "react-icons/rx";
@@ -69,14 +69,29 @@ export default function AddNewQuestion() {
     defaultValues: defaultQuestionValues,
   });
 
-  const handleSave = (data: TQuizQuestionSchema) => {
-    appendQuestion(data);
-    closeNewQuestion();
+  const resetForm = () => {
     formMethods.reset({
       ...defaultQuestionValues,
       _id: Date.now(),
     });
     setPreviews([]);
+  };
+
+  useEffect(() => {
+    if (isNewQuestion) {
+      resetForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNewQuestion]);
+
+  const handleClose = () => {
+    closeNewQuestion();
+    resetForm();
+  };
+
+  const handleSave = (data: TQuizQuestionSchema) => {
+    appendQuestion(data);
+    handleClose();
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -145,11 +160,11 @@ export default function AddNewQuestion() {
   };
 
   return (
-    <Modal isOpen={isNewQuestion} onClose={closeNewQuestion} className="p-0">
+    <Modal isOpen={isNewQuestion} onClose={handleClose} className="p-0">
       {/* {JSON.stringify(formMethods.formState.errors)} */}
       <div className="p-4 flex items-center justify-between border-b border-gray-300">
         <p className="font-semibold text-lg">New Question</p>
-        <button type="button" onClick={closeNewQuestion}>
+        <button type="button" onClick={handleClose}>
           <RxCross2 />
         </button>
       </div>
