@@ -23,6 +23,7 @@ import {
   QuizQuestionSchema,
   TQuizQuestionSchema,
 } from "@/schema/course.schema";
+import QuizQuestionAnswerFields from "./QuizQuestionAnswerFields";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 const questionType = [
@@ -43,6 +44,22 @@ const questionType = [
   },
 ];
 
+const defaultQuestionValues: TQuizQuestionSchema = {
+  _id: Date.now(),
+  title: "",
+  details: "",
+  type: "single_choice",
+  answer_required: false,
+  answer_explanation: "",
+  marks: 1,
+  media: [],
+  options: [
+    { id: "a", text: "" },
+    { id: "b", text: "" },
+  ],
+  correct_answer: { value: "a" },
+};
+
 export default function UpdateQuestion() {
   const {
     isEditQuestion,
@@ -58,16 +75,7 @@ export default function UpdateQuestion() {
 
   const formMethods = useForm<TQuizQuestionSchema>({
     resolver: zodResolver(QuizQuestionSchema),
-    defaultValues: {
-      _id: Date.now(),
-      title: "",
-      details: "",
-      type: "single_choice",
-      answer_required: false,
-      answer_explanation: "",
-      marks: 1,
-      media: [],
-    },
+    defaultValues: defaultQuestionValues,
   });
 
   useEffect(() => {
@@ -76,35 +84,40 @@ export default function UpdateQuestion() {
       if (question) {
         formMethods.reset({
           _id: question._id,
+          id: question.id,
           title: question.title,
-          details: question.details,
+          details: question.details ?? "",
           type: question.type,
           answer_required: question.answer_required,
-          answer_explanation: question.answer_explanation,
+          answer_explanation: question.answer_explanation ?? "",
           marks: question.marks,
-          media: question.Media,
+          media: question.media ?? [],
+          options:
+            question.options ??
+            (question.type === "true_false"
+              ? null
+              : [
+                  { id: "a", text: "" },
+                  { id: "b", text: "" },
+                ]),
+          correct_answer:
+            question.correct_answer ??
+            (question.type === "true_false"
+              ? { value: true }
+              : question.type === "multiple_choice"
+              ? { values: [] }
+              : { value: "a" }),
         });
       }
     }
-  }, [editQuestionID]);
+  }, [editQuestionID, questions, formMethods]);
 
   const handleSave = (data: TQuizQuestionSchema) => {
     updateQuestion({
       ...data,
-      id: data._id,
+      id: data.id ?? data._id,
     });
     closeEditQuestion();
-    // formMethods.reset({
-    //   _id: Date.now(),
-    //   title: "",
-    //   details: "",
-    //   type: "single_choice",
-    //   answer_required: false,
-    //   answer_explanation: "",
-    //   marks: 1,
-    //   media: [],
-    // });
-    // setPreviews([]);
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -300,6 +313,12 @@ export default function UpdateQuestion() {
             }}
           />
         </div>
+        <QuizQuestionAnswerFields
+          control={formMethods.control}
+          watch={formMethods.watch}
+          setValue={formMethods.setValue}
+          errors={formMethods.formState.errors}
+        />
         <div className="mb-3 flex items-center gap-5">
           <div className="w-1/2">
             <label className="text-sm block font-medium mb-1">Marks</label>

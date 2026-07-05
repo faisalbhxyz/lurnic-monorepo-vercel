@@ -113,6 +113,8 @@ type CreateQuizQuestionInput struct {
 	Title             string                  `json:"title" form:"title" binding:"required"`
 	Details           *string                 `json:"details" form:"details"`
 	Media             *datatypes.JSON         `json:"media" form:"media"`
+	Options           *datatypes.JSON         `json:"options" form:"options"`
+	CorrectAnswer     *datatypes.JSON         `json:"correct_answer" form:"correct_answer"`
 	Type              models.QuizQuestionType `json:"type" form:"type"`
 	Marks             float32                 `json:"marks" form:"marks" binding:"required"`
 	AnswerRequired    bool                    `json:"answer_required" form:"answer_required"`
@@ -126,7 +128,7 @@ type CreateAssignmentInput struct {
 	Attachments      *datatypes.JSON                  `json:"attachments" form:"attachments"`
 	IsPublished      bool                             `json:"is_published" form:"is_published"`
 	TimeLimit        int                              `json:"time_limit" form:"time_limit" binding:"required"`
-	TimeLimitOption  models.CourseQuizTimeLimitOption `json:"time_limit_option" form:"time_limit_option"`
+	TimeLimitOption  models.CourseAssignmentTimeLimitOption `json:"time_limit_option" form:"time_limit_option"`
 	FileUploadLimit  int                              `json:"file_upload_limit" form:"file_upload_limit"`
 	TotalMarks       float32                          `json:"total_marks" form:"total_marks" binding:"required"`
 	MinimumPassMarks float32                          `json:"minimum_pass_marks" form:"minimum_pass_marks" binding:"required"`

@@ -257,6 +257,11 @@ func (h *CourseHandler) Create(c *gin.Context) {
 		input.CourseChapters[chapterIndex].CourseLessons[lessonIndex].Resources = lessonResources
 	}
 
+	if err := applyAssignmentAttachmentUploads(input.CourseChapters, c.Request.MultipartForm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Step 3: Pass the parsed object to the service layer for further processing
 	if err := h.service.Create(input, c.GetUint("tenant_id"), c.GetUint("user_id")); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -388,6 +393,11 @@ func (h *CourseHandler) Update(c *gin.Context) {
 
 		// Assign **only this lesson’s resources**
 		input.CourseChapters[chapterIndex].CourseLessons[lessonIndex].Resources = lessonResources
+	}
+
+	if err := applyAssignmentAttachmentUploads(input.CourseChapters, c.Request.MultipartForm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	if err := h.service.Update(uint(courseID), c.GetUint("tenant_id"), c.GetUint("user_id"), input); err != nil {

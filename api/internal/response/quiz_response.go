@@ -34,10 +34,12 @@ type CourseQuizQuestionsResponse struct {
 	Title             string                  `json:"title" gorm:"type:varchar(255)"`
 	Details           *string                 `json:"details" gorm:"type:text"`
 	Media             *datatypes.JSON         `json:"media"`
+	Options           *datatypes.JSON         `json:"options"`
+	CorrectAnswer     *datatypes.JSON         `json:"correct_answer,omitempty"`
 	Type              models.QuizQuestionType `json:"type"`
 	Marks             float32                 `json:"marks"`
 	AnswerRequired    bool                    `json:"answer_required"`
-	AnswerExplanation *string                 `json:"answer_explanation"`
+	AnswerExplanation *string                 `json:"answer_explanation,omitempty"`
 	CreatedAt         time.Time               `json:"created_at"`
 	UpdatedAt         time.Time               `json:"updated_at"`
 }

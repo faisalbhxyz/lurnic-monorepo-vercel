@@ -25,7 +25,7 @@ type CourseAssignment struct {
 	Attachments      *datatypes.JSON           `gorm:"type:json" json:"attachments"`
 	IsPublished      bool                      `json:"is_published" gorm:"column:is_published;default:false"`
 	TimeLimit        int                       `json:"time_limit" gorm:"column:time_limit;default:1"`
-	TimeLimitOption  CourseQuizTimeLimitOption `json:"time_limit_option" gorm:"column:time_limit_option;type:enum('minutes','hours','days','weeks','months');default:'weeks'"`
+	TimeLimitOption  CourseAssignmentTimeLimitOption `json:"time_limit_option" gorm:"column:time_limit_option;type:enum('minutes','hours','days','weeks','months');default:'weeks'"`
 	FileUploadLimit  int                       `json:"file_upload_limit" gorm:"column:file_upload_limit;default:1"`
 	TotalMarks       float32                   `json:"total_marks" gorm:"column:total_marks;default:1"`
 	MinimumPassMarks float32                   `json:"minimum_pass_marks" gorm:"column:minimum_pass_marks;default:0"`

@@ -46,16 +46,20 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
     openEditQuestion,
   } = useCoursesStore();
 
-  const { watch, control } = useFormContext<TCourseSchema>();
+  const { watch, control, getValues, setValue } = useFormContext<TCourseSchema>();
 
   const chapterIndex = watch("course_chapters", []).findIndex(
     (chapter) => chapter._id === chapterId
   );
-  const safeChapterIndex = chapterIndex === -1 ? 0 : chapterIndex;
+
+  const quizzesFieldName =
+    chapterIndex === -1
+      ? ("course_chapters.0.quizzes" as const)
+      : (`course_chapters.${chapterIndex}.quizzes` as const);
 
   const { append, update } = useFieldArray({
     control,
-    name: `course_chapters.${safeChapterIndex}.quizzes`,
+    name: quizzesFieldName,
     keyName: "uid",
   });
 
@@ -81,18 +85,26 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
   });
 
   useEffect(() => {
-    const watchedLesson =
-      watch(`course_chapters.${safeChapterIndex}.quizzes`) || [];
-    if (isEdit && editQuizID && watchedLesson?.length > 0) {
-      const index = watchedLesson?.findIndex((c) => c._id === editQuizID);
-      if (index !== -1) {
-        formMethods.reset(watchedLesson[index]);
-        // console.log("[QS] ", watchedLesson[index].questions);
+    if (chapterIndex === -1) return;
 
-        setQuestions(watchedLesson[index].questions);
+    const watchedQuizzes =
+      watch(`course_chapters.${chapterIndex}.quizzes`) || [];
+    if (isEdit && editQuizID && watchedQuizzes.length > 0) {
+      const index = watchedQuizzes.findIndex((c) => c._id === editQuizID);
+      if (index !== -1) {
+        formMethods.reset(watchedQuizzes[index]);
+        setQuestions(watchedQuizzes[index].questions ?? []);
       }
     }
-  }, [isEdit, editQuizID, watch]);
+  }, [isEdit, editQuizID, chapterIndex, watch, formMethods, setQuestions]);
+
+  if (chapterId == null || chapterIndex === -1) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Select a chapter to add or edit a quiz.
+      </div>
+    );
+  }
 
   const handleSave = (data: TCourseQuizSchema) => {
     if (questions.length === 0) {
@@ -100,39 +112,60 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
       return;
     }
 
-    if (isEdit && editQuizID) {
-      const watchedLesson =
-        watch(`course_chapters.${safeChapterIndex}.quizzes`) || [];
+    if (chapterIndex === -1) {
+      toast.error("Chapter not found. Close and open the quiz again.");
+      return;
+    }
 
-      const index = watchedLesson?.findIndex((c) => c._id === editQuizID);
+    const quizzesPath = `course_chapters.${chapterIndex}.quizzes` as const;
+    const existingQuizzes = getValues(quizzesPath) ?? [];
+    if (!getValues(quizzesPath)) {
+      setValue(quizzesPath, []);
+    }
+
+    const quizPayload = {
+      ...data,
+      type: "quiz" as const,
+      questions,
+      // Only persist DB ids on the API payload; client _id is for UI only.
+      id: data.id && data.id > 0 ? data.id : undefined,
+      _id: data._id ?? Date.now(),
+    };
+
+    if (isEdit && editQuizID) {
+      const index = existingQuizzes.findIndex((c) => c._id === editQuizID);
       if (index !== -1) {
         update(index, {
-          ...watchedLesson[index],
-          title: data.title,
-          instructions: data.instructions,
-          is_published: data.is_published,
-          enable_retry: data.enable_retry,
-          retry_attempts: data.retry_attempts,
-          minimum_pass_percentage: data.minimum_pass_percentage,
-          single_quiz_view: data.single_quiz_view,
-          reveal_answers: data.reveal_answers,
-          randomize_questions: data.randomize_questions,
-          time_limit: data.time_limit,
-          time_limit_option: data.time_limit_option,
-          total_visible_questions: data.total_visible_questions,
-          questions: questions,
+          ...existingQuizzes[index],
+          ...quizPayload,
         });
+      } else {
+        toast.error("Quiz not found in this chapter.");
+        return;
       }
       clearChapterId();
       closeEditQuiz();
     } else {
+      append(quizPayload);
       closeNewQuiz();
       clearChapterId();
-      append({
-        ...data,
-        questions: questions,
+      formMethods.reset({
+        _id: Date.now(),
+        type: "quiz",
+        title: "",
+        instructions: "",
+        enable_retry: false,
+        retry_attempts: 0,
+        is_published: false,
+        minimum_pass_percentage: 0,
+        single_quiz_view: false,
+        reveal_answers: false,
+        randomize_questions: false,
+        time_limit: 1,
+        time_limit_option: "weeks",
+        total_visible_questions: 1,
+        questions: [],
       });
-      formMethods.reset();
     }
   };
 

@@ -16,7 +16,7 @@ type CourseAssignmentResponse struct {
 	Attachments      *datatypes.JSON                  `json:"attachments"`
 	IsPublished      bool                             `json:"is_published"`
 	TimeLimit        int                              `json:"time_limit"`
-	TimeLimitOption  models.CourseQuizTimeLimitOption `json:"time_limit_option"`
+	TimeLimitOption  models.CourseAssignmentTimeLimitOption `json:"time_limit_option"`
 	FileUploadLimit  int                              `json:"file_upload_limit"`
 	TotalMarks       float32                          `json:"total_marks"`
 	MinimumPassMarks float32                          `json:"minimum_pass_marks"`

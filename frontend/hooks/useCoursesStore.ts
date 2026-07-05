@@ -8,7 +8,12 @@ interface QuizQuestion {
   answer_required: boolean;
   details?: string | null | undefined;
   id?: number | null | undefined;
-  Media?: any[] | null | undefined;
+  media?: any[] | null | undefined;
+  options?: { id: string; text: string }[] | null | undefined;
+  correct_answer?:
+    | { value?: string | boolean; values?: string[] }
+    | null
+    | undefined;
   answer_explanation?: string | null | undefined;
 }
 

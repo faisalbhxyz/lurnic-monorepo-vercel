@@ -37,14 +37,48 @@ import ItemActions from "./ItemActions";
 import { useCoursesStore } from "@/hooks/useCoursesStore";
 import { LuPlus } from "react-icons/lu";
 import { useFormContext } from "react-hook-form";
-import { CourseChapterSchema, TCourseSchema } from "@/schema/course.schema";
+import {
+  CourseChapterSchema,
+  TCourseAssignmentSchema,
+  TCourseChapterSchema,
+  TCourseLessonSchema,
+  TCourseQuizSchema,
+  TCourseSchema,
+} from "@/schema/course.schema";
 import { z } from "zod";
+
+type ChapterItem =
+  | TCourseLessonSchema
+  | TCourseQuizSchema
+  | TCourseAssignmentSchema;
+
+function buildChapterItems(chapter: TCourseChapterSchema): ChapterItem[] {
+  return [
+    ...(chapter.course_lessons ?? []),
+    ...(chapter.quizzes ?? []),
+    ...(chapter.assignments ?? []),
+  ];
+}
+
+function splitChapterItems(items: ChapterItem[]) {
+  return {
+    course_lessons: items.filter(
+      (item): item is TCourseLessonSchema => item.type === "lesson"
+    ),
+    quizzes: items.filter(
+      (item): item is TCourseQuizSchema => item.type === "quiz"
+    ),
+    assignments: items.filter(
+      (item): item is TCourseAssignmentSchema => item.type === "assignment"
+    ),
+  };
+}
 
 // Main Curriculum Component
 export default function Curriculum() {
   const { addNewChapter } = useCoursesStore();
 
-  const { watch } = useFormContext<TCourseSchema>();
+  const { watch, setValue } = useFormContext<TCourseSchema>();
 
   const chapters = watch("course_chapters", []);
 
@@ -63,7 +97,6 @@ export default function Curriculum() {
   }, []);
 
   const handleChapterDragStart = (event: DragStartEvent) => {
-    console.log("event", event);
     setActiveId(event.active.id as number);
   };
 
@@ -76,17 +109,27 @@ export default function Curriculum() {
     const oldIndex = chapters.findIndex((ch) => ch._id === active.id);
     const newIndex = chapters.findIndex((ch) => ch._id === over.id);
 
-    // if (oldIndex !== -1 && newIndex !== -1) {
-    //   setChapters((prev) => arrayMove(prev, oldIndex, newIndex));
-    // }
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(chapters, oldIndex, newIndex).map(
+      (chapter, index) => ({
+        ...chapter,
+        position: index,
+      })
+    );
+    setValue("course_chapters", reordered, { shouldDirty: true });
   };
 
   const activeChapter = chapters.find((ch) => ch._id === activeId);
 
-  const handleItemReorder = (chapterId: number, newItems: ICourseLesson[]) => {
-    // setChapters((prev) =>
-    //   prev.map((ch) => (ch.id === chapterId ? { ...ch, items: newItems } : ch))
-    // );
+  const handleItemReorder = (chapterId: number, newItems: ChapterItem[]) => {
+    const { course_lessons, quizzes, assignments } = splitChapterItems(newItems);
+    const updatedChapters = chapters.map((chapter) =>
+      chapter._id === chapterId
+        ? { ...chapter, course_lessons, quizzes, assignments }
+        : chapter
+    );
+    setValue("course_chapters", updatedChapters, { shouldDirty: true });
   };
 
   if (!isClient) return null;
@@ -139,16 +182,11 @@ function SortableChapter({
   onItemReorder,
 }: {
   chapter: z.infer<typeof CourseChapterSchema>;
-  onItemReorder: (chapterId: number, items: ICourseLesson[]) => void;
+  onItemReorder: (chapterId: number, items: ChapterItem[]) => void;
 }) {
-  // const [chapterItems, setChapterItems] = useState<ItemType[]>(chapter.items);
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  const chapterItems = [
-    ...(chapter.course_lessons ?? []),
-    ...(chapter.quizzes ?? []),
-    ...(chapter.assignments ?? []),
-  ];
+  const chapterItems = buildChapterItems(chapter);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -177,19 +215,18 @@ function SortableChapter({
   };
 
   const handleItemDragEnd = (event: DragEndEvent) => {
-    // const { active, over } = event;
-    // setActiveId(null);
-    // if (!over || active.id === over.id) return;
-    // const oldIndex = chapterItems.findIndex((item) => item.id === active.id);
-    // const newIndex = chapterItems.findIndex((item) => item.id === over.id);
-    // if (oldIndex !== -1 && newIndex !== -1) {
-    //   onItemReorder(chapter.id, arrayMove(chapterItems, oldIndex, newIndex));
-    // }
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = chapterItems.findIndex((item) => item._id === active.id);
+    const newIndex = chapterItems.findIndex((item) => item._id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    onItemReorder(chapter._id, arrayMove(chapterItems, oldIndex, newIndex));
   };
 
-  const activeItem =
-    chapter.course_lessons &&
-    chapter.course_lessons.find((item) => item._id === activeId);
+  const activeItem = chapterItems.find((item) => item._id === activeId);
 
   return (
     <div
@@ -230,25 +267,24 @@ function SortableChapter({
             >
               <SortableContext
                 items={
-                  chapterItems ? chapterItems.map((item) => item.title) : []
+                  chapterItems ? chapterItems.map((item) => item._id) : []
                 }
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-3">
-                  {chapterItems &&
-                    chapterItems.map((item) => (
-                      <SortableItem
-                        key={item.title}
-                        // @ts-ignore
-                        item={item}
-                        chapterId={chapter._id}
-                      />
-                    ))}
+                  {chapterItems.map((item) => (
+                    <SortableItem
+                      key={item._id}
+                      item={item}
+                      chapterId={chapter._id}
+                    />
+                  ))}
                 </div>
               </SortableContext>
               <DragOverlay>
-                {/* @ts-ignore */}
-                {activeItem && <SortableItem item={activeItem} />}
+                {activeItem && (
+                  <SortableItem item={activeItem} chapterId={chapter._id} />
+                )}
               </DragOverlay>
             </DndContext>
           )}
@@ -263,7 +299,7 @@ function SortableItem({
   item,
   chapterId,
 }: {
-  item: ICourseLesson;
+  item: ChapterItem;
   chapterId: number;
 }) {
   const {
@@ -295,13 +331,16 @@ function SortableItem({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`w-full border rounded-sm p-3 bg-white cursor-grab ${
-        "border-l-2 border-l-primary" //item.type === "Chapter" ? "" :
-      }`}
+      className="w-full border rounded-sm p-3 bg-white border-l-2 border-l-primary"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          <div
+            {...listeners}
+            className="cursor-grab text-gray-400 hover:text-gray-600"
+          >
+            <MdDragIndicator size={20} />
+          </div>
           {Icon && <Icon className="text-primary" />}
           <span className="font-medium">{item.title}</span>
           <span className="ml-5 text-xs bg-gray-200 px-2 py-0.5 rounded-md">

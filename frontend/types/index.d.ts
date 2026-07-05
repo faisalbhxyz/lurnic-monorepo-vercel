@@ -274,6 +274,8 @@ interface QuizQuestion {
   answer_explanation: string | null;
   answer_required: boolean;
   media: any[];
+  options?: { id: string; text: string }[] | null;
+  correct_answer?: { value?: string | boolean; values?: string[] } | null;
   created_at: string;
   updated_at: string;
 }

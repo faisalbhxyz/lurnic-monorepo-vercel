@@ -11,7 +11,9 @@ import (
 	generalsettings "dashlearn/internal/modules/general_settings"
 	"dashlearn/internal/modules/instructor"
 	"dashlearn/internal/modules/order"
-	paymentmethod "dashlearn/internal/modules/payment_method"
+	paymentmethod 	"dashlearn/internal/modules/payment_method"
+	"dashlearn/internal/modules/assignment"
+	"dashlearn/internal/modules/quiz"
 	"dashlearn/internal/modules/role"
 	"dashlearn/internal/modules/student"
 	subcategory "dashlearn/internal/modules/sub_category"
@@ -148,6 +150,8 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	category.RegisterCategoryRoutes(apiRoutesGroup)
 	subcategory.RegisterSubCategoryRoutes(apiRoutesGroup)
 	course.RegisterCourseRoutes(apiRoutesGroup)
+	quiz.RegisterQuizRoutes(apiRoutesGroup)
+	assignment.RegisterAssignmentRoutes(apiRoutesGroup)
 
 	// Vercel/serverless: in-process cron is disabled when VERCEL=1; schedule this path in vercel.json
 	// and set CRON_SECRET (Vercel sends Authorization: Bearer <CRON_SECRET>).

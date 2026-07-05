@@ -21,6 +21,8 @@ type QuizQuestion struct {
 	Title             string           `json:"title" gorm:"type:varchar(255)"`
 	Details           *string          `json:"details" gorm:"type:text"`
 	Media             *datatypes.JSON  `gorm:"type:json" json:"media"`
+	Options           *datatypes.JSON  `gorm:"type:json" json:"options"`
+	CorrectAnswer     *datatypes.JSON  `gorm:"type:json;column:correct_answer" json:"correct_answer"`
 	Type              QuizQuestionType `gorm:"type:enum('multiple_choice','single_choice','true_false')" json:"type"`
 	Marks             float32          `json:"marks" gorm:"column:marks;default:1"`
 	AnswerRequired    bool             `json:"answer_required" gorm:"column:answer_required;default:false"`

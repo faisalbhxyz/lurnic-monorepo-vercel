@@ -1,22 +1,101 @@
 import { z } from "zod";
 
-export const QuizQuestionSchema = z.object({
-  _id: z.coerce.number(),
-  id: z.coerce.number().optional().nullable(),
-  title: z
-    .string({ required_error: "Title is required" })
-    .trim()
-    .min(1, {
-      message: "Title is required",
-    })
-    .max(200, { message: "Title should not exceed 200 characters" }),
-  details: z.string().optional().nullable(),
-  media: z.array(z.any()).optional().nullable(),
-  type: z.enum(["multiple_choice", "single_choice", "true_false"]),
-  marks: z.coerce.number({ required_error: "Marks is required" }).gte(0),
-  answer_required: z.boolean(),
-  answer_explanation: z.string().trim().optional().nullable(),
+export const QuizOptionSchema = z.object({
+  id: z.string().trim().min(1, { message: "Option id is required" }),
+  text: z.string().trim().min(1, { message: "Option text is required" }),
 });
+
+export type TQuizOptionSchema = z.infer<typeof QuizOptionSchema>;
+
+export const QuizCorrectAnswerSchema = z
+  .object({
+    value: z.union([z.string(), z.boolean()]).optional(),
+    values: z.array(z.string()).optional(),
+  })
+  .optional()
+  .nullable();
+
+export type TQuizCorrectAnswerSchema = z.infer<typeof QuizCorrectAnswerSchema>;
+
+export const QuizQuestionSchema = z
+  .object({
+    _id: z.coerce.number(),
+    id: z.coerce.number().optional().nullable(),
+    title: z
+      .string({ required_error: "Title is required" })
+      .trim()
+      .min(1, {
+        message: "Title is required",
+      })
+      .max(200, { message: "Title should not exceed 200 characters" }),
+    details: z.string().optional().nullable(),
+    media: z.array(z.any()).optional().nullable(),
+    options: z.array(QuizOptionSchema).optional().nullable(),
+    correct_answer: QuizCorrectAnswerSchema,
+    type: z.enum(["multiple_choice", "single_choice", "true_false"]),
+    marks: z.coerce.number({ required_error: "Marks is required" }).gte(0),
+    answer_required: z.boolean(),
+    answer_explanation: z.string().trim().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "true_false") {
+      if (
+        data.correct_answer?.value === undefined ||
+        typeof data.correct_answer.value !== "boolean"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["correct_answer"],
+          message: "Select the correct True/False answer.",
+        });
+      }
+      return;
+    }
+
+    const options = data.options ?? [];
+    if (options.length < 2) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["options"],
+        message: "Add at least two answer options.",
+      });
+      return;
+    }
+
+    const optionIds = new Set(options.map((o) => o.id));
+
+    if (data.type === "single_choice") {
+      const value = data.correct_answer?.value;
+      if (typeof value !== "string" || !optionIds.has(value)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["correct_answer"],
+          message: "Select the correct option.",
+        });
+      }
+      return;
+    }
+
+    const values = data.correct_answer?.values ?? [];
+    if (values.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["correct_answer"],
+        message: "Select at least one correct option.",
+      });
+      return;
+    }
+    for (const value of values) {
+      if (!optionIds.has(value)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["correct_answer"],
+          message: "Correct options must match listed choices.",
+        });
+        return;
+      }
+    }
+  });
 
 export type TQuizQuestionSchema = z.infer<typeof QuizQuestionSchema>;
 

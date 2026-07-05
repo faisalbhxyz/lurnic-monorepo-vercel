@@ -26,8 +26,8 @@ export default function AddItem({ id }: { id: number }) {
         <MenuItem>
           <button
             onClick={() => {
-              addNewLesson();
               setChapterId(id);
+              addNewLesson();
             }}
             className="group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 data-focus:bg-gray-100"
           >
@@ -38,8 +38,8 @@ export default function AddItem({ id }: { id: number }) {
         <MenuItem>
           <button
             onClick={() => {
-              addNewQuiz();
               setChapterId(id);
+              addNewQuiz();
             }}
             className="group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 data-focus:bg-gray-100"
           >
@@ -50,8 +50,8 @@ export default function AddItem({ id }: { id: number }) {
         <MenuItem>
           <button
             onClick={() => {
-              addNewAssignment();
               setChapterId(id);
+              addNewAssignment();
             }}
             className="group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 data-focus:bg-gray-100"
           >

@@ -62,6 +62,9 @@ export default function NewChapter({ isEdit = false }: { isEdit: boolean }) {
         description,
         access,
         position: fields.length,
+        course_lessons: [],
+        quizzes: [],
+        assignments: [],
       });
       setTitle("");
       setDescription("");

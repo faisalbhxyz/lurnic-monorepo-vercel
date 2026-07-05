@@ -32,11 +32,80 @@ import UpdateQuestion from "./curriculum/UpdateQuestion";
 import { dbTimeToPickerFormat } from "@/lib/helpers";
 import axios from "axios";
 
+const toDbId = (id?: number | null) =>
+  id != null && Number(id) > 0 ? Number(id) : undefined;
+
+const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
+  chapters.map((chapter) => ({
+    id: toDbId(chapter.id),
+    position: chapter.position,
+    title: chapter.title,
+    description: chapter.description ?? null,
+    access: chapter.access,
+    course_lessons: (chapter.course_lessons ?? []).map((lesson) => ({
+      id: toDbId(lesson.id),
+      title: lesson.title,
+      description: lesson.description ?? null,
+      lesson_type: lesson.lesson_type,
+      source_type: lesson.source_type,
+      source: lesson.source,
+      is_published: lesson.is_published,
+      is_public: lesson.is_public,
+      is_scheduled: lesson.is_scheduled,
+      schedule_date: lesson.schedule_date ?? null,
+      schedule_time: lesson.schedule_time ?? null,
+      show_comming_soon: lesson.show_comming_soon,
+      resources: lesson.resources ?? null,
+    })),
+    quizzes: (chapter.quizzes ?? []).map((quiz) => ({
+      id: toDbId(quiz.id),
+      title: quiz.title,
+      instructions: quiz.instructions,
+      is_published: quiz.is_published,
+      randomize_questions: quiz.randomize_questions,
+      single_quiz_view: quiz.single_quiz_view,
+      time_limit: quiz.time_limit,
+      time_limit_option: quiz.time_limit_option,
+      total_visible_questions: quiz.total_visible_questions,
+      reveal_answers: quiz.reveal_answers,
+      enable_retry: quiz.enable_retry,
+      retry_attempts: quiz.retry_attempts,
+      minimum_pass_percentage: quiz.minimum_pass_percentage,
+      questions: (quiz.questions ?? []).map((question) => ({
+        id: toDbId(question.id),
+        title: question.title,
+        details: question.details ?? null,
+        media: question.media ?? null,
+        options: question.options ?? null,
+        correct_answer: question.correct_answer ?? null,
+        type: question.type,
+        marks: question.marks,
+        answer_required: question.answer_required,
+        answer_explanation: question.answer_explanation ?? null,
+      })),
+    })),
+    assignments: (chapter.assignments ?? []).map((assignment) => ({
+      id: toDbId(assignment.id),
+      title: assignment.title,
+      instructions: assignment.instructions,
+      attachments:
+        (assignment.attachments ?? []).filter(
+          (item) => !(item instanceof File)
+        ) ?? null,
+      is_published: assignment.is_published,
+      time_limit: assignment.time_limit,
+      time_limit_option: assignment.time_limit_option,
+      file_upload_limit: assignment.file_upload_limit,
+      total_marks: assignment.total_marks,
+      minimum_pass_marks: assignment.minimum_pass_marks,
+    })),
+  }));
+
 const tabs = [
   { id: 1, label: "Details" },
   { id: 2, label: "Curriculum" },
-  // { id: 3, label: "Quizzes" },
-  // { id: 4, label: "Assignments" },
+  { id: 3, label: "Quizzes" },
+  { id: 4, label: "Assignments" },
   // { id: 5, label: "Reviews" },
   // { id: 6, label: "Notice" },
   { id: 7, label: "Settings" },
@@ -103,6 +172,7 @@ export default function CoursesTabs({
           description: "",
           course_lessons: [],
           quizzes: [],
+          assignments: [],
         },
       ],
       general_settings: {
@@ -123,26 +193,35 @@ export default function CoursesTabs({
         (ins) => ins.instructor.id
       );
 
-      const chapters = courseDetails.course_chapters.map((chapter) => {
+      const chapters = courseDetails.course_chapters
+        .slice()
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((chapter) => {
         return {
           ...chapter,
           id: chapter.id,
           _id: chapter.id,
-          course_lessons: chapter.course_lessons.map((lesson) => {
+          course_lessons: (chapter.course_lessons ?? [])
+            .map((lesson) => {
             const source = lesson.source || {};
             return {
               ...lesson,
               id: lesson.id,
               _id: lesson.id,
-              type: "lesson",
+              type: "lesson" as const,
               source: {
-                data: source.data.data,
-                playback_time: source.data.playback_times,
+                data: source.data?.data ?? source.data,
+                playback_time: source.data?.playback_times,
                 isFile: false,
               },
             };
-          }),
-          assignments: chapter.assignments.map((assignment) => {
+          })
+            .sort(
+              (a, b) =>
+                ((a as { position?: number }).position ?? 0) -
+                ((b as { position?: number }).position ?? 0)
+            ),
+          assignments: (chapter.assignments ?? []).map((assignment) => {
             return {
               ...assignment,
               id: assignment.id,
@@ -150,13 +229,13 @@ export default function CoursesTabs({
               type: "assignment",
             };
           }),
-          quizzes: chapter.quizzes.map((quiz) => {
+          quizzes: (chapter.quizzes ?? []).map((quiz) => {
             return {
               ...quiz,
               id: quiz.id,
               _id: quiz.id,
               type: "quiz",
-              questions: quiz.questions.map((q) => {
+              questions: (quiz.questions ?? []).map((q) => {
                 return {
                   ...q,
                   id: q.id,
@@ -243,18 +322,26 @@ export default function CoursesTabs({
         return <Basics />;
       case "Curriculum":
         return <Curriculum />;
-      // case "Quizzes":
-      //   return (
-      //     <div className="border p-5 rounded-lg mt-5">
-      //       <QuizTable />
-      //     </div>
-      //   );
-      // case "Assignments":
-      //   return (
-      //     <div className="border p-5 rounded-lg mt-5">
-      //       <AssignmentTable />
-      //     </div>
-      //   );
+      case "Quizzes":
+        return courseDetails?.id ? (
+          <div className="border p-5 rounded-lg mt-5">
+            <QuizTable courseId={courseDetails.id} />
+          </div>
+        ) : (
+          <div className="border p-5 rounded-lg mt-5 text-sm text-gray-500">
+            Save the course first to view quiz submissions.
+          </div>
+        );
+      case "Assignments":
+        return courseDetails?.id ? (
+          <div className="border p-5 rounded-lg mt-5">
+            <AssignmentTable courseId={courseDetails.id} />
+          </div>
+        ) : (
+          <div className="border p-5 rounded-lg mt-5 text-sm text-gray-500">
+            Save the course first to view assignment submissions.
+          </div>
+        );
       // case "Reviews":
       //   return (
       //     <div className="border p-5 rounded-lg mt-5">
@@ -373,7 +460,7 @@ export default function CoursesTabs({
       fd.append("tags", JSON.stringify(data.tags || []));
       fd.append("author_id", String(data.author_id));
       fd.append("overview", JSON.stringify(data.overview));
-      fd.append("course_chapters", JSON.stringify(data.course_chapters));
+      fd.append("course_chapters", JSON.stringify(serializeChaptersForApi(data.course_chapters)));
       fd.append("general_settings", JSON.stringify(data.general_settings));
       fd.append("course_instructors", JSON.stringify(data.course_instructors));
 
@@ -384,6 +471,17 @@ export default function CoursesTabs({
             if (file instanceof File) {
               fd.append(
                 `resources[${chapterIndex}][${lessonIndex}][]`,
+                file,
+                file.name
+              );
+            }
+          });
+        });
+        chapter.assignments?.forEach((assignment, assignmentIndex) => {
+          assignment.attachments?.forEach((file) => {
+            if (file instanceof File) {
+              fd.append(
+                `assignment_attachments[${chapterIndex}][${assignmentIndex}][]`,
                 file,
                 file.name
               );

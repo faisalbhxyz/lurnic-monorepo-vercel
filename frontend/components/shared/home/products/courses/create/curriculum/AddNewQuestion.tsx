@@ -14,17 +14,14 @@ import Image from "next/image";
 import Button from "@/components/ui/Button";
 import {
   Controller,
-  useFieldArray,
   useForm,
-  useFormContext,
 } from "react-hook-form";
 import {
   QuizQuestionSchema,
-  TCourseQuizSchema,
-  TCourseSchema,
   TQuizQuestionSchema,
 } from "@/schema/course.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import QuizQuestionAnswerFields from "./QuizQuestionAnswerFields";
 
 const questionType = [
   {
@@ -44,6 +41,22 @@ const questionType = [
   },
 ];
 
+const defaultQuestionValues: TQuizQuestionSchema = {
+  _id: Date.now(),
+  title: "",
+  details: "",
+  type: "single_choice",
+  answer_required: false,
+  answer_explanation: "",
+  marks: 1,
+  media: [],
+  options: [
+    { id: "a", text: "" },
+    { id: "b", text: "" },
+  ],
+  correct_answer: { value: "a" },
+};
+
 export default function AddNewQuestion() {
   const { isNewQuestion, closeNewQuestion, appendQuestion } = useCoursesStore();
   const [isMedia, setIsMedia] = useState(false);
@@ -53,30 +66,15 @@ export default function AddNewQuestion() {
 
   const formMethods = useForm<TQuizQuestionSchema>({
     resolver: zodResolver(QuizQuestionSchema),
-    defaultValues: {
-      _id: Date.now(),
-      title: "",
-      details: "",
-      type: "single_choice",
-      answer_required: false,
-      answer_explanation: "",
-      marks: 1,
-      media: [],
-    },
+    defaultValues: defaultQuestionValues,
   });
 
   const handleSave = (data: TQuizQuestionSchema) => {
     appendQuestion(data);
     closeNewQuestion();
     formMethods.reset({
+      ...defaultQuestionValues,
       _id: Date.now(),
-      title: "",
-      details: "",
-      type: "single_choice",
-      answer_required: false,
-      answer_explanation: "",
-      marks: 1,
-      media: [],
     });
     setPreviews([]);
   };
@@ -274,6 +272,12 @@ export default function AddNewQuestion() {
             }}
           />
         </div>
+        <QuizQuestionAnswerFields
+          control={formMethods.control}
+          watch={formMethods.watch}
+          setValue={formMethods.setValue}
+          errors={formMethods.formState.errors}
+        />
         <div className="mb-3 flex items-center gap-5">
           <div className="w-1/2">
             <label className="text-sm block font-medium mb-1">Marks</label>

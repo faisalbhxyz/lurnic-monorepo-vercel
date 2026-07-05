@@ -29,6 +29,24 @@ import {
 } from "react-hook-form";
 import { IoIosArrowDown } from "react-icons/io";
 
+const ACCEPTED_ATTACHMENT_TYPES =
+  "image/jpeg,image/jpg,image/png,image/gif,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip";
+
+type StoredAttachment = {
+  url: string;
+  file_name: string;
+  mime_type?: string;
+  size?: number;
+};
+
+function isStoredAttachment(value: unknown): value is StoredAttachment {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "url" in value &&
+    typeof (value as StoredAttachment).url === "string"
+  );
+}
 const options = [
   { id: 2, name: "Minutes", value: "minutes" },
   { id: 3, name: "Hours", value: "hours" },
@@ -44,7 +62,9 @@ export default function AssignmentEdit({
 }) {
   const [isMedia, setIsMedia] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<
+    { type: "image" | "file"; src: string; name: string }[]
+  >([]);
 
   const {
     chapterId,
@@ -84,57 +104,42 @@ export default function AssignmentEdit({
     },
   });
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const validTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/svg+xml",
-      ];
-      const fileArray = Array.from(files).filter((file) =>
-        validTypes.includes(file.type)
-      );
+  const addFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
 
-      fileArray.forEach((file) => {
+    const current = formMethods.watch("attachments") ?? [];
+    formMethods.setValue("attachments", [...current, ...fileArray]);
+
+    fileArray.forEach((file) => {
+      if (file.type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setPreviews((prev) => [...prev, reader.result as string]);
+          setPreviews((prev) => [
+            ...prev,
+            { type: "image", src: reader.result as string, name: file.name },
+          ]);
         };
         reader.readAsDataURL(file);
-      });
+      } else {
+        setPreviews((prev) => [
+          ...prev,
+          { type: "file", src: "", name: file.name },
+        ]);
+      }
+    });
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      addFiles(e.target.files);
     }
   };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files) {
-      const validTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/svg+xml",
-      ];
-      const fileArray = Array.from(files).filter((file) =>
-        validTypes.includes(file.type)
-      );
-
-      fileArray.forEach((file) => {
-        formMethods.setValue("attachments", [
-          ...(formMethods.watch("attachments") ?? []),
-          file,
-        ]);
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviews((prev) => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
+    if (e.dataTransfer.files) {
+      addFiles(e.dataTransfer.files);
     }
   };
 
@@ -150,15 +155,24 @@ export default function AssignmentEdit({
   };
 
   useEffect(() => {
-    const watchedLesson =
+    const watchedAssignments =
       watch(`course_chapters.${safeChapterIndex}.assignments`) || [];
-    if (isEdit && assignmentID && watchedLesson?.length > 0) {
-      const index = watchedLesson?.findIndex((c) => c._id === assignmentID);
+    if (isEdit && assignmentID && watchedAssignments?.length > 0) {
+      const index = watchedAssignments?.findIndex((c) => c._id === assignmentID);
       if (index !== -1) {
-        formMethods.reset(watchedLesson[index]);
+        const assignment = watchedAssignments[index];
+        formMethods.reset(assignment);
+        const existing = (assignment.attachments ?? []).filter(isStoredAttachment);
+        setPreviews(
+          existing.map((item) => ({
+            type: item.mime_type?.startsWith("image/") ? "image" : "file",
+            src: item.url,
+            name: item.file_name,
+          }))
+        );
       }
     }
-  }, [isEdit, assignmentID, watch]);
+  }, [isEdit, assignmentID, watch, safeChapterIndex, formMethods]);
 
   const handleSave = (data: TCourseAssignmentSchema) => {
     if (isEdit && assignmentID) {
@@ -173,6 +187,7 @@ export default function AssignmentEdit({
           ...watchedAssignments[index],
           title: data.title,
           instructions: data.instructions,
+          attachments: data.attachments ?? null,
           is_published: data.is_published,
           file_upload_limit: data.file_upload_limit,
           minimum_pass_marks: data.minimum_pass_marks,
@@ -188,8 +203,10 @@ export default function AssignmentEdit({
       clearChapterId();
       append({
         ...data,
+        attachments: data.attachments ?? null,
       });
       formMethods.reset();
+      setPreviews([]);
     }
   };
 
@@ -262,18 +279,34 @@ export default function AssignmentEdit({
                   <div className="bg-gray-100 p-2 rounded-md">
                     {previews.length > 0 ? (
                       <div className="mt-2 space-y-4">
-                        {previews.map((src, idx) => (
+                        {previews.map((preview, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center justify-between border rounded p-2"
+                            className="flex items-center justify-between border rounded p-2 gap-3"
                           >
-                            <Image
-                              src={src}
-                              alt={`Preview ${idx}`}
-                              width={80}
-                              height={80}
-                              className="object-contain rounded"
-                            />
+                            {preview.type === "image" ? (
+                              <Image
+                                src={preview.src}
+                                alt={preview.name}
+                                width={80}
+                                height={80}
+                                className="object-contain rounded"
+                              />
+                            ) : (
+                              <div className="text-sm">
+                                <p className="font-medium">{preview.name}</p>
+                                {preview.src && (
+                                  <a
+                                    href={preview.src}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary text-xs hover:underline"
+                                  >
+                                    View file
+                                  </a>
+                                )}
+                              </div>
+                            )}
                             <button
                               type="button"
                               onClick={() => removePreview(idx)}
@@ -283,9 +316,13 @@ export default function AssignmentEdit({
                             </button>
                           </div>
                         ))}
-                        <Button className="w-full mt-5 flex items-center justify-center">
-                          Upload {previews.length} files
-                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full mt-2 text-sm text-primary font-medium"
+                        >
+                          Add more files
+                        </button>
                       </div>
                     ) : (
                       <div
@@ -295,7 +332,7 @@ export default function AssignmentEdit({
                         className="border border-dashed flex justify-center items-center p-5 rounded-md min-h-32 cursor-pointer text-center"
                       >
                         <p>
-                          Drop images here or{" "}
+                          Drop files here or{" "}
                           <button
                             type="button"
                             className="text-sky-500 hover:underline"
@@ -309,7 +346,7 @@ export default function AssignmentEdit({
                         </p>
                         <input
                           type="file"
-                          accept="image/jpeg,image/jpg,image/png,image/gif,image/svg+xml"
+                          accept={ACCEPTED_ATTACHMENT_TYPES}
                           multiple
                           onChange={handleFileChange}
                           ref={fileInputRef}

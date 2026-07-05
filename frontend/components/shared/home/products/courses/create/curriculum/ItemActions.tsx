@@ -26,22 +26,25 @@ export default function ItemActions({
   const chapterIndex = watch("course_chapters", []).findIndex(
     (chapter) => chapter._id === chapterID
   );
-  const safeChapterIndex = chapterIndex === -1 ? 0 : chapterIndex;
+
+  if (chapterIndex === -1) {
+    return null;
+  }
 
   // one fieldArray per type
   const lessonsFieldArray = useFieldArray({
     control,
-    name: `course_chapters.${safeChapterIndex}.course_lessons`,
+    name: `course_chapters.${chapterIndex}.course_lessons`,
     keyName: "uid",
   });
   const quizzesFieldArray = useFieldArray({
     control,
-    name: `course_chapters.${safeChapterIndex}.quizzes`,
+    name: `course_chapters.${chapterIndex}.quizzes`,
     keyName: "uid",
   });
   const assignmentsFieldArray = useFieldArray({
     control,
-    name: `course_chapters.${safeChapterIndex}.assignments`,
+    name: `course_chapters.${chapterIndex}.assignments`,
     keyName: "uid",
   });
 
@@ -52,15 +55,15 @@ export default function ItemActions({
     switch (itemType) {
       case "lesson":
         items =
-          watch(`course_chapters.${safeChapterIndex}.course_lessons`) || [];
+          watch(`course_chapters.${chapterIndex}.course_lessons`) || [];
         removeFn = lessonsFieldArray.remove;
         break;
       case "quiz":
-        items = watch(`course_chapters.${safeChapterIndex}.quizzes`) || [];
+        items = watch(`course_chapters.${chapterIndex}.quizzes`) || [];
         removeFn = quizzesFieldArray.remove;
         break;
       case "assignment":
-        items = watch(`course_chapters.${safeChapterIndex}.assignments`) || [];
+        items = watch(`course_chapters.${chapterIndex}.assignments`) || [];
         removeFn = assignmentsFieldArray.remove;
         break;
       default:

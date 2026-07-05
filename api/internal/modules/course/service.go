@@ -2,6 +2,7 @@ package course
 
 import (
 	"dashlearn/internal/models"
+	quizmodule "dashlearn/internal/modules/quiz"
 	"dashlearn/internal/response"
 	"dashlearn/internal/utils"
 	"errors"
@@ -582,19 +583,7 @@ func (s *courseService) GetBySlugPublic(tenantID uint, slug string) (*response.C
 		for _, quiz := range chapter.Quizzes {
 			questions := make([]response.CourseQuizQuestionsResponse, 0, len(quiz.Questions))
 			for _, question := range quiz.Questions {
-				questions = append(questions, response.CourseQuizQuestionsResponse{
-					ID:                question.ID,
-					QuizID:            question.QuizID,
-					Title:             question.Title,
-					Details:           question.Details,
-					Media:             question.Media,
-					Type:              question.Type,
-					Marks:             question.Marks,
-					AnswerRequired:    question.AnswerRequired,
-					AnswerExplanation: question.AnswerExplanation,
-					CreatedAt:         question.CreatedAt,
-					UpdatedAt:         question.UpdatedAt,
-				})
+				questions = append(questions, quizmodule.SanitizeQuestionResponse(question, false))
 			}
 
 			// Only include quiz if it has questions or is published
@@ -934,7 +923,9 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 						QuizID:            newCourseQuiz.ID,
 						Title:             question.Title,
 						Details:           utils.ZeroToNil(question.Details),
-						Media:             utils.ZeroToNil(question.Media),
+						Media:             question.Media,
+						Options:           question.Options,
+						CorrectAnswer:     question.CorrectAnswer,
 						Type:              question.Type,
 						Marks:             question.Marks,
 						AnswerRequired:    question.AnswerRequired,
@@ -1374,7 +1365,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					FileUploadLimit:  assignment.FileUploadLimit,
 					TotalMarks:       assignment.TotalMarks,
 					MinimumPassMarks: assignment.MinimumPassMarks,
-					Attachments:      nil,
+					Attachments:      assignment.Attachments,
 				}
 				if err := s.db.Create(&newAssignment).Error; err != nil {
 					return err
@@ -1395,6 +1386,8 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					existingQuiz.Instructions = quiz.Instructions
 					// existingQuiz.Position = lIdx
 					existingQuiz.IsPublished = quiz.IsPublished
+					existingQuiz.RandomizeQuestions = quiz.RandomizeQuestions
+					existingQuiz.SingleQuizView = quiz.SingleQuizView
 					existingQuiz.TimeLimit = quiz.TimeLimit
 					existingQuiz.TimeLimitOption = quiz.TimeLimitOption
 					existingQuiz.TotalVisibleQuestions = quiz.TotalVisibleQuestions
@@ -1417,7 +1410,9 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 								existingQuestion.AnswerRequired = question.AnswerRequired
 								existingQuestion.AnswerExplanation = question.AnswerExplanation
 								existingQuestion.Type = question.Type
-								// existingQuestion.Media = question.Media
+								existingQuestion.Media = question.Media
+								existingQuestion.Options = question.Options
+								existingQuestion.CorrectAnswer = question.CorrectAnswer
 
 								if err := s.db.Save(&existingQuestion).Error; err != nil {
 									return err
@@ -1431,7 +1426,9 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 								Details:           question.Details,
 								Marks:             question.Marks,
 								Type:              question.Type,
-								Media:             nil,
+								Media:             question.Media,
+								Options:           question.Options,
+								CorrectAnswer:     question.CorrectAnswer,
 								AnswerRequired:    question.AnswerRequired,
 								AnswerExplanation: question.AnswerExplanation,
 							}
@@ -1449,6 +1446,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 			} else {
 				// Create new quiz
 				newQuiz := models.CourseQuiz{
+					CourseID:              courseID,
 					ChapterID:             chapterID,
 					Title:                 quiz.Title,
 					Instructions:          quiz.Instructions,
@@ -1475,9 +1473,11 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 						Details:           question.Details,
 						Type:              question.Type,
 						Marks:             question.Marks,
+						Media:             question.Media,
+						Options:           question.Options,
+						CorrectAnswer:     question.CorrectAnswer,
 						AnswerRequired:    question.AnswerRequired,
 						AnswerExplanation: question.AnswerExplanation,
-						// Media:     question.Media,
 					}
 					if err := s.db.Create(&newQuestion).Error; err != nil {
 						return err
