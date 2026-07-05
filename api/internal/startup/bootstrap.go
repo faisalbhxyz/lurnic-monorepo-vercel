@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 
 	"dashlearn/internal/dsn"
 
@@ -25,7 +26,17 @@ func Bootstrap() error {
 		log.Printf("[startup] fixautoinc warning: %v", err)
 	}
 
-	return runMigrations(norm)
+	var lastErr error
+	for attempt := 1; attempt <= 5; attempt++ {
+		if err := runMigrations(norm); err != nil {
+			lastErr = err
+			log.Printf("[startup] migration attempt %d/5 failed: %v", attempt, err)
+			time.Sleep(time.Duration(attempt) * 3 * time.Second)
+			continue
+		}
+		return nil
+	}
+	return lastErr
 }
 
 func runFixAutoInc() error {

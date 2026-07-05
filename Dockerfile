@@ -46,5 +46,5 @@ COPY --from=builder /app/migrations ./migrations
 # Expose the port your Gin app listens on (must match APP_PORT, default 5000)
 EXPOSE 5000
 
-# Migrations run inside ./main (startup.Bootstrap) with normalized GOOSE_DBSTRING.
-CMD ["./main"]
+# Migrations run inside ./main. Restart loop keeps the container alive for Coolify logs if main exits.
+CMD ["sh", "-c", "while true; do ./main; code=$?; echo \"[api] main exited ($code), restarting in 5s\"; sleep 5; done"]

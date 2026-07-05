@@ -19,7 +19,8 @@ func main() {
 
 	if os.Getenv("SKIP_DB_BOOTSTRAP") != "true" {
 		if err := startup.Bootstrap(); err != nil {
-			log.Fatal("startup bootstrap failed:", err)
+			// Log but keep going: migrations may already be applied; container must stay up for Coolify logs.
+			log.Printf("[startup] bootstrap warning: %v", err)
 		}
 	}
 

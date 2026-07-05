@@ -35,4 +35,4 @@ COPY --from=builder /app/frontend/.next/static ./.next/static
 COPY --from=builder /app/frontend/public ./public
 
 EXPOSE 3000
-CMD ["sh", "-c", "exec node server.js"]
+CMD ["sh", "-c", "while true; do node server.js; code=$?; echo \"[web] server exited ($code), restarting in 5s\"; sleep 5; done"]

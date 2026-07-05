@@ -5,7 +5,7 @@
 #
 # Optional local MySQL in Docker: merge `docker-compose.mysql.yaml` (see that file).
 #
-# Prerequisites: Docker Compose v2.24+ (for `env_file` + `required: false`) or ensure `.env` exists.
+# Prerequisites: Docker Compose v2.24+ recommended.
 #
 # Quick start (repo root):
 #   cp .env.example .env
@@ -18,8 +18,7 @@
 # - Two domains: API → 5000, Web → 3000. Rebuild `web` after changing NEXT_PUBLIC_*.
 # - Build context issues (lstat .../frontend): set BUILD_SOURCE_CONTEXT=https://github.com/ORG/REPO.git#branch
 
-name: lurnic
-
+# Coolify: do NOT set top-level `name:` — Coolify assigns `--project-name` from the resource UUID.
 # Do not define a custom bridge network here. Coolify attaches Traefik to its compose
 # network; an extra network (e.g. lurnic) makes Traefik pick the wrong container IP
 # → intermittent 504 Gateway Timeout while in-container healthchecks still pass.
@@ -30,10 +29,7 @@ services:
       context: ${BUILD_SOURCE_CONTEXT:-.}
       dockerfile: Dockerfile
     pull_policy: never
-    restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
+    restart: always
     environment:
       APP_PORT: "5000"
       GIN_MODE: ${GIN_MODE:-release}
@@ -62,10 +58,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to your public API base e.g. https://api.example.com/v1}
         NEXT_PUBLIC_APP_KEY: ${NEXT_PUBLIC_APP_KEY:-}
     pull_policy: never
-    restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
+    restart: always
     environment:
       NODE_ENV: production
       PORT: "3000"
