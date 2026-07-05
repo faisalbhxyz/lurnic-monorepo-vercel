@@ -2,10 +2,10 @@ package utils
 
 import (
 	"context"
+	"dashlearn/internal/dsn"
 	"log"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -16,11 +16,14 @@ import (
 var DB *gorm.DB
 
 func ConnectDatabase() error {
-	dsn := os.Getenv("GOOSE_DBSTRING")
-	if dsn == "" {
+	raw := os.Getenv("GOOSE_DBSTRING")
+	if raw == "" {
 		return &ConfigError{Message: "GOOSE_DBSTRING not found in environment"}
 	}
-	dsn = normalizeMySQLDSN(dsn)
+	dsnStr, err := dsn.Normalize(raw)
+	if err != nil {
+		return err
+	}
 
 	// GORM default SlowThreshold is 200ms; cross-region DB RTT often exceeds that without being a slow query.
 	slowMS := 1000
@@ -42,7 +45,7 @@ func ConnectDatabase() error {
 		),
 	}
 
-	database, err := gorm.Open(mysql.Open(dsn), cfg)
+	database, err := gorm.Open(mysql.Open(dsnStr), cfg)
 	if err != nil {
 		return err
 	}
@@ -66,41 +69,6 @@ func ConnectDatabase() error {
 
 	DB = database
 	return nil
-}
-
-func normalizeMySQLDSN(dsn string) string {
-	// NOTE: We intentionally avoid parsing user/pass to keep this transformation simple and safe.
-	// We only touch the query string segment.
-	base, q := splitQuery(dsn)
-	q = ensureQueryKV(q, "tls", "skip-verify")
-	q = ensureQueryKV(q, "timeout", "5s")
-	q = ensureQueryKV(q, "readTimeout", "15s")
-	q = ensureQueryKV(q, "writeTimeout", "15s")
-	if q == "" {
-		return base
-	}
-	return base + "?" + q
-}
-
-func splitQuery(s string) (base, query string) {
-	if i := strings.Index(s, "?"); i >= 0 {
-		return s[:i], s[i+1:]
-	}
-	return s, ""
-}
-
-func ensureQueryKV(query, key, value string) string {
-	// Treat query as simple k=v&... string; we don't decode/encode because we only add safe ASCII keys/values.
-	if query == "" {
-		return key + "=" + value
-	}
-	parts := strings.Split(query, "&")
-	for _, p := range parts {
-		if p == key || strings.HasPrefix(p, key+"=") {
-			return query
-		}
-	}
-	return query + "&" + key + "=" + value
 }
 
 type ConfigError struct {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dashlearn/internal/startup"
 	"dashlearn/pkg/server"
 	"fmt"
 	"log"
@@ -15,6 +16,12 @@ var Version = "v1.0.24"
 
 func main() {
 	fmt.Println("🚀 DashLearn Server Starting... Version:", Version)
+
+	if os.Getenv("SKIP_DB_BOOTSTRAP") != "true" {
+		if err := startup.Bootstrap(); err != nil {
+			log.Fatal("startup bootstrap failed:", err)
+		}
+	}
 
 	// Optional .env is loaded inside server.NewEngine (also used by Vercel handler); Coolify/Docker use injected env only.
 

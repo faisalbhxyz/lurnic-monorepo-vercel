@@ -76,7 +76,7 @@ services:
       AUTH_URL: ${AUTH_URL:?Set AUTH_URL to the dashboard public URL e.g. https://app.example.com}
     depends_on:
       api:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "3000:3000"
     healthcheck:

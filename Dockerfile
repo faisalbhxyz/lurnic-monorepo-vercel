@@ -38,9 +38,7 @@ WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/fixautoinc .
 COPY --from=builder /go/bin/goose /usr/local/bin/goose
-COPY api/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
-RUN sed -i 's/\r$//' ./docker-entrypoint.sh \
-  && chmod +x ./main ./fixautoinc ./docker-entrypoint.sh
+RUN chmod +x ./main ./fixautoinc
 
 # Migration SQL (module lives under api/; do not COPY from build context — root has no migrations/)
 COPY --from=builder /app/migrations ./migrations
@@ -48,6 +46,5 @@ COPY --from=builder /app/migrations ./migrations
 # Expose the port your Gin app listens on (must match APP_PORT, default 5000)
 EXPOSE 5000
 
-# TiDB cannot ALTER an existing column to add AUTO_INCREMENT (Error 8200).
-# Entrypoint normalizes DSN (TLS/timeouts), runs fixautoinc + goose, then starts the API.
-CMD ["sh", "./docker-entrypoint.sh"]
+# Migrations run inside ./main (startup.Bootstrap) with normalized GOOSE_DBSTRING.
+CMD ["./main"]
