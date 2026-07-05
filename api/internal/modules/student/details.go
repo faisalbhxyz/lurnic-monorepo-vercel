@@ -65,6 +65,22 @@ func buildStudentAdminDetails(db *gorm.DB, tenantID, studentID uint) (*response.
 
 	orderDetails, orderStats := loadStudentOrders(db, tenantID, studentID)
 
+	var activeDevice *response.StudentActiveDevice
+	if session := getStudentSessionForAdmin(db, studentID); session != nil {
+		deviceName := "Unknown device"
+		if session.DeviceName != nil && *session.DeviceName != "" {
+			deviceName = *session.DeviceName
+		}
+		activeDevice = &response.StudentActiveDevice{
+			DeviceID:   session.DeviceID,
+			DeviceName: deviceName,
+			IPAddress:  session.IPAddress,
+			UserAgent:  session.UserAgent,
+			LoggedInAt: session.CreatedAt,
+			LastSeenAt: session.LastSeenAt,
+		}
+	}
+
 	return &response.StudentDetailsAdminResponse{
 		ID:           student.ID,
 		UserID:       student.UserID,
@@ -88,6 +104,7 @@ func buildStudentAdminDetails(db *gorm.DB, tenantID, studentID uint) (*response.
 			UnpaidOrders:         orderStats.unpaid,
 			TotalSpent:           orderStats.spent,
 		},
+		ActiveDevice: activeDevice,
 	}, nil
 }
 

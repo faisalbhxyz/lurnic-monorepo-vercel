@@ -5,6 +5,7 @@ type CreateClassInput struct {
 	Slug        string  `json:"slug" form:"slug"`
 	IconLabel   *string `json:"icon_label" form:"icon_label"`
 	IconColor   *string `json:"icon_color" form:"icon_color"`
+	IconImage   *string `json:"icon_image"`
 	Position    int     `json:"position" form:"position"`
 	IsPublished *bool   `json:"is_published" form:"is_published"`
 }
@@ -14,6 +15,7 @@ type UpdateClassInput struct {
 	Slug        string  `json:"slug" form:"slug"`
 	IconLabel   *string `json:"icon_label" form:"icon_label"`
 	IconColor   *string `json:"icon_color" form:"icon_color"`
+	IconImage   *string `json:"icon_image"`
 	Position    int     `json:"position" form:"position"`
 	IsPublished *bool   `json:"is_published" form:"is_published"`
 }

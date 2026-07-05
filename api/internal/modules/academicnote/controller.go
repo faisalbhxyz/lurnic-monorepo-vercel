@@ -45,15 +45,22 @@ func (h *Handler) GetClassByID(c *gin.Context) {
 
 func (h *Handler) CreateClass(c *gin.Context) {
 	var input CreateClassInput
-	if err := c.ShouldBindWith(&input, binding.Form); err != nil {
+	if err := c.ShouldBindWith(&input, binding.FormMultipart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
 		return
 	}
-	if err := h.service.CreateClass(input, c.GetUint("tenant_id")); err != nil {
+	if iconURL, err := uploadFile(c, "icon_image", 2*1024*1024); err == nil {
+		input.IconImage = iconURL
+	}
+	id, err := h.service.CreateClass(input, c.GetUint("tenant_id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "Class created successfully"})
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Class created successfully",
+		"data":    gin.H{"id": id},
+	})
 }
 
 func (h *Handler) UpdateClass(c *gin.Context) {
@@ -63,9 +70,12 @@ func (h *Handler) UpdateClass(c *gin.Context) {
 		return
 	}
 	var input UpdateClassInput
-	if err := c.ShouldBindWith(&input, binding.Form); err != nil {
+	if err := c.ShouldBindWith(&input, binding.FormMultipart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
 		return
+	}
+	if iconURL, err := uploadFile(c, "icon_image", 2*1024*1024); err == nil {
+		input.IconImage = iconURL
 	}
 	if err := h.service.UpdateClass(id, input, c.GetUint("tenant_id")); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

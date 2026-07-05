@@ -8,6 +8,7 @@ type AcademicNoteClassResponse struct {
 	Slug        string    `json:"slug"`
 	IconLabel   *string   `json:"icon_label"`
 	IconColor   *string   `json:"icon_color"`
+	IconImage   *string   `json:"icon_image"`
 	Position    int       `json:"position"`
 	IsPublished bool      `json:"is_published"`
 	NoteCount   int       `json:"note_count,omitempty"`
@@ -63,6 +64,7 @@ type AcademicNoteClassDetailResponse struct {
 	Slug        string                        `json:"slug"`
 	IconLabel   *string                       `json:"icon_label"`
 	IconColor   *string                       `json:"icon_color"`
+	IconImage   *string                       `json:"icon_image"`
 	Position    int                           `json:"position"`
 	IsPublished bool                          `json:"is_published"`
 	Subjects    []AcademicNoteSubjectResponse `json:"subjects"`

@@ -17,8 +17,10 @@ type UpdateStudentInput struct {
 }
 
 type LoginStudentInput struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Email      string  `json:"email" binding:"required,email"`
+	Password   string  `json:"password" binding:"required,min=6"`
+	DeviceID   string  `json:"device_id" binding:"required,min=8,max=128"`
+	DeviceName *string `json:"device_name" binding:"omitempty,max=255"`
 }
 
 type ForgotPasswordInput struct {

@@ -15,6 +15,8 @@ Student course complete korle (admin je **completion %** set kore) certificate *
 | `GET` | `/student/certificates/{id}` | `app-key` + `Bearer` | Ekta certificate detail |
 | `GET` | `/course/{slug}/certificate` | `app-key` + `Bearer` | Course page theke oi course er certificate |
 | `GET` | `/course/{slug}/progress` | `app-key` + `Bearer` | Progress bar / “certificate locked” UI |
+| `GET` | `/course/{slug}/lessons/{lessonId}/progress` | `app-key` + `Bearer` | Video resume position (see [LESSON_VIDEO_PROGRESS_STOREFRONT_API.md](./LESSON_VIDEO_PROGRESS_STOREFRONT_API.md)) |
+| `PATCH` | `/course/{slug}/lessons/{lessonId}/progress` | `app-key` + `Bearer` | Save video watch position (heartbeat) |
 | `POST` | `/course/{slug}/lessons/{lessonId}/complete` | `app-key` + `Bearer` | Lesson complete mark (progress + cert trigger) |
 
 **Student auth:** `Authorization: Bearer <student_jwt>` from `POST /v1/student/login`  

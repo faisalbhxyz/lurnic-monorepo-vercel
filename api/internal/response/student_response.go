@@ -32,6 +32,15 @@ type StudentDetailsStats struct {
 	TotalSpent             float64 `json:"total_spent"`
 }
 
+type StudentActiveDevice struct {
+	DeviceID   string    `json:"device_id"`
+	DeviceName string    `json:"device_name"`
+	IPAddress  *string   `json:"ip_address"`
+	UserAgent  *string   `json:"user_agent"`
+	LoggedInAt time.Time `json:"logged_in_at"`
+	LastSeenAt time.Time `json:"last_seen_at"`
+}
+
 type StudentOrderDetail struct {
 	ID              uint                      `json:"id"`
 	InvoiceID       int64                     `json:"invoice_id"`
@@ -62,7 +71,8 @@ type StudentDetailsAdminResponse struct {
 	Status       bool                      `json:"status"`
 	CreatedAt   time.Time                 `json:"created_at"`
 	UpdatedAt   time.Time                 `json:"updated_at"`
-	Enrollments []StudentEnrollmentDetail `json:"enrollments"`
-	Orders      []StudentOrderDetail      `json:"orders"`
-	Stats       StudentDetailsStats       `json:"stats"`
+	Enrollments  []StudentEnrollmentDetail `json:"enrollments"`
+	Orders       []StudentOrderDetail      `json:"orders"`
+	Stats        StudentDetailsStats       `json:"stats"`
+	ActiveDevice *StudentActiveDevice      `json:"active_device"`
 }

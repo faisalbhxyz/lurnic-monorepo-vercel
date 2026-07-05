@@ -9,6 +9,7 @@ type AcademicNoteClass struct {
 	Slug        string               `json:"slug"`
 	IconLabel   *string              `gorm:"column:icon_label" json:"icon_label"`
 	IconColor   *string              `gorm:"column:icon_color" json:"icon_color"`
+	IconImage   *string              `gorm:"column:icon_image" json:"icon_image"`
 	Position    int                  `gorm:"default:0" json:"position"`
 	IsPublished bool                 `gorm:"column:is_published;default:true" json:"is_published"`
 	CreatedAt   time.Time            `gorm:"autoCreateTime" json:"created_at"`

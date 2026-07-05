@@ -1,12 +1,10 @@
+import AddClassNote from "@/components/shared/home/website/class-notes/AddClassNote";
 import ClassNoteList from "@/components/shared/home/website/class-notes/ClassNoteList";
-import Button from "@/components/ui/Button";
 import { auth } from "@/lib/auth";
 import axiosInstance from "@/lib/axiosInstance";
 import { Session } from "next-auth";
 import Link from "next/link";
 import React from "react";
-import { LuPlus } from "react-icons/lu";
-
 export const getAllClassNotes = async (
   session: Session
 ): Promise<IAcademicNoteClass[] | null> => {
@@ -41,13 +39,10 @@ export default async function ClassNotesPage() {
         <div>
           <h3 className="font-medium">Class-wise Notes</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Manage academic classes, subjects, papers, and PDF lecture sheets for
-            the storefront.
+            Create a class, then add subjects, papers, and PDF notes in one place.
           </p>
         </div>
-        <Button link src="/class-notes/create">
-          <LuPlus /> Add Class
-        </Button>
+        <AddClassNote session={session} />
       </div>
 
       <div className="mt-5">

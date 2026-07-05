@@ -255,7 +255,7 @@ curl -s -X POST "$API/student/reset-password" \
 curl -s -X POST "$API/student/login" \
   -H "app-key: $KEY" \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@example.com","password":"newSecret123"}'
+  -d '{"email":"student@example.com","password":"newSecret123","device_id":"550e8400-e29b-41d4-a716-446655440000"}'
 ```
 
 ---
@@ -264,7 +264,7 @@ curl -s -X POST "$API/student/login" \
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /student/login` | Login after reset |
+| `POST /student/login` | Login after reset (`device_id` required — see [STUDENT_DEVICE_LOGIN_STOREFRONT_API.md](./STUDENT_DEVICE_LOGIN_STOREFRONT_API.md)) |
 | `POST /student/register` | New student signup |
 | `GET /student/details` | Profile (Bearer token) |
 

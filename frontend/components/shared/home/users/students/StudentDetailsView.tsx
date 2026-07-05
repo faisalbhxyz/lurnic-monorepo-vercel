@@ -10,6 +10,7 @@ import {
   HiOutlineClipboardList,
   HiOutlineMail,
   HiOutlinePhone,
+  HiOutlineDeviceMobile,
   HiOutlineShoppingCart,
 } from "react-icons/hi";
 import { BiEditAlt } from "react-icons/bi";
@@ -105,6 +106,54 @@ export default function StudentDetailsView({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="border rounded-xl bg-white overflow-hidden">
+        <div className="px-5 py-4 border-b">
+          <h4 className="font-medium text-lg">Active Device</h4>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Only one device can access classes at a time. A new login replaces the previous session.
+          </p>
+        </div>
+        {student.active_device ? (
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-gray-500">Device</p>
+              <p className="font-medium text-gray-900 mt-1 inline-flex items-center gap-1.5">
+                <HiOutlineDeviceMobile className="text-gray-400" />
+                {student.active_device.device_name}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500">IP address</p>
+              <p className="font-medium text-gray-900 mt-1">
+                {student.active_device.ip_address || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500">Logged in</p>
+              <p className="font-medium text-gray-900 mt-1">
+                {formatDateTime(student.active_device.logged_in_at)}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500">Last active</p>
+              <p className="font-medium text-gray-900 mt-1">
+                {formatDateTime(student.active_device.last_seen_at)}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-gray-500">Device ID</p>
+              <p className="font-mono text-xs text-gray-700 mt-1 break-all">
+                {student.active_device.device_id}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="p-8 text-center text-gray-500 text-sm">
+            Not logged in on any device.
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

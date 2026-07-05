@@ -113,11 +113,21 @@ interface IStudentOrderDetail {
   updated_at: string;
 }
 
+interface IStudentActiveDevice {
+  device_id: string;
+  device_name: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  logged_in_at: string;
+  last_seen_at: string;
+}
+
 interface IStudentDetails extends Omit<IStudent, "enrollments" | "status"> {
   status: boolean;
   enrollments: IStudentEnrollmentDetail[];
   orders: IStudentOrderDetail[];
   stats: IStudentDetailsStats;
+  active_device?: IStudentActiveDevice | null;
 }
 
 interface ICourseLesson {
@@ -401,6 +411,7 @@ interface IAcademicNoteClass {
   slug: string;
   icon_label?: string | null;
   icon_color?: string | null;
+  icon_image?: string | null;
   position: number;
   is_published: boolean;
   note_count?: number;

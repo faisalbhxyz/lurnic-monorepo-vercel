@@ -33,6 +33,7 @@ func setupTestDB(t *testing.T) (*gorm.DB, uint) {
 			slug TEXT NOT NULL,
 			icon_label TEXT,
 			icon_color TEXT,
+			icon_image TEXT,
 			position INTEGER DEFAULT 0,
 			is_published INTEGER DEFAULT 1,
 			created_at DATETIME,
@@ -92,7 +93,7 @@ func TestAcademicNoteHierarchyAndPublicAPI(t *testing.T) {
 	svc := NewService(db)
 
 	published := true
-	if err := svc.CreateClass(CreateClassInput{
+	if _, err := svc.CreateClass(CreateClassInput{
 		Title:       "HSC",
 		Slug:        "hsc",
 		IconLabel:   strPtr("H"),
@@ -207,7 +208,7 @@ func TestCreateNoteRequiresPdf(t *testing.T) {
 	svc := NewService(db)
 
 	published := true
-	_ = svc.CreateClass(CreateClassInput{Title: "C", IsPublished: &published}, tenantID)
+	_, _ = svc.CreateClass(CreateClassInput{Title: "C", IsPublished: &published}, tenantID)
 	classes, _ := svc.GetAllClasses(tenantID)
 	_ = svc.CreateSubject(CreateSubjectInput{ClassID: classes[0].ID, Title: "S", IsPublished: &published}, tenantID)
 	adminClass, _ := svc.GetClassByID(tenantID, uint64(classes[0].ID))

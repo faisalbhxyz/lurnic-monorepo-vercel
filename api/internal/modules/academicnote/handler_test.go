@@ -77,7 +77,7 @@ func TestHTTPPublicAndPrivateRoutes(t *testing.T) {
 	svc := NewService(utils.DB)
 
 	published := true
-	if err := svc.CreateClass(CreateClassInput{
+	if _, err := svc.CreateClass(CreateClassInput{
 		Title: "HSC", Slug: "hsc", IsPublished: &published,
 	}, tenantID); err != nil {
 		t.Fatalf("seed class: %v", err)

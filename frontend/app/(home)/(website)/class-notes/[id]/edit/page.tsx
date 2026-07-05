@@ -36,22 +36,45 @@ export default async function EditClassNotePage({
   const classData = await getClassNoteById(session, id);
   if (!classData) notFound();
 
+  const subjectCount = classData.subjects?.length ?? 0;
+  const noteCount = classData.note_count ?? 0;
+
   return (
     <>
       <div className="flex items-center text-sm gap-1">
-        <Link href="/class-notes" className="text-gray-500">
+        <Link href="/class-notes" className="text-gray-500 hover:text-primary">
           Class-wise Notes
         </Link>
         /<span>{classData.title}</span>
       </div>
-      <h3 className="font-medium mt-5">Manage: {classData.title}</h3>
 
-      <div className="mt-5 border rounded-xl p-5">
-        <h4 className="font-medium mb-4">Class Settings</h4>
-        <CreateClassNoteForm session={session} isEdit classData={classData} />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-5">
+        <div>
+          <h3 className="font-medium text-lg">{classData.title}</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Add subjects, papers, and PDF notes — everything is on this page.
+          </p>
+        </div>
+        <div className="flex gap-2 text-sm">
+          <span className="px-3 py-1 rounded-full bg-slate-100 text-gray-700">
+            {subjectCount} subject{subjectCount === 1 ? "" : "s"}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700">
+            {noteCount} note{noteCount === 1 ? "" : "s"}
+          </span>
+        </div>
       </div>
 
       <ClassNoteManager session={session} classData={classData} />
+
+      <details className="mt-8 border rounded-xl overflow-hidden group">
+        <summary className="cursor-pointer px-4 py-3 bg-gray-50 font-medium text-sm hover:bg-gray-100">
+          Class settings (title, icon, publish)
+        </summary>
+        <div className="p-5 border-t">
+          <CreateClassNoteForm session={session} isEdit classData={classData} />
+        </div>
+      </details>
     </>
   );
 }

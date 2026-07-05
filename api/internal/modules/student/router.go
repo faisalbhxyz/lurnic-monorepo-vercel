@@ -20,9 +20,11 @@ func RegisterStudentRoutes(rg *gin.RouterGroup) {
 	publicGroup := rg.Group("/student", middleware.GetTenantID())
 	{
 		publicGroup.POST("/login", LoginStudent)
+		publicGroup.POST("/logout", middleware.StudentAuthMiddleware(), LogoutStudent)
 		publicGroup.POST("/register", CreateStudentPublic)
 		publicGroup.POST("/forgot-password", ForgotPasswordStudent)
 		publicGroup.POST("/reset-password", ResetPasswordStudent)
 		publicGroup.GET("/details", middleware.StudentAuthMiddleware(), GetStudentDetails)
+		publicGroup.PUT("/update", middleware.StudentAuthMiddleware(), UpdateStudentProfile)
 	}
 }

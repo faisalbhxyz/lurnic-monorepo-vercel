@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import FeaturedImage from "@/components/shared/FeaturedImage";
 import InputField from "@/components/ui/InputField";
 import Label from "@/components/ui/Label";
 import Button from "@/components/ui/Button";
@@ -17,6 +18,23 @@ const classSchema = z.object({
   slug: z.string().trim().max(180).optional(),
   icon_label: z.string().trim().max(10).optional(),
   icon_color: z.string().trim().max(20).optional(),
+  icon_image: z
+    .any()
+    .optional()
+    .refine((file) => {
+      if (!file) return true;
+      return file.size <= 2 * 1024 * 1024;
+    }, "Max icon size is 2MB.")
+    .refine((file) => {
+      if (!file) return true;
+      return [
+        "image/png",
+        "image/jpg",
+        "image/jpeg",
+        "image/webp",
+        "image/svg+xml",
+      ].includes(file.type);
+    }, "Only PNG, JPG, WebP, and SVG are supported."),
   position: z.coerce.number().gte(0),
   is_published: z.boolean(),
 });
@@ -27,10 +45,16 @@ export default function CreateClassNoteForm({
   session,
   isEdit = false,
   classData = null,
+  onSuccess,
+  onCancel,
+  onCreated,
 }: {
   session: Session;
   isEdit?: boolean;
   classData?: IAcademicNoteClass | null;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  onCreated?: (id: number) => void;
 }) {
   const router = useRouter();
 
@@ -39,6 +63,8 @@ export default function CreateClassNoteForm({
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
+    trigger,
   } = useForm<ClassFormData>({
     resolver: zodResolver(classSchema),
     defaultValues: {
@@ -73,6 +99,9 @@ export default function CreateClassNoteForm({
     fd.append("icon_color", data.icon_color || "");
     fd.append("position", String(data.position));
     fd.append("is_published", String(data.is_published));
+    if (data.icon_image) {
+      fd.append("icon_image", data.icon_image);
+    }
 
     const headers = {
       Authorization: `Bearer ${session.accessToken}`,
@@ -95,7 +124,26 @@ export default function CreateClassNoteForm({
         .post("/private/academic-notes/classes/create", fd, { headers })
         .then((res) => {
           toast.success(res.data.message);
-          router.push("/class-notes");
+          reset({
+            title: "",
+            slug: "",
+            icon_label: "",
+            icon_color: "",
+            is_published: true,
+            position: 0,
+          });
+          setValue("icon_image", undefined);
+          const createdId = res.data?.data?.id;
+          if (onCreated && createdId) {
+            onCreated(createdId);
+            return;
+          }
+          if (onSuccess) {
+            onSuccess();
+            router.refresh();
+          } else {
+            router.push("/class-notes");
+          }
         })
         .catch((error) => {
           toast.error(error.response?.data?.error || "Something went wrong.");
@@ -122,6 +170,30 @@ export default function CreateClassNoteForm({
           {...register("slug")}
           error={errors.slug?.message}
         />
+      </div>
+      <div>
+        <Label>Custom Icon (optional)</Label>
+        <p className="text-xs text-gray-500 mb-2">
+          Upload a custom icon image, or use the label and color fields below.
+        </p>
+        <FeaturedImage
+          label="Upload Icon"
+          desc="PNG, JPG, WebP, or SVG. Max 2MB."
+          dbImage={
+            isEdit && classData?.icon_image
+              ? { isDBImg: true, name: classData.icon_image }
+              : undefined
+          }
+          onFileSelected={(file) => {
+            setValue("icon_image", file);
+            trigger("icon_image");
+          }}
+        />
+        {errors.icon_image && (
+          <p className="text-red-500 text-sm mt-1">
+            {String(errors.icon_image.message)}
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -163,7 +235,7 @@ export default function CreateClassNoteForm({
         <Button
           type="button"
           variant="secondary"
-          onClick={() => router.push("/class-notes")}
+          onClick={() => (onCancel ? onCancel() : router.push("/class-notes"))}
         >
           Cancel
         </Button>

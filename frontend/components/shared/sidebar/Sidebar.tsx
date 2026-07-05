@@ -66,7 +66,6 @@ const menuItems: MenuItem[] = [
     submenu: [
       { label: "Banner", href: "/banner" },
       { label: "Class-wise Notes", href: "/class-notes" },
-      { label: "Add Class Note", href: "/class-notes/create" },
     ],
   },
 ];

@@ -53,7 +53,7 @@ export default function ClassNoteAction({ id }: { id: number }) {
             onClick={() => router.push(`/class-notes/${id}/edit`)}
           >
             <BiEditAlt size={18} />
-            Manage
+            Open
           </button>
         </MenuItem>
         <MenuItem>

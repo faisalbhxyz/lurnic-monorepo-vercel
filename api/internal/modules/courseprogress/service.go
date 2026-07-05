@@ -5,6 +5,7 @@ import (
 	"dashlearn/internal/modules/certificate"
 	"dashlearn/internal/progress"
 	"errors"
+	"math"
 	"time"
 
 	"gorm.io/gorm"
@@ -29,20 +30,102 @@ func (s *Service) GetCourseProgress(tenantID, studentID uint, slug string) (*pro
 	return &breakdown, nil
 }
 
+func (s *Service) GetLessonVideoProgress(tenantID, studentID uint, slug string, lessonID uint) (*LessonVideoProgressResponse, error) {
+	course, err := s.loadEnrolledCourse(tenantID, studentID, slug)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.loadPublishedLesson(course.ID, lessonID); err != nil {
+		return nil, err
+	}
+
+	var row models.StudentLessonVideoProgress
+	err = s.db.
+		Where("tenant_id = ? AND student_id = ? AND lesson_id = ?", tenantID, studentID, lessonID).
+		First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return s.toLessonVideoProgressResponse(&row, s.isLessonCompleted(tenantID, studentID, lessonID)), nil
+}
+
+func (s *Service) UpdateLessonVideoProgress(tenantID, studentID uint, slug string, lessonID uint, req UpdateLessonVideoProgressRequest) (*LessonVideoProgressResponse, error) {
+	course, err := s.loadEnrolledCourse(tenantID, studentID, slug)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.loadPublishedLesson(course.ID, lessonID); err != nil {
+		return nil, err
+	}
+
+	maxPosition := req.MaxPositionSeconds
+	duration := req.DurationSeconds
+
+	var existing models.StudentLessonVideoProgress
+	err = s.db.
+		Where("tenant_id = ? AND student_id = ? AND lesson_id = ?", tenantID, studentID, lessonID).
+		First(&existing).Error
+	if err == nil {
+		if existing.MaxPositionSeconds > maxPosition {
+			maxPosition = existing.MaxPositionSeconds
+		}
+		if existing.DurationSeconds > duration {
+			duration = existing.DurationSeconds
+		}
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	progressPercent := calcVideoProgressPercent(maxPosition, duration)
+
+	row := models.StudentLessonVideoProgress{
+		TenantID:           tenantID,
+		StudentID:          studentID,
+		CourseID:           course.ID,
+		LessonID:           lessonID,
+		MaxPositionSeconds: maxPosition,
+		DurationSeconds:    duration,
+		ProgressPercent:    progressPercent,
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if err := s.db.Create(&row).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		updates := map[string]interface{}{
+			"max_position_seconds": maxPosition,
+			"duration_seconds":     duration,
+			"progress_percent":     progressPercent,
+		}
+		if err := s.db.Model(&existing).Updates(updates).Error; err != nil {
+			return nil, err
+		}
+		row = existing
+		row.MaxPositionSeconds = maxPosition
+		row.DurationSeconds = duration
+		row.ProgressPercent = progressPercent
+		if err := s.db.First(&row, existing.ID).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	return s.toLessonVideoProgressResponse(&row, s.isLessonCompleted(tenantID, studentID, lessonID)), nil
+}
+
 func (s *Service) MarkLessonComplete(tenantID, studentID uint, slug string, lessonID uint) (*progress.Breakdown, error) {
 	course, err := s.loadEnrolledCourse(tenantID, studentID, slug)
 	if err != nil {
 		return nil, err
 	}
 
-	var lesson models.CourseLesson
-	if err := s.db.
-		Joins("JOIN course_chapters ON course_chapters.id = course_lessons.chapter_id").
-		Where("course_lessons.id = ? AND course_chapters.course_id = ? AND course_lessons.is_published = ?", lessonID, course.ID, true).
-		First(&lesson).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("lesson not found")
-		}
+	if _, err := s.loadPublishedLesson(course.ID, lessonID); err != nil {
 		return nil, err
 	}
 
@@ -92,4 +175,48 @@ func (s *Service) loadEnrolledCourse(tenantID, studentID uint, slug string) (*mo
 	}
 
 	return &course, nil
+}
+
+func (s *Service) loadPublishedLesson(courseID, lessonID uint) (*models.CourseLesson, error) {
+	var lesson models.CourseLesson
+	if err := s.db.
+		Joins("JOIN course_chapters ON course_chapters.id = course_lessons.chapter_id").
+		Where("course_lessons.id = ? AND course_chapters.course_id = ? AND course_lessons.is_published = ?", lessonID, courseID, true).
+		First(&lesson).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("lesson not found")
+		}
+		return nil, err
+	}
+	return &lesson, nil
+}
+
+func (s *Service) isLessonCompleted(tenantID, studentID, lessonID uint) bool {
+	var count int64
+	s.db.Model(&models.StudentLessonCompletion{}).
+		Where("tenant_id = ? AND student_id = ? AND lesson_id = ?", tenantID, studentID, lessonID).
+		Count(&count)
+	return count > 0
+}
+
+func (s *Service) toLessonVideoProgressResponse(row *models.StudentLessonVideoProgress, completed bool) *LessonVideoProgressResponse {
+	return &LessonVideoProgressResponse{
+		LessonID:           row.LessonID,
+		MaxPositionSeconds: row.MaxPositionSeconds,
+		DurationSeconds:    row.DurationSeconds,
+		ProgressPercent:    row.ProgressPercent,
+		Completed:          completed,
+		UpdatedAt:          row.UpdatedAt,
+	}
+}
+
+func calcVideoProgressPercent(maxPosition, duration float64) float64 {
+	if duration <= 0 {
+		return 0
+	}
+	percent := maxPosition / duration * 100
+	if percent > 100 {
+		return 100
+	}
+	return math.Round(percent*10) / 10
 }

@@ -316,7 +316,11 @@ func ensureEnrolledStudent(tenantID, courseID uint) (*models.Student, error) {
 }
 
 func loginStudent(base, appKey, email, password string) (string, error) {
-	body, _ := json.Marshal(map[string]string{"email": email, "password": password})
+	body, _ := json.Marshal(map[string]string{
+		"email":     email,
+		"password":  password,
+		"device_id": "live-test-device-0001",
+	})
 	res, err := requestJSON(http.MethodPost, base+"/student/login", appKey, "", body)
 	if err != nil {
 		return "", err

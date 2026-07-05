@@ -15,7 +15,7 @@ type Service interface {
 	// Classes
 	GetAllClasses(tenantID uint) ([]response.AcademicNoteClassResponse, error)
 	GetClassByID(tenantID uint, id uint64) (*response.AcademicNoteClassAdminResponse, error)
-	CreateClass(input CreateClassInput, tenantID uint) error
+	CreateClass(input CreateClassInput, tenantID uint) (uint, error)
 	UpdateClass(id uint64, input UpdateClassInput, tenantID uint) error
 	DeleteClass(id uint64, tenantID uint) error
 
@@ -175,6 +175,7 @@ func (s *service) GetAllClasses(tenantID uint) ([]response.AcademicNoteClassResp
 			Slug:        c.Slug,
 			IconLabel:   c.IconLabel,
 			IconColor:   c.IconColor,
+			IconImage:   c.IconImage,
 			Position:    c.Position,
 			IsPublished: c.IsPublished,
 			NoteCount:   count,
@@ -253,6 +254,7 @@ func (s *service) GetClassByID(tenantID uint, id uint64) (*response.AcademicNote
 			Slug:        class.Slug,
 			IconLabel:   class.IconLabel,
 			IconColor:   class.IconColor,
+			IconImage:   class.IconImage,
 			Position:    class.Position,
 			IsPublished: class.IsPublished,
 			NoteCount:   count,
@@ -263,21 +265,25 @@ func (s *service) GetClassByID(tenantID uint, id uint64) (*response.AcademicNote
 	}, nil
 }
 
-func (s *service) CreateClass(input CreateClassInput, tenantID uint) error {
+func (s *service) CreateClass(input CreateClassInput, tenantID uint) (uint, error) {
 	class := models.AcademicNoteClass{
 		TenantID:    tenantID,
 		Title:       input.Title,
 		Slug:        utils.Slugify(input.Title),
 		IconLabel:   input.IconLabel,
 		IconColor:   input.IconColor,
+		IconImage:   input.IconImage,
 		Position:    input.Position,
 		IsPublished: boolVal(input.IsPublished, true),
 	}
 	if err := s.db.Create(&class).Error; err != nil {
-		return err
+		return 0, err
 	}
 	class.Slug = resolveSlug(input.Title, input.Slug, class.ID)
-	return s.db.Model(&class).Update("slug", class.Slug).Error
+	if err := s.db.Model(&class).Update("slug", class.Slug).Error; err != nil {
+		return 0, err
+	}
+	return class.ID, nil
 }
 
 func (s *service) UpdateClass(id uint64, input UpdateClassInput, tenantID uint) error {
@@ -286,20 +292,34 @@ func (s *service) UpdateClass(id uint64, input UpdateClassInput, tenantID uint) 
 		return err
 	}
 	slug := resolveSlug(input.Title, input.Slug, class.ID)
-	return s.db.Model(&class).Updates(map[string]interface{}{
+	updates := map[string]interface{}{
 		"title":        input.Title,
 		"slug":         slug,
 		"icon_label":   input.IconLabel,
 		"icon_color":   input.IconColor,
 		"position":     input.Position,
 		"is_published": boolVal(input.IsPublished, class.IsPublished),
-	}).Error
+	}
+	if input.IconImage != nil && *input.IconImage != "" {
+		if class.IconImage != nil && *class.IconImage != "" && *class.IconImage != *input.IconImage {
+			if err := utils.DeleteFromBunny(*class.IconImage); err != nil {
+				fmt.Println("Error deleting class icon:", err)
+			}
+		}
+		updates["icon_image"] = input.IconImage
+	}
+	return s.db.Model(&class).Updates(updates).Error
 }
 
 func (s *service) DeleteClass(id uint64, tenantID uint) error {
 	var class models.AcademicNoteClass
 	if err := s.db.Where("id = ? AND tenant_id = ?", id, tenantID).First(&class).Error; err != nil {
 		return err
+	}
+	if class.IconImage != nil && *class.IconImage != "" {
+		if err := utils.DeleteFromBunny(*class.IconImage); err != nil {
+			fmt.Println("Error deleting class icon:", err)
+		}
 	}
 	return s.db.Delete(&class).Error
 }
@@ -468,6 +488,7 @@ func (s *service) GetPublicClasses(tenantID uint) ([]response.AcademicNoteClassR
 			Slug:      c.Slug,
 			IconLabel: c.IconLabel,
 			IconColor: c.IconColor,
+			IconImage: c.IconImage,
 			Position:  c.Position,
 			NoteCount: count,
 		})
@@ -529,6 +550,7 @@ func (s *service) GetPublicClassBySlug(tenantID uint, classSlug string) (*respon
 		Slug:      class.Slug,
 		IconLabel: class.IconLabel,
 		IconColor: class.IconColor,
+		IconImage: class.IconImage,
 		Position:  class.Position,
 		Subjects:  subjects,
 	}, nil
@@ -572,6 +594,7 @@ func (s *service) GetPublicNotesByPaperSlug(tenantID uint, classSlug, subjectSlu
 			Slug:      class.Slug,
 			IconLabel: class.IconLabel,
 			IconColor: class.IconColor,
+			IconImage: class.IconImage,
 		},
 		Subject: response.AcademicNoteSubjectResponse{
 			ID:        subject.ID,

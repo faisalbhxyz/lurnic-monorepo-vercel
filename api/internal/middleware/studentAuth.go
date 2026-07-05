@@ -3,16 +3,14 @@ package middleware
 import (
 	"dashlearn/internal/models"
 	"dashlearn/internal/utils"
+	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 )
-
-var SecretKey2 = []byte(os.Getenv("JWT_SECRET"))
 
 func StudentAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -24,7 +22,6 @@ func StudentAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Expected: Bearer <token>
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
@@ -33,37 +30,50 @@ func StudentAuthMiddleware() gin.HandlerFunc {
 		}
 
 		tokenStr := parts[1]
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
-			// Validate signing method
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.ErrSignatureInvalid
-			}
-			return SecretKey2, nil
-		})
-
-		if err != nil || !token.Valid {
+		userID, sessionID, err := utils.ParseStudentSessionID(tokenStr)
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
 		}
 
-		// You can store claims/user info in context if needed
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			if exp, ok := claims["exp"].(float64); ok && int64(exp) < time.Now().Unix() {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
-				c.Abort()
-				return
-			}
-
-			// get tenantID
-			var user models.Student
-			utils.DB.Where("user_id = ?", claims["user_id"]).Select("id", "user_id", "tenant_id").First(&user)
-
-			// Set user info in context
-			c.Set("user_id", user.ID)
-			c.Set("tenant_id", user.TenantID)
+		var user models.Student
+		if err := utils.DB.Where("user_id = ?", userID).Select("id", "user_id", "tenant_id", "status").First(&user).Error; err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.Abort()
+			return
 		}
 
+		if !user.Status {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Account is inactive"})
+			c.Abort()
+			return
+		}
+
+		var session models.StudentSession
+		err = utils.DB.Where("student_id = ? AND session_id = ?", user.ID, sessionID).First(&session).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   "Session expired or logged in on another device",
+				"code":    "SESSION_REPLACED",
+				"message": "Your account was logged in on another device. Please sign in again.",
+			})
+			c.Abort()
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again."})
+			c.Abort()
+			return
+		}
+
+		if time.Since(session.LastSeenAt) > time.Minute {
+			_ = utils.DB.Model(&session).Update("last_seen_at", time.Now()).Error
+		}
+
+		c.Set("user_id", user.ID)
+		c.Set("tenant_id", user.TenantID)
+		c.Set("session_id", sessionID)
 		c.Next()
 	}
 }

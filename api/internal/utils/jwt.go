@@ -23,6 +23,47 @@ func GenerateJWT(userID string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
+func GenerateStudentSessionJWT(userID, sessionID string) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id":    userID,
+		"session_id": sessionID,
+		"exp":        time.Now().Add(24 * time.Hour).Unix(),
+		"iat":        time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+func ParseStudentSessionID(tokenStr string) (userID, sessionID string, err error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return jwtSecret, nil
+	})
+	if err != nil || !token.Valid {
+		return "", "", errors.New("invalid or expired token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", errors.New("invalid token claims")
+	}
+
+	if exp, ok := claims["exp"].(float64); ok && int64(exp) < time.Now().Unix() {
+		return "", "", errors.New("token expired")
+	}
+
+	userID, _ = claims["user_id"].(string)
+	sessionID, _ = claims["session_id"].(string)
+	if userID == "" || sessionID == "" {
+		return "", "", errors.New("invalid student session token")
+	}
+
+	return userID, sessionID, nil
+}
+
 func GeneratePasswordResetJWT(userID, email string, tenantID uint) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":   userID,

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { FiSearch } from "react-icons/fi";
 import ClassNoteAction from "./ClassNoteAction";
 
@@ -40,20 +41,36 @@ export default function ClassNoteList({ data }: { data: IAcademicNoteClass[] }) 
             {filteredData.map((item) => (
               <tr
                 key={item.id}
-                className="border-t border-gray-300 hover:bg-gray-100"
+                className="border-t border-gray-300 hover:bg-gray-50"
               >
                 <td className="p-3">
-                  <div className="flex items-center gap-3">
-                    {item.icon_color && (
+                  <Link
+                    href={`/class-notes/${item.id}/edit`}
+                    className="flex items-center gap-3 group"
+                  >
+                    {item.icon_image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.icon_image}
+                        alt=""
+                        className="w-8 h-8 rounded-md object-contain"
+                      />
+                    ) : item.icon_color ? (
                       <div
                         className="w-8 h-8 rounded-md flex items-center justify-center text-white text-xs font-bold"
                         style={{ backgroundColor: item.icon_color }}
                       >
                         {item.icon_label || item.title.charAt(0)}
                       </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold">
+                        {item.title.charAt(0)}
+                      </div>
                     )}
-                    <span className="font-medium">{item.title}</span>
-                  </div>
+                    <span className="font-medium group-hover:text-primary">
+                      {item.title}
+                    </span>
+                  </Link>
                 </td>
                 <td className="p-3 text-gray-600">{item.slug}</td>
                 <td className="p-3">{item.note_count ?? 0}</td>
@@ -69,7 +86,15 @@ export default function ClassNoteList({ data }: { data: IAcademicNoteClass[] }) 
                   </span>
                 </td>
                 <td className="p-3">
-                  <ClassNoteAction id={item.id} />
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/class-notes/${item.id}/edit`}
+                      className="text-primary text-sm border border-primary px-3 py-1.5 rounded-md hover:bg-primary hover:text-white transition-colors"
+                    >
+                      Add Notes
+                    </Link>
+                    <ClassNoteAction id={item.id} />
+                  </div>
                 </td>
               </tr>
             ))}

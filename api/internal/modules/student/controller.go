@@ -223,6 +223,15 @@ func LoginStudent(c *gin.Context) {
 					case "min":
 						errorsMap["password"] = "Password must be at least 6 characters long"
 					}
+				case "DeviceID":
+					switch tag {
+					case "required":
+						errorsMap["device_id"] = "Device ID is required"
+					case "min":
+						errorsMap["device_id"] = "Device ID is invalid"
+					case "max":
+						errorsMap["device_id"] = "Device ID is too long"
+					}
 				}
 			}
 			c.JSON(http.StatusBadRequest, gin.H{"error": errorsMap})
@@ -248,8 +257,23 @@ func LoginStudent(c *gin.Context) {
 		return
 	}
 
-	// Generate JWT token
-	token, err := utils.GenerateJWT(user.UserID)
+	if !user.Status {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Account is inactive"})
+		return
+	}
+
+	sessionID, err := replaceStudentSession(
+		utils.DB,
+		c.GetUint("tenant_id"),
+		user.ID,
+		sessionInputFromRequest(c, input.DeviceID, input.DeviceName),
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+		return
+	}
+
+	token, err := utils.GenerateStudentSessionJWT(user.UserID, sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -270,6 +294,21 @@ func LoginStudent(c *gin.Context) {
 		},
 	})
 
+}
+
+func LogoutStudent(c *gin.Context) {
+	studentID := c.GetUint("user_id")
+	if studentID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	if err := invalidateStudentSession(utils.DB, studentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to logout"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
 func ForgotPasswordStudent(c *gin.Context) {
@@ -435,6 +474,8 @@ func ResetPasswordStudent(c *gin.Context) {
 		return
 	}
 
+	_ = invalidateStudentSession(utils.DB, user.ID)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
 
@@ -479,6 +520,61 @@ func GetStudentDetails(c *gin.Context) {
 		First(&users)
 
 	c.JSON(http.StatusOK, gin.H{"data": users})
+}
+
+func UpdateStudentProfile(c *gin.Context) {
+	var input UpdateStudentInput
+	if err := c.ShouldBindWith(&input, binding.FormMultipart); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	profileImageURL, uploadErr := parseProfileImageUpload(c)
+	if uploadErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": uploadErr.Error()})
+		return
+	}
+	input.ProfileImageURL = profileImageURL
+
+	tenantID := c.GetUint("tenant_id")
+	studentID := c.GetUint("user_id")
+
+	var student models.Student
+	if err := utils.DB.Where("id = ? AND tenant_id = ?", studentID, tenantID).First(&student).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Student not found"})
+		return
+	}
+
+	updates := map[string]interface{}{
+		"first_name": input.FirstName,
+		"last_name":  input.LastName,
+		"phone":      input.Phone,
+	}
+
+	if input.ProfileImageURL != nil && *input.ProfileImageURL != "" {
+		updates["profile_image"] = input.ProfileImageURL
+		if student.ProfileImage != nil && *student.ProfileImage != "" {
+			if delErr := utils.DeleteFromBunny(*student.ProfileImage); delErr != nil {
+				fmt.Println("Failed to delete old profile image:", delErr)
+			}
+		}
+	}
+
+	if err := utils.DB.Model(&student).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var profile models.StudentDetailsRes
+	utils.DB.
+		Preload("Enrollments").
+		Where("tenant_id = ? AND id = ?", tenantID, studentID).
+		First(&profile)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profile updated successfully",
+		"data":    profile,
+	})
 }
 
 func UpdateStudent(c *gin.Context) {
