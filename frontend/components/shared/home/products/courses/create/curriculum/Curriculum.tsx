@@ -39,40 +39,17 @@ import { LuPlus } from "react-icons/lu";
 import { useFormContext } from "react-hook-form";
 import {
   CourseChapterSchema,
-  TCourseAssignmentSchema,
   TCourseChapterSchema,
-  TCourseLessonSchema,
-  TCourseQuizSchema,
   TCourseSchema,
 } from "@/schema/course.schema";
+import {
+  buildChapterItems,
+  ChapterItem,
+  getItemDragId,
+  splitChapterItems,
+  withChapterItemPositions,
+} from "@/lib/chapterItems";
 import { z } from "zod";
-
-type ChapterItem =
-  | TCourseLessonSchema
-  | TCourseQuizSchema
-  | TCourseAssignmentSchema;
-
-function buildChapterItems(chapter: TCourseChapterSchema): ChapterItem[] {
-  return [
-    ...(chapter.course_lessons ?? []),
-    ...(chapter.quizzes ?? []),
-    ...(chapter.assignments ?? []),
-  ];
-}
-
-function splitChapterItems(items: ChapterItem[]) {
-  return {
-    course_lessons: items.filter(
-      (item): item is TCourseLessonSchema => item.type === "lesson"
-    ),
-    quizzes: items.filter(
-      (item): item is TCourseQuizSchema => item.type === "quiz"
-    ),
-    assignments: items.filter(
-      (item): item is TCourseAssignmentSchema => item.type === "assignment"
-    ),
-  };
-}
 
 // Main Curriculum Component
 export default function Curriculum() {
@@ -123,7 +100,9 @@ export default function Curriculum() {
   const activeChapter = chapters.find((ch) => ch._id === activeId);
 
   const handleItemReorder = (chapterId: number, newItems: ChapterItem[]) => {
-    const { course_lessons, quizzes, assignments } = splitChapterItems(newItems);
+    const { course_lessons, quizzes, assignments } = splitChapterItems(
+      withChapterItemPositions(newItems)
+    );
     const updatedChapters = chapters.map((chapter) =>
       chapter._id === chapterId
         ? { ...chapter, course_lessons, quizzes, assignments }
@@ -184,7 +163,7 @@ function SortableChapter({
   chapter: z.infer<typeof CourseChapterSchema>;
   onItemReorder: (chapterId: number, items: ChapterItem[]) => void;
 }) {
-  const [activeId, setActiveId] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const chapterItems = buildChapterItems(chapter);
 
@@ -211,7 +190,7 @@ function SortableChapter({
   };
 
   const handleItemDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as number);
+    setActiveId(String(event.active.id));
   };
 
   const handleItemDragEnd = (event: DragEndEvent) => {
@@ -219,14 +198,20 @@ function SortableChapter({
     setActiveId(null);
     if (!over || active.id === over.id) return;
 
-    const oldIndex = chapterItems.findIndex((item) => item._id === active.id);
-    const newIndex = chapterItems.findIndex((item) => item._id === over.id);
+    const oldIndex = chapterItems.findIndex(
+      (item) => getItemDragId(item) === active.id
+    );
+    const newIndex = chapterItems.findIndex(
+      (item) => getItemDragId(item) === over.id
+    );
     if (oldIndex === -1 || newIndex === -1) return;
 
     onItemReorder(chapter._id, arrayMove(chapterItems, oldIndex, newIndex));
   };
 
-  const activeItem = chapterItems.find((item) => item._id === activeId);
+  const activeItem = chapterItems.find(
+    (item) => getItemDragId(item) === activeId
+  );
 
   return (
     <div
@@ -267,7 +252,7 @@ function SortableChapter({
             >
               <SortableContext
                 items={
-                  chapterItems ? chapterItems.map((item) => item._id) : []
+                  chapterItems ? chapterItems.map((item) => getItemDragId(item)) : []
                 }
                 strategy={verticalListSortingStrategy}
               >
@@ -309,7 +294,7 @@ function SortableItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item._id });
+  } = useSortable({ id: getItemDragId(item) });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),

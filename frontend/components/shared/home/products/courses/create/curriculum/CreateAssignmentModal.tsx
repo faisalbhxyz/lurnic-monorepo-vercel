@@ -15,7 +15,7 @@ export default function CreateAssignmentModal() {
       } bg-black/50`}
     >
       <div className="p-3 flex items-center justify-end">
-        <button onClick={closeNewAssignment} className="text-white">
+        <button type="button" onClick={closeNewAssignment} className="text-white">
           <RxCross2 size={22} />
         </button>
       </div>

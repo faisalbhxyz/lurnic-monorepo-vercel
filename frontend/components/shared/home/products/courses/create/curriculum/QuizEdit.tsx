@@ -23,6 +23,7 @@ import {
 } from "react-hook-form";
 import { LuTrash2 } from "react-icons/lu";
 import { toast } from "sonner";
+import { nextChapterItemPosition } from "@/lib/chapterItems";
 
 const options = [
   { id: 1, name: "Days", value: "days" },
@@ -123,6 +124,14 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
       setValue(quizzesPath, []);
     }
 
+    const chapterForPosition =
+      watch("course_chapters")[chapterIndex] ?? {
+        _id: 0,
+        position: 0,
+        title: "",
+        access: "draft",
+      };
+
     const quizPayload = {
       ...data,
       type: "quiz" as const,
@@ -146,7 +155,10 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
       clearChapterId();
       closeEditQuiz();
     } else {
-      append(quizPayload);
+      append({
+        ...quizPayload,
+        position: nextChapterItemPosition(chapterForPosition),
+      });
       closeNewQuiz();
       clearChapterId();
       formMethods.reset({

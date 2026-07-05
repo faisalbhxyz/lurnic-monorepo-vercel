@@ -22,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import UploadResources from "./UploadResources";
 import Schedule from "../details/Schedule";
 import LessonSchedule from "../lesson/LessonSchedule";
+import { nextChapterItemPosition } from "@/lib/chapterItems";
 
 const mediaOptions = [
   { id: 1, name: "Video", value: "video" },
@@ -206,6 +207,14 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
       append({
         _id: Date.now(),
         type: "lesson",
+        position: nextChapterItemPosition(
+          watch("course_chapters")[safeChapterIndex] ?? {
+            _id: 0,
+            position: 0,
+            title: "",
+            access: "draft",
+          }
+        ),
         title: data.title,
         description: data.description,
         lesson_type: data.lesson_type,

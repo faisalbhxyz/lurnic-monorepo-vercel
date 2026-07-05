@@ -29,6 +29,7 @@ type CourseAssignment struct {
 	FileUploadLimit  int                       `json:"file_upload_limit" gorm:"column:file_upload_limit;default:1"`
 	TotalMarks       float32                   `json:"total_marks" gorm:"column:total_marks;default:1"`
 	MinimumPassMarks float32                   `json:"minimum_pass_marks" gorm:"column:minimum_pass_marks;default:0"`
+	Position         int                       `gorm:"default:0" json:"position"`
 	CreatedAt        time.Time                 `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt        time.Time                 `gorm:"autoUpdateTime" json:"updated_at"`
 }

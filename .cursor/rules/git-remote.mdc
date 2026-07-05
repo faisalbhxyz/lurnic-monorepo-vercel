@@ -1,0 +1,16 @@
+---
+description: Default git remote for commits and pushes — always use lurnic-new (lurnic-monorepo-vercel)
+alwaysApply: true
+---
+
+# Git remote: lurnic-new
+
+This repo's **canonical remote** is **`lurnic-new`** → `https://github.com/faisalbhxyz/lurnic-monorepo-vercel.git`.
+
+When the user asks to commit or push:
+
+- **Push to `lurnic-new`**, not `origin` (`adstryker/lurnic-server`).
+- Use `git push -u lurnic-new HEAD` on a new branch, or `git push lurnic-new` / plain `git push` when upstream is already `lurnic-new/*`.
+- Do **not** push to `origin` or `fbh` unless the user explicitly asks for a different remote.
+
+Local `master` tracks **`lurnic-new/master`**.

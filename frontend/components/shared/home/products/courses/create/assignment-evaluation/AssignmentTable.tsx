@@ -76,6 +76,7 @@ export default function AssignmentTable({ courseId }: { courseId: number }) {
       <div className="mb-4 flex space-x-1">
         {["All", "Evaluate", "Pending"].map((status) => (
           <button
+            type="button"
             key={status}
             onClick={() => setFilter(status)}
             className={`px-4 py-2 border-b ${

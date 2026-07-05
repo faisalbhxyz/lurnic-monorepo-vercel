@@ -29,7 +29,7 @@ export default function ChapterActions({ id }: { id: number }) {
 
   return (
     <Menu>
-      <MenuButton className="p-1.5 rounded-md outline-none">
+      <MenuButton type="button" className="p-1.5 rounded-md outline-none">
         <BsThreeDotsVertical />
       </MenuButton>
 

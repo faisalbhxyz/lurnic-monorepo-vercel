@@ -28,6 +28,7 @@ import {
   useFormContext,
 } from "react-hook-form";
 import { IoIosArrowDown } from "react-icons/io";
+import { nextChapterItemPosition } from "@/lib/chapterItems";
 
 const ACCEPTED_ATTACHMENT_TYPES =
   "image/jpeg,image/jpg,image/png,image/gif,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip";
@@ -204,6 +205,14 @@ export default function AssignmentEdit({
       append({
         ...data,
         attachments: data.attachments ?? null,
+        position: nextChapterItemPosition(
+          watch("course_chapters")[safeChapterIndex] ?? {
+            _id: 0,
+            position: 0,
+            title: "",
+            access: "draft",
+          }
+        ),
       });
       formMethods.reset();
       setPreviews([]);
@@ -266,6 +275,7 @@ export default function AssignmentEdit({
             </div>
             <div className="mb-3">
               <button
+                type="button"
                 onClick={() => setIsMedia((prev) => !prev)}
                 className="border border-primary text-sm px-3 py-1.5 text-primary font-medium rounded-md flex items-center gap-1"
               >

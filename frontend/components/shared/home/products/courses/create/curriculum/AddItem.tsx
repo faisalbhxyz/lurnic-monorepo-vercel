@@ -12,6 +12,7 @@ export default function AddItem({ id }: { id: number }) {
   return (
     <Menu>
       <MenuButton
+        type="button"
         onClick={(e) => e.stopPropagation()}
         className="outline-none hover:bg-primary border border-primary text-primary hover:text-white text-sm p-1.5 rounded-md flex items-center gap-2 font-medium"
       >
@@ -25,6 +26,7 @@ export default function AddItem({ id }: { id: number }) {
       >
         <MenuItem>
           <button
+            type="button"
             onClick={() => {
               setChapterId(id);
               addNewLesson();
@@ -37,6 +39,7 @@ export default function AddItem({ id }: { id: number }) {
         </MenuItem>
         <MenuItem>
           <button
+            type="button"
             onClick={() => {
               setChapterId(id);
               addNewQuiz();
@@ -49,6 +52,7 @@ export default function AddItem({ id }: { id: number }) {
         </MenuItem>
         <MenuItem>
           <button
+            type="button"
             onClick={() => {
               setChapterId(id);
               addNewAssignment();

@@ -304,10 +304,16 @@ func (s *courseService) GetByID(tenantID uint, courseID uint) (models.CourseDeta
 		Where("tenant_id = ? AND id = ?", tenantID, courseID).
 		Preload("Author").
 		Preload("Chapters").
-		Preload("Chapters.Lessons").
+		Preload("Chapters.Lessons", func(db *gorm.DB) *gorm.DB {
+			return db.Order("position ASC")
+		}).
 		Preload("Chapters.Lessons.Resources").
-		Preload("Chapters.Assignments").
-		Preload("Chapters.Quizzes").
+		Preload("Chapters.Assignments", func(db *gorm.DB) *gorm.DB {
+			return db.Order("position ASC")
+		}).
+		Preload("Chapters.Quizzes", func(db *gorm.DB) *gorm.DB {
+			return db.Order("position ASC")
+		}).
 		Preload("Chapters.Quizzes.Questions").
 		Preload("GeneralSettings").
 		Preload("GeneralSettings.Category").
@@ -826,7 +832,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 			}
 
 			// Create lessons
-			for idx, lesson := range chapter.CourseLessons {
+			for _, lesson := range chapter.CourseLessons {
 				sourceJSON := utils.JSONB[models.Source]{Data: lesson.Source}
 
 				var lessonDateForDB *string
@@ -855,7 +861,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 					ChapterID:   newCourseChapter.ID,
 					Title:       lesson.Title,
 					Description: utils.EmptyStringToNil(lesson.Description),
-					Position:    idx,
+					Position:    lesson.Position,
 					LessonType:  lesson.LessonType,
 					SourceType:  lesson.SourceType,
 					Source:      sourceJSON,
@@ -902,6 +908,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 					ChapterID:             newCourseChapter.ID,
 					Title:                 quiz.Title,
 					Instructions:          quiz.Instructions,
+					Position:              quiz.Position,
 					IsPublished:           quiz.IsPublished,
 					RandomizeQuestions:    quiz.RandomizeQuestions,
 					SingleQuizView:        quiz.SingleQuizView,
@@ -946,6 +953,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 					ChapterID:        newCourseChapter.ID,
 					Title:            assignment.Title,
 					Instructions:     assignment.Instructions,
+					Position:         assignment.Position,
 					IsPublished:      assignment.IsPublished,
 					TimeLimit:        assignment.TimeLimit,
 					TimeLimitOption:  assignment.TimeLimitOption,
@@ -1201,7 +1209,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 		}
 
 		// Handle lessons inside chapter
-		for lIdx, lesson := range chapter.CourseLessons {
+		for _, lesson := range chapter.CourseLessons {
 
 			fmt.Println("🔄 Processing lesson:", lesson.Title)
 
@@ -1244,7 +1252,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					// Overwrite existingLesson fields explicitly with cleaned values
 					existingLesson.Title = lesson.Title
 					existingLesson.Description = utils.EmptyStringToNil(lesson.Description)
-					existingLesson.Position = lIdx
+					existingLesson.Position = lesson.Position
 					existingLesson.LessonType = lesson.LessonType
 					existingLesson.SourceType = lesson.SourceType
 					existingLesson.Source = sourceJSON
@@ -1291,7 +1299,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					ChapterID:       chapterID,
 					Title:           lesson.Title,
 					Description:     utils.EmptyStringToNil(lesson.Description),
-					Position:        lIdx,
+					Position:        lesson.Position,
 					LessonType:      lesson.LessonType,
 					SourceType:      lesson.SourceType,
 					Source:          sourceJSON,
@@ -1339,7 +1347,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					// Update
 					existingAssignment.Title = assignment.Title
 					existingAssignment.Instructions = assignment.Instructions
-					// existingAssignment.Position = lIdx
+					existingAssignment.Position = assignment.Position
 					existingAssignment.Attachments = assignment.Attachments
 					existingAssignment.IsPublished = assignment.IsPublished
 					existingAssignment.TimeLimit = assignment.TimeLimit
@@ -1359,6 +1367,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					CourseID:         courseID,
 					Title:            assignment.Title,
 					Instructions:     assignment.Instructions,
+					Position:         assignment.Position,
 					IsPublished:      assignment.IsPublished,
 					TimeLimit:        assignment.TimeLimit,
 					TimeLimitOption:  assignment.TimeLimitOption,
@@ -1384,7 +1393,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					// Update
 					existingQuiz.Title = quiz.Title
 					existingQuiz.Instructions = quiz.Instructions
-					// existingQuiz.Position = lIdx
+					existingQuiz.Position = quiz.Position
 					existingQuiz.IsPublished = quiz.IsPublished
 					existingQuiz.RandomizeQuestions = quiz.RandomizeQuestions
 					existingQuiz.SingleQuizView = quiz.SingleQuizView
@@ -1450,6 +1459,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					ChapterID:             chapterID,
 					Title:                 quiz.Title,
 					Instructions:          quiz.Instructions,
+					Position:              quiz.Position,
 					IsPublished:           quiz.IsPublished,
 					TimeLimit:             quiz.TimeLimit,
 					TimeLimitOption:       quiz.TimeLimitOption,

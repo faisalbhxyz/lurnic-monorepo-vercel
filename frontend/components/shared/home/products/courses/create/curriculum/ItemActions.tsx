@@ -102,7 +102,7 @@ export default function ItemActions({
 
   return (
     <Menu>
-      <MenuButton className="p-1.5 rounded-md outline-none">
+      <MenuButton type="button" className="p-1.5 rounded-md outline-none">
         <BsThreeDotsVertical />
       </MenuButton>
 

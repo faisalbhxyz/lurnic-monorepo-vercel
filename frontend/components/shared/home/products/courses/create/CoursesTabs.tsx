@@ -31,19 +31,26 @@ import UpdateQuizModal from "./curriculum/UpdateQuizModal";
 import UpdateQuestion from "./curriculum/UpdateQuestion";
 import { dbTimeToPickerFormat } from "@/lib/helpers";
 import axios from "axios";
+import { normalizeChapterItemPositions, buildChapterItems, splitChapterItems } from "@/lib/chapterItems";
 
 const toDbId = (id?: number | null) =>
   id != null && Number(id) > 0 ? Number(id) : undefined;
 
 const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
-  chapters.map((chapter) => ({
+  chapters.map((chapter) => {
+    const { course_lessons, quizzes, assignments } = splitChapterItems(
+      buildChapterItems(chapter)
+    );
+
+    return {
     id: toDbId(chapter.id),
     position: chapter.position,
     title: chapter.title,
     description: chapter.description ?? null,
     access: chapter.access,
-    course_lessons: (chapter.course_lessons ?? []).map((lesson) => ({
+    course_lessons: course_lessons.map((lesson) => ({
       id: toDbId(lesson.id),
+      position: lesson.position ?? 0,
       title: lesson.title,
       description: lesson.description ?? null,
       lesson_type: lesson.lesson_type,
@@ -57,8 +64,9 @@ const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
       show_comming_soon: lesson.show_comming_soon,
       resources: lesson.resources ?? null,
     })),
-    quizzes: (chapter.quizzes ?? []).map((quiz) => ({
+    quizzes: quizzes.map((quiz) => ({
       id: toDbId(quiz.id),
+      position: quiz.position ?? 0,
       title: quiz.title,
       instructions: quiz.instructions,
       is_published: quiz.is_published,
@@ -84,8 +92,9 @@ const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
         answer_explanation: question.answer_explanation ?? null,
       })),
     })),
-    assignments: (chapter.assignments ?? []).map((assignment) => ({
+    assignments: assignments.map((assignment) => ({
       id: toDbId(assignment.id),
+      position: assignment.position ?? 0,
       title: assignment.title,
       instructions: assignment.instructions,
       attachments:
@@ -99,7 +108,8 @@ const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
       total_marks: assignment.total_marks,
       minimum_pass_marks: assignment.minimum_pass_marks,
     })),
-  }));
+  };
+  });
 
 const tabs = [
   { id: 1, label: "Details" },
@@ -227,6 +237,7 @@ export default function CoursesTabs({
               id: assignment.id,
               _id: assignment.id,
               type: "assignment",
+              position: (assignment as { position?: number }).position,
             };
           }),
           quizzes: (chapter.quizzes ?? []).map((quiz) => {
@@ -235,6 +246,7 @@ export default function CoursesTabs({
               id: quiz.id,
               _id: quiz.id,
               type: "quiz",
+              position: (quiz as { position?: number }).position,
               questions: (quiz.questions ?? []).map((q) => {
                 return {
                   ...q,
@@ -277,7 +289,8 @@ export default function CoursesTabs({
         sale_price: courseDetails.sale_price || 0,
         show_comming_soon: courseDetails?.show_comming_soon || false,
         tags: courseDetails.tags,
-        course_chapters: chapters.map((chapter) => ({
+        course_chapters: chapters.map((chapter) =>
+          normalizeChapterItemPositions({
           ...chapter,
           course_lessons: chapter.course_lessons?.map((lesson) => ({
             ...lesson,
@@ -299,7 +312,8 @@ export default function CoursesTabs({
                 type: r.type || r.mime_type || "application/octet-stream",
               })) || null,
           })),
-        })) as any,
+        })
+        ) as any,
         course_instructors: instructors as any,
         author_id: courseDetails.author_id,
         general_settings: {
@@ -625,6 +639,7 @@ export default function CoursesTabs({
       <div className="border-b border-gray-300 flex space-x-4 mb-4">
         {tabs.map((tab) => (
           <button
+            type="button"
             key={tab.id}
             onClick={() => handleTabChange(tab.label)}
             className={`px-3 py-2 border-b-2 font-medium text-sm transition-all focus:outline-none ${
@@ -639,7 +654,7 @@ export default function CoursesTabs({
       </div>
       <FormProvider {...formMethods}>
         {/* {JSON.stringify(formMethods.formState.errors, null, 2)} */}
-        <form onSubmit={formMethods.handleSubmit(handleSave)}>
+        <div>
           <div className="flex items-center justify-between my-5">
             <div className="flex items-center gap-5">
               <Image
@@ -665,8 +680,9 @@ export default function CoursesTabs({
                 Preview
               </button> */}
               <Button
-                type="submit"
+                type="button"
                 disabled={loading}
+                onClick={formMethods.handleSubmit(handleSave)}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isEdit ? "Update Course" : "Publish Course"}
@@ -684,7 +700,7 @@ export default function CoursesTabs({
           <UpdateAssignmentModal />
           <UpdateQuizModal />
           <UpdateQuestion />
-        </form>
+        </div>
       </FormProvider>
     </>
   );

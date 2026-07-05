@@ -28,6 +28,7 @@ type CourseQuiz struct {
 	EnableRetry           bool                      `json:"enable_retry" gorm:"column:enable_retry;default:false"`
 	RetryAttempts         int                       `json:"retry_attempts" gorm:"column:retry_attempts;default:1"`
 	MinimumPassPercentage float32                   `json:"minimum_pass_percentage" gorm:"column:minimum_pass_percentage;default:0"`
+	Position              int                       `gorm:"default:0" json:"position"`
 	CreatedAt             time.Time                 `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt             time.Time                 `gorm:"autoUpdateTime" json:"updated_at"`
 	Questions             []QuizQuestion            `gorm:"foreignKey:QuizID;references:ID" json:"questions"`

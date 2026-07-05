@@ -103,6 +103,7 @@ export const CourseQuizSchema = z.object({
   _id: z.coerce.number(),
   id: z.coerce.number().optional().nullable(),
   type: z.literal("quiz"),
+  position: z.coerce.number().gte(0).optional().nullable(),
   title: z
     .string({ required_error: "Title is required" })
     .trim()
@@ -143,6 +144,7 @@ export const CourseAssignmentSchema = z.object({
   _id: z.coerce.number(),
   id: z.coerce.number().optional().nullable(),
   type: z.literal("assignment"),
+  position: z.coerce.number().gte(0).optional().nullable(),
   title: z
     .string({ required_error: "Title is required" })
     .trim()
@@ -180,6 +182,7 @@ export const CourseLessonSchema = z
     _id: z.coerce.number(),
     id: z.coerce.number().optional().nullable(),
     type: z.literal("lesson"),
+    position: z.coerce.number().gte(0).optional().nullable(),
     title: z
       .string({ required_error: "Title is required" })
       .min(1, { message: "Title is required" })

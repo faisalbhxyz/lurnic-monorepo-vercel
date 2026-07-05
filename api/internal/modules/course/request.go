@@ -80,6 +80,7 @@ type CreateCourseLesson struct {
 	ScheduleDate    *string                 `form:"schedule_date" json:"schedule_date" binding:"omitempty"`
 	ScheduleTime    *string                 `form:"schedule_time" json:"schedule_time" binding:"omitempty"`
 	ShowCommingSoon *bool                   `form:"show_comming_soon" json:"show_comming_soon" binding:"omitempty"`
+	Position        int                     `json:"position" form:"position"`
 }
 
 type CreateGeneralSettings struct {
@@ -105,6 +106,7 @@ type CreateCourseQuizInput struct {
 	EnableRetry           bool                             `json:"enable_retry" form:"enable_retry"`
 	RetryAttempts         int                              `json:"retry_attempts" form:"retry_attempts" binding:"required"`
 	MinimumPassPercentage float32                          `json:"minimum_pass_percentage" form:"minimum_pass_percentage" binding:"required"`
+	Position              int                              `json:"position" form:"position"`
 	Questions             []CreateQuizQuestionInput        `json:"questions" form:"questions" binding:"required"`
 }
 
@@ -132,6 +134,7 @@ type CreateAssignmentInput struct {
 	FileUploadLimit  int                              `json:"file_upload_limit" form:"file_upload_limit"`
 	TotalMarks       float32                          `json:"total_marks" form:"total_marks" binding:"required"`
 	MinimumPassMarks float32                          `json:"minimum_pass_marks" form:"minimum_pass_marks" binding:"required"`
+	Position         int                              `json:"position" form:"position"`
 }
 
 type ReorderRequest struct {
