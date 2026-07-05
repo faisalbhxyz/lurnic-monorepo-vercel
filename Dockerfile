@@ -38,6 +38,8 @@ WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/fixautoinc .
 COPY --from=builder /go/bin/goose /usr/local/bin/goose
+COPY api/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 # Migration SQL (module lives under api/; do not COPY from build context — root has no migrations/)
 COPY --from=builder /app/migrations ./migrations
@@ -46,5 +48,5 @@ COPY --from=builder /app/migrations ./migrations
 EXPOSE 5000
 
 # TiDB cannot ALTER an existing column to add AUTO_INCREMENT (Error 8200).
-# Run the idempotent fixer first, then migrations, then start.
-CMD ["sh", "-c", "./fixautoinc || true; goose -dir /app/migrations up && exec ./main"]
+# Entrypoint normalizes DSN (TLS/timeouts), runs fixautoinc + goose, then starts the API.
+CMD ["./docker-entrypoint.sh"]

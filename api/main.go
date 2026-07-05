@@ -37,5 +37,9 @@ func main() {
 		}
 	}()
 
-	router.Run(":" + os.Getenv("APP_PORT"))
+	port := os.Getenv("APP_PORT")
+	if port == "" {
+		port = "5000"
+	}
+	router.Run(":" + port)
 }
