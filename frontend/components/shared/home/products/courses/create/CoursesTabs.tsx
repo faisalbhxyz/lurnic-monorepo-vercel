@@ -192,6 +192,19 @@ export default function CoursesTabs({
         duration: null,
         sub_category_id: null,
       },
+      certificate_settings: {
+        is_enabled: false,
+        completion_percent: 100,
+        count_lessons: true,
+        count_quizzes: true,
+        count_assignments: true,
+        template_path: "/images/Certificat-14.jpg",
+        title: "Certificate of Completion",
+        subtitle_one: "",
+        subtitle_two: "",
+        owner_signature: null,
+        instructor_signature: null,
+      },
     },
   });
 
@@ -325,6 +338,36 @@ export default function CoursesTabs({
           duration: courseDetails.general_settings.duration,
           category_id: courseDetails.general_settings.category_id,
           sub_category_id: courseDetails.general_settings.sub_category_id,
+        },
+        certificate_settings: {
+          is_enabled: courseDetails.certificate_settings?.is_enabled ?? false,
+          completion_percent:
+            courseDetails.certificate_settings?.completion_percent ?? 100,
+          count_lessons: courseDetails.certificate_settings?.count_lessons ?? true,
+          count_quizzes: courseDetails.certificate_settings?.count_quizzes ?? true,
+          count_assignments:
+            courseDetails.certificate_settings?.count_assignments ?? true,
+          template_path:
+            courseDetails.certificate_settings?.template_path ??
+            "/images/Certificat-14.jpg",
+          title:
+            courseDetails.certificate_settings?.title ??
+            "Certificate of Completion",
+          subtitle_one: courseDetails.certificate_settings?.subtitle_one ?? "",
+          subtitle_two: courseDetails.certificate_settings?.subtitle_two ?? "",
+          owner_signature: courseDetails.certificate_settings?.owner_signature
+            ? {
+                isDBImg: true,
+                name: courseDetails.certificate_settings.owner_signature,
+              }
+            : null,
+          instructor_signature: courseDetails.certificate_settings
+            ?.instructor_signature
+            ? {
+                isDBImg: true,
+                name: courseDetails.certificate_settings.instructor_signature,
+              }
+            : null,
         },
       });
     }
@@ -476,6 +519,37 @@ export default function CoursesTabs({
       fd.append("overview", JSON.stringify(data.overview));
       fd.append("course_chapters", JSON.stringify(serializeChaptersForApi(data.course_chapters)));
       fd.append("general_settings", JSON.stringify(data.general_settings));
+      fd.append(
+        "certificate_settings",
+        JSON.stringify({
+          is_enabled: data.certificate_settings.is_enabled,
+          completion_percent: data.certificate_settings.completion_percent,
+          count_lessons: data.certificate_settings.count_lessons,
+          count_quizzes: data.certificate_settings.count_quizzes,
+          count_assignments: data.certificate_settings.count_assignments,
+          template_path: data.certificate_settings.template_path,
+          title: data.certificate_settings.title || null,
+          subtitle_one: data.certificate_settings.subtitle_one || null,
+          subtitle_two: data.certificate_settings.subtitle_two || null,
+        })
+      );
+      if (
+        data.certificate_settings.owner_signature &&
+        !data.certificate_settings.owner_signature.isDBImg &&
+        data.certificate_settings.owner_signature instanceof File
+      ) {
+        fd.append("owner_signature", data.certificate_settings.owner_signature);
+      }
+      if (
+        data.certificate_settings.instructor_signature &&
+        !data.certificate_settings.instructor_signature.isDBImg &&
+        data.certificate_settings.instructor_signature instanceof File
+      ) {
+        fd.append(
+          "instructor_signature",
+          data.certificate_settings.instructor_signature
+        );
+      }
       fd.append("course_instructors", JSON.stringify(data.course_instructors));
 
       // Only append actual new uploads; ignore DB-backed resource objects.

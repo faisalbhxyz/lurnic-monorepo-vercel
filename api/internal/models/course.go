@@ -66,8 +66,9 @@ type CourseDetails struct {
 	TenantID        uint                     `gorm:"column:tenant_id" json:"-"`
 	Tenant          Tenant                   `gorm:"foreignKey:TenantID;references:ID" json:"-"`
 	Chapters        []CourseChapter          `gorm:"foreignKey:CourseID;references:ID" json:"course_chapters"`
-	GeneralSettings CourseGeneralSettings    `gorm:"foreignKey:CourseID;references:ID" json:"general_settings"`
-	Instructors     []CourseInstructor       `gorm:"foreignKey:CourseID;references:ID" json:"course_instructors"`
+	GeneralSettings     CourseGeneralSettings     `gorm:"foreignKey:CourseID;references:ID" json:"general_settings"`
+	CertificateSettings CourseCertificateSettings `gorm:"foreignKey:CourseID;references:ID" json:"certificate_settings"`
+	Instructors         []CourseInstructor        `gorm:"foreignKey:CourseID;references:ID" json:"course_instructors"`
 	Enrollments     []Enrollment             `gorm:"foreignKey:CourseID;references:ID" json:"enrollments"`
 }
 

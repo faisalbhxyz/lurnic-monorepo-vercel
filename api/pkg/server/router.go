@@ -6,12 +6,15 @@ import (
 	"dashlearn/internal/models"
 	"dashlearn/internal/modules/banner"
 	"dashlearn/internal/modules/category"
+	"dashlearn/internal/modules/certificate"
+	"dashlearn/internal/modules/courseprogress"
 	"dashlearn/internal/modules/course"
 	"dashlearn/internal/modules/enrollment"
 	generalsettings "dashlearn/internal/modules/general_settings"
 	"dashlearn/internal/modules/instructor"
 	"dashlearn/internal/modules/order"
 	paymentmethod 	"dashlearn/internal/modules/payment_method"
+	"dashlearn/internal/modules/academicnote"
 	"dashlearn/internal/modules/assignment"
 	"dashlearn/internal/modules/quiz"
 	"dashlearn/internal/modules/role"
@@ -152,6 +155,8 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	course.RegisterCourseRoutes(apiRoutesGroup)
 	quiz.RegisterQuizRoutes(apiRoutesGroup)
 	assignment.RegisterAssignmentRoutes(apiRoutesGroup)
+	certificate.RegisterCertificateRoutes(apiRoutesGroup)
+	courseprogress.RegisterCourseProgressRoutes(apiRoutesGroup)
 
 	// Vercel/serverless: in-process cron is disabled when VERCEL=1; schedule this path in vercel.json
 	// and set CRON_SECRET (Vercel sends Authorization: Bearer <CRON_SECRET>).
@@ -178,6 +183,7 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 
 	enrollment.RegisterEnrollmentRoutes(apiRoutesGroup)
 	banner.RegisterBannerRoutes(apiRoutesGroup)
+	academicnote.RegisterRoutes(apiRoutesGroup)
 	order.RegisterCourseRoutes(apiRoutesGroup)
 	generalsettings.RegisterGeneralSettingsRoutes(apiRoutesGroup)
 	paymentmethod.RegisterRoutes(apiRoutesGroup)

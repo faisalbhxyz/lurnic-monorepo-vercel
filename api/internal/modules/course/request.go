@@ -24,8 +24,9 @@ type CourseDetailsInput struct {
 	IntroVideo      *models.IntroVideo        `form:"intro_video" json:"intro_video" binding:"omitempty"`
 	Overview        *[]string                 `form:"overview" json:"overview" binding:"omitempty"`
 	CourseChapters  []CreateCourseChapter     `form:"course_chapters" json:"course_chapters"`
-	GeneralSettings CreateGeneralSettings     `form:"general_settings" json:"general_settings" binding:"required"`
-	Instructors     []int32                   `form:"course_instructors" json:"course_instructors"`
+	GeneralSettings     CreateGeneralSettings     `form:"general_settings" json:"general_settings" binding:"required"`
+	CertificateSettings CreateCertificateSettings `form:"certificate_settings" json:"certificate_settings"`
+	Instructors         []int32                   `form:"course_instructors" json:"course_instructors"`
 }
 
 type CreateCourseDetailsInput struct {
@@ -90,6 +91,20 @@ type CreateGeneralSettings struct {
 	CategoryID      uint                   `json:"category_id" form:"category_id" binding:"required"`
 	SubCategoryID   *uint                  `json:"sub_category_id" form:"sub_category_id" binding:"omitempty"`
 	Duration        *string                `json:"duration" form:"duration" binding:"omitempty"`
+}
+
+type CreateCertificateSettings struct {
+	IsEnabled           bool    `json:"is_enabled" form:"is_enabled"`
+	CompletionPercent   uint8   `json:"completion_percent" form:"completion_percent"`
+	CountLessons        bool    `json:"count_lessons" form:"count_lessons"`
+	CountQuizzes        bool    `json:"count_quizzes" form:"count_quizzes"`
+	CountAssignments    bool    `json:"count_assignments" form:"count_assignments"`
+	TemplatePath        string  `json:"template_path" form:"template_path"`
+	Title               *string `json:"title" form:"title"`
+	SubtitleOne         *string `json:"subtitle_one" form:"subtitle_one"`
+	SubtitleTwo         *string `json:"subtitle_two" form:"subtitle_two"`
+	OwnerSignature      *string `json:"owner_signature" form:"owner_signature"`
+	InstructorSignature *string `json:"instructor_signature" form:"instructor_signature"`
 }
 
 type CreateCourseQuizInput struct {

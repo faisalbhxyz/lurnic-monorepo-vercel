@@ -63,7 +63,10 @@ const menuItems: MenuItem[] = [
   {
     label: "Website",
     icon: <IoEarthSharp size={18} />,
-    submenu: [{ label: "Banner", href: "/banner" }],
+    submenu: [
+      { label: "Banner", href: "/banner" },
+      { label: "Class-wise Notes", href: "/class-notes" },
+    ],
   },
 ];
 

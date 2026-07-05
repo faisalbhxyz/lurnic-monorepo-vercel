@@ -7,6 +7,19 @@ export const formatDate = (date: string): string => {
   return `${day} ${month}, ${year}`;
 };
 
+export const formatDateTime = (date: string): string => {
+  const parsedDate = new Date(date);
+  const day = String(parsedDate.getDate()).padStart(2, "0");
+  const month = parsedDate.toLocaleString("en-US", { month: "short" });
+  const year = parsedDate.getFullYear();
+  const hours = parsedDate.getHours();
+  const minutes = String(parsedDate.getMinutes()).padStart(2, "0");
+  const period = hours < 12 ? "AM" : "PM";
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+
+  return `${day} ${month} ${year}, ${hour12}:${minutes} ${period}`;
+};
+
 export const dbTimeToPickerFormat = (timeStr: string): string => {
   const [hourStr, minStr] = timeStr.split(":");
   let hour = parseInt(hourStr, 10);

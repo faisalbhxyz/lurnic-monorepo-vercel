@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"dashlearn/internal/models"
+	"dashlearn/internal/modules/certificate"
 	"dashlearn/internal/response"
 
 	"gorm.io/datatypes"
@@ -188,6 +189,8 @@ func (s *quizService) SubmitQuiz(tenantID, studentID uint, slug string, quizID u
 	if err != nil {
 		return nil, err
 	}
+
+	_, _ = certificate.NewService(s.db).TryIssueCertificate(tenantID, studentID, quiz.CourseID)
 
 	return s.buildSubmissionDetail(submission.ID, quiz.RevealAnswers)
 }

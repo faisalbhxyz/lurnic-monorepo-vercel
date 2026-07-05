@@ -19,10 +19,11 @@ type Student struct {
 	UserID      string                          `gorm:"column:user_id;uniqueIndex" json:"user_id"`
 	FirstName   string                          `json:"first_name"`
 	LastName    *string                         `json:"last_name"`
-	Phone       *string                         `json:"phone"`
-	Email       string                          `gorm:"uniqueIndex" json:"email"`
-	Password    string                          `json:"-"`
-	Status      bool                            `json:"status"`
+	Phone        *string                         `json:"phone"`
+	Email        string                          `gorm:"uniqueIndex" json:"email"`
+	Password     string                          `json:"-"`
+	ProfileImage *string                         `gorm:"column:profile_image" json:"profile_image"`
+	Status       bool                            `json:"status"`
 	OTPCode     *string                         `json:"otp_code,omitempty"`
 	CreatedAt   time.Time                       `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time                       `gorm:"autoUpdateTime" json:"updated_at"`
@@ -36,9 +37,10 @@ type StudentDetailsRes struct {
 	UserID      string                          `gorm:"column:user_id;uniqueIndex" json:"user_id"`
 	FirstName   string                          `json:"first_name"`
 	LastName    *string                         `json:"last_name"`
-	Phone       *string                         `json:"phone"`
-	Email       string                          `gorm:"uniqueIndex" json:"email"`
-	Status      bool                            `json:"status"`
+	Phone        *string                         `json:"phone"`
+	Email        string                          `gorm:"uniqueIndex" json:"email"`
+	ProfileImage *string                         `gorm:"column:profile_image" json:"profile_image"`
+	Status       bool                            `json:"status"`
 	CreatedAt   time.Time                       `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time                       `gorm:"autoUpdateTime" json:"updated_at"`
 	Enrollments []StudentWithEnrollmentResponse `gorm:"foreignKey:StudentID" json:"enrollments"`

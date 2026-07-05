@@ -21,6 +21,8 @@ func RegisterStudentRoutes(rg *gin.RouterGroup) {
 	{
 		publicGroup.POST("/login", LoginStudent)
 		publicGroup.POST("/register", CreateStudentPublic)
+		publicGroup.POST("/forgot-password", ForgotPasswordStudent)
+		publicGroup.POST("/reset-password", ResetPasswordStudent)
 		publicGroup.GET("/details", middleware.StudentAuthMiddleware(), GetStudentDetails)
 	}
 }

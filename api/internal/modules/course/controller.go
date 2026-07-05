@@ -262,6 +262,11 @@ func (h *CourseHandler) Create(c *gin.Context) {
 		return
 	}
 
+	if err := applyCertificateSettingsFromRequest(c, &input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate_settings: " + err.Error()})
+		return
+	}
+
 	// Step 3: Pass the parsed object to the service layer for further processing
 	if err := h.service.Create(input, c.GetUint("tenant_id"), c.GetUint("user_id")); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -397,6 +402,11 @@ func (h *CourseHandler) Update(c *gin.Context) {
 
 	if err := applyAssignmentAttachmentUploads(input.CourseChapters, c.Request.MultipartForm); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := applyCertificateSettingsFromRequest(c, &input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate_settings: " + err.Error()})
 		return
 	}
 

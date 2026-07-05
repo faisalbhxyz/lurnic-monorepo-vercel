@@ -2,6 +2,8 @@
 
 import Checkbox from "@/components/ui/Checkbox";
 import { formatDate } from "@/lib/helpers";
+import Image from "next/image";
+import Link from "next/link";
 import React, { useState } from "react";
 import { FiSearch } from "react-icons/fi";
 import StudentAction from "./StudentAction";
@@ -94,18 +96,29 @@ export default function StudentList({ data, studentPrefix }: OrderListProps) {
                   </div>
                 </td>
                 <td className="p-3">
-                  <div className="flex items-center gap-5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
+                  <Link
+                    href={`/students/${std.id}`}
+                    className="flex items-center gap-3 hover:text-primary"
+                  >
+                    <div className="flex items-center gap-2">
+                      {std.profile_image ? (
+                        <Image
+                          src={std.profile_image}
+                          alt={`${std.first_name} ${std.last_name ?? ""}`}
+                          width={32}
+                          height={32}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
                         <span className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center font-medium">
                           {std.first_name.slice(0, 1)}
                         </span>
-                        <p className="font-medium">
-                          {std.first_name} {std.last_name ?? ""}
-                        </p>
-                      </div>
+                      )}
+                      <p className="font-medium">
+                        {std.first_name} {std.last_name ?? ""}
+                      </p>
                     </div>
-                  </div>
+                  </Link>
                 </td>
                 <td className="p-3">{std.email}</td>
                 <td className="p-3">

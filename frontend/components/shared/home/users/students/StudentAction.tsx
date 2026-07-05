@@ -4,6 +4,8 @@ import React from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { HiDotsVertical } from "react-icons/hi";
 import { BiEditAlt } from "react-icons/bi";
+import { FiEye } from "react-icons/fi";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -44,6 +46,15 @@ export default function StudentAction({ id }: { id: number }) {
         anchor="bottom end"
         className="w-40 origin-top-right rounded-lg border bg-white p-1 text-sm transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0"
       >
+        <MenuItem>
+          <Link
+            href={`/students/${id}`}
+            className="group flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-blue-500 data-[focus]:text-white"
+          >
+            <FiEye size={18} />
+            View Details
+          </Link>
+        </MenuItem>
         <MenuItem>
           <button
             className="group flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-blue-500 data-[focus]:text-white"

@@ -60,10 +60,64 @@ interface IStudent {
   last_name?: string | null;
   phone?: string | null;
   email: string;
-  status: string;
+  status: string | boolean;
+  profile_image?: string | null;
   created_at: string;
   updated_at: string;
   enrollments?: IEnrollment[] | null;
+}
+
+interface IStudentEnrollmentDetail {
+  id: number;
+  course_id: number;
+  title: string;
+  slug: string;
+  featured_image?: string | null;
+  enrolled_at: string;
+  progress_percent: number;
+  lessons_completed: number;
+  lessons_total: number;
+  quizzes_completed: number;
+  quizzes_total: number;
+  assignments_completed: number;
+  assignments_total: number;
+}
+
+interface IStudentDetailsStats {
+  total_enrollments: number;
+  average_progress: number;
+  quizzes_submitted: number;
+  assignments_submitted: number;
+  total_orders: number;
+  paid_orders: number;
+  unpaid_orders: number;
+  total_spent: number;
+}
+
+interface IStudentOrderDetail {
+  id: number;
+  invoice_id: number;
+  course_id: number;
+  course_title: string;
+  featured_image?: string | null;
+  total: number;
+  discount: number;
+  discount_type: string;
+  payment_status: "paid" | "unpaid";
+  payment_type: string;
+  payment_method?: string | null;
+  transaction_id?: string | null;
+  customer_note?: string | null;
+  admin_note?: string | null;
+  ordered_at: string;
+  updated_at: string;
+}
+
+interface IStudentDetails extends Omit<IStudent, "enrollments" | "status"> {
+  status: boolean;
+  enrollments: IStudentEnrollmentDetail[];
+  orders: IStudentOrderDetail[];
+  stats: IStudentDetailsStats;
 }
 
 interface ICourseLesson {
@@ -191,6 +245,7 @@ interface CourseDetails {
   tenant?: Tenant; // Define Tenant interface separately if needed
   course_chapters: CourseChapter[];
   general_settings: CourseGeneralSettings;
+  certificate_settings?: CourseCertificateSettings | null;
   course_instructors: CourseInstructor[];
 }
 
@@ -294,6 +349,24 @@ interface CourseGeneralSettings {
   updated_at: string;
 }
 
+interface CourseCertificateSettings {
+  id?: number;
+  course_id?: number;
+  is_enabled: boolean;
+  completion_percent: number;
+  count_lessons: boolean;
+  count_quizzes: boolean;
+  count_assignments: boolean;
+  template_path: string;
+  title?: string | null;
+  subtitle_one?: string | null;
+  subtitle_two?: string | null;
+  owner_signature?: string | null;
+  instructor_signature?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface CourseInstructor {
   id: number;
   course_id: number;
@@ -320,6 +393,65 @@ interface IBanner {
   image: string;
   created_at: string;
   updated_at: string;
+}
+
+interface IAcademicNoteClass {
+  id: number;
+  title: string;
+  slug: string;
+  icon_label?: string | null;
+  icon_color?: string | null;
+  position: number;
+  is_published: boolean;
+  note_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface IAcademicNoteSubject {
+  id: number;
+  class_id: number;
+  title: string;
+  slug: string;
+  position: number;
+  is_published: boolean;
+  note_count?: number;
+  papers?: IAcademicNotePaper[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface IAcademicNotePaper {
+  id: number;
+  subject_id: number;
+  title: string;
+  slug: string;
+  icon_label?: string | null;
+  icon_color?: string | null;
+  position: number;
+  is_published: boolean;
+  note_count?: number;
+  notes?: IAcademicNoteItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface IAcademicNoteItem {
+  id: number;
+  paper_id: number;
+  title: string;
+  subtitle?: string | null;
+  thumbnail?: string | null;
+  pdf_url: string;
+  pdf_file_name?: string | null;
+  position: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface IAcademicNoteClassDetail extends IAcademicNoteClass {
+  subjects: (IAcademicNoteSubject & { papers: (IAcademicNotePaper & { notes: IAcademicNoteItem[] })[] })[];
 }
 
 interface IOrder {

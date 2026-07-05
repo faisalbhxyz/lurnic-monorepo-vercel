@@ -301,6 +301,33 @@ export const CourseChapterSchema = z.object({
 
 export type TCourseChapterSchema = z.infer<typeof CourseChapterSchema>;
 
+const CertificateSettingsSchema = z
+  .object({
+    is_enabled: z.boolean(),
+    completion_percent: z.coerce
+      .number({ required_error: "Completion percent is required" })
+      .min(1, { message: "Minimum 1%" })
+      .max(100, { message: "Maximum 100%" }),
+    count_lessons: z.boolean(),
+    count_quizzes: z.boolean(),
+    count_assignments: z.boolean(),
+    template_path: z.string().min(1),
+    title: z.string().optional().nullable(),
+    subtitle_one: z.string().optional().nullable(),
+    subtitle_two: z.string().optional().nullable(),
+    owner_signature: z.any().optional().nullable(),
+    instructor_signature: z.any().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.count_lessons && !data.count_quizzes && !data.count_assignments) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["count_lessons"],
+        message: "Select at least one item to count toward progress.",
+      });
+    }
+  });
+
 const GeneralSettingsSchema = z.object({
   difficulty_level: z.enum(["all", "beginner", "intermediate", "expert"]),
   maximum_student: z.coerce
@@ -418,6 +445,7 @@ export const CourseSchema = z.object({
       message: "At least one instructor is required",
     }),
   general_settings: GeneralSettingsSchema,
+  certificate_settings: CertificateSettingsSchema,
 }).superRefine(({ is_scheduled, schedule_date, schedule_time }, ctx) => {
   if (!is_scheduled) return;
 

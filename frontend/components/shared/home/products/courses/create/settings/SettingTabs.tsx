@@ -6,7 +6,7 @@ import CertificatesTab from "@/components/shared/home/products/courses/create/se
 import SeoTab from "@/components/shared/home/products/courses/create/settings/SeoTab";
 import FaqTab from "@/components/shared/home/products/courses/create/settings/FaqTab";
 
-const TABS = ["General"]; //"Certificates", "SEO", "FAQ"
+const TABS = ["General", "Certificates"]; //"SEO", "FAQ"
 
 export default function SettingTabs({
   categories,

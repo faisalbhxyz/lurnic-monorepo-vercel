@@ -317,6 +317,7 @@ func (s *courseService) GetByID(tenantID uint, courseID uint) (models.CourseDeta
 		Preload("Chapters.Quizzes.Questions").
 		Preload("GeneralSettings").
 		Preload("GeneralSettings.Category").
+		Preload("CertificateSettings").
 		Preload("Instructors").
 		Preload("Instructors.Instructor").
 		Preload("Enrollments").
@@ -532,6 +533,7 @@ func (s *courseService) GetBySlugPublic(tenantID uint, slug string) (*response.C
 		Preload("Chapters.Quizzes.Questions").
 		Preload("GeneralSettings").
 		Preload("GeneralSettings.Category").
+		Preload("CertificateSettings").
 		Preload("Instructors").
 		Preload("Instructors.Instructor").
 		Preload("Enrollments").
@@ -1002,6 +1004,10 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 		}
 
 		if err := tx.Create(&newGeneralSettings).Error; err != nil {
+			return err
+		}
+
+		if err := upsertCertificateSettings(tx, newCourseDetails.ID, input.CertificateSettings); err != nil {
 			return err
 		}
 
@@ -1598,7 +1604,11 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 	}
 
 	// If exists, update
-	return s.db.Where("course_id = ?", courseID).Select("difficulty_level", "maximum_student", "language", "category_id", "sub_category_id", "duration").Updates(&updateGeneralSettings).Error
+	if err := s.db.Where("course_id = ?", courseID).Select("difficulty_level", "maximum_student", "language", "category_id", "sub_category_id", "duration").Updates(&updateGeneralSettings).Error; err != nil {
+		return err
+	}
+
+	return upsertCertificateSettings(s.db, courseID, input.CertificateSettings)
 
 }
 

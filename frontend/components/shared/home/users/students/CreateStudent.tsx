@@ -1,5 +1,6 @@
 "use client";
 
+import FeaturedImage from "@/components/shared/FeaturedImage";
 import Button from "@/components/ui/Button";
 import InputField from "@/components/ui/InputField";
 import Modal from "@/components/ui/Modal";
@@ -14,6 +15,7 @@ import { LuPlus } from "react-icons/lu";
 import { RxCross2 } from "react-icons/rx";
 import { toast } from "sonner";
 import { z } from "zod";
+import { profileImageSchema } from "./profileImageSchema";
 
 const RegisterSchema = z
   .object({
@@ -40,6 +42,7 @@ const RegisterSchema = z
       .optional()
       .nullable()
       .or(z.literal("")),
+    profile_image: profileImageSchema.optional(),
     password: z
       .string()
       .trim()
@@ -68,18 +71,26 @@ export default function CreateStudent() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    trigger,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<TRegisterSchema>({
     resolver: zodResolver(RegisterSchema),
   });
 
   const handleOnSubmit = async (data: TRegisterSchema) => {
-
+    const fd = new FormData();
+    fd.append("first_name", data.first_name);
+    if (data.last_name) fd.append("last_name", data.last_name);
+    if (data.phone) fd.append("phone", data.phone);
+    fd.append("email", data.email);
+    fd.append("password", data.password);
+    if (data.profile_image) fd.append("profile_image", data.profile_image);
 
     axiosInstance
-      .post("/private/student/register", data, {
+      .post("/private/student/register", fd, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${session?.accessToken}`,
         },
       })
@@ -132,6 +143,24 @@ export default function CreateStudent() {
               )}
             </div>
             <div className="p-5">
+              <div className="mb-5 max-w-xs">
+                <label className="text-sm font-medium mb-1 block">
+                  Profile Image
+                </label>
+                <FeaturedImage
+                  label="Upload Profile Image"
+                  dbImage={watch("profile_image")}
+                  onFileSelected={(file) => {
+                    setValue("profile_image", file, { shouldValidate: true });
+                    trigger("profile_image");
+                  }}
+                />
+                {errors.profile_image?.message && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {String(errors.profile_image.message)}
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-5 mb-5">
                 <div className="w-full">
                   <label className="text-sm font-medium mb-1 block">
