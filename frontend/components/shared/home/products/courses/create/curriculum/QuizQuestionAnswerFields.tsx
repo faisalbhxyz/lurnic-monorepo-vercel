@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import {
   Control,
   Controller,
@@ -40,6 +40,9 @@ export default function QuizQuestionAnswerFields({
   const questionType = watch("type");
   const options = watch("options") ?? [];
   const correctAnswer = watch("correct_answer");
+  const singleChoiceGroupName = useId();
+  const trueFalseGroupName = useId();
+  const prevQuestionTypeRef = useRef(questionType);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -48,9 +51,14 @@ export default function QuizQuestionAnswerFields({
   });
 
   useEffect(() => {
+    const prevQuestionType = prevQuestionTypeRef.current;
+    prevQuestionTypeRef.current = questionType;
+
     if (questionType === "true_false") {
-      setValue("options", null);
-      setValue("correct_answer", { value: true });
+      if (prevQuestionType !== "true_false") {
+        setValue("options", null);
+        setValue("correct_answer", { value: true });
+      }
       return;
     }
 
@@ -62,11 +70,24 @@ export default function QuizQuestionAnswerFields({
       ]);
     }
 
+    const opts = watch("options") ?? [];
+    const optionIds = new Set(opts.map((o) => o.id));
+    const currentCorrect = watch("correct_answer");
+
     if (questionType === "single_choice") {
-      setValue("correct_answer", {
-        value: watch("options")?.[0]?.id ?? "a",
-      });
-    } else if (questionType === "multiple_choice") {
+      const value = currentCorrect?.value;
+      if (
+        prevQuestionType !== "single_choice" ||
+        typeof value !== "string" ||
+        !optionIds.has(value)
+      ) {
+        setValue("correct_answer", { value: opts[0]?.id ?? "a" });
+      }
+    } else if (
+      questionType === "multiple_choice" &&
+      (prevQuestionType !== "multiple_choice" ||
+        !Array.isArray(currentCorrect?.values))
+    ) {
       setValue("correct_answer", { values: [] });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,18 +101,24 @@ export default function QuizQuestionAnswerFields({
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="radio"
-              name="true_false_answer"
+              name={trueFalseGroupName}
+              value="true"
               checked={correctAnswer?.value === true}
-              onChange={() => setValue("correct_answer", { value: true })}
+              onChange={() =>
+                setValue("correct_answer", { value: true }, { shouldDirty: true })
+              }
             />
             True
           </label>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="radio"
-              name="true_false_answer"
+              name={trueFalseGroupName}
+              value="false"
               checked={correctAnswer?.value === false}
-              onChange={() => setValue("correct_answer", { value: false })}
+              onChange={() =>
+                setValue("correct_answer", { value: false }, { shouldDirty: true })
+              }
             />
             False
           </label>
@@ -133,10 +160,15 @@ export default function QuizQuestionAnswerFields({
               {questionType === "single_choice" ? (
                 <input
                   type="radio"
-                  name="single_correct"
+                  name={singleChoiceGroupName}
+                  value={options[index]?.id ?? ""}
                   checked={correctAnswer?.value === options[index]?.id}
                   onChange={() =>
-                    setValue("correct_answer", { value: options[index]?.id })
+                    setValue(
+                      "correct_answer",
+                      { value: options[index]?.id },
+                      { shouldDirty: true }
+                    )
                   }
                 />
               ) : (

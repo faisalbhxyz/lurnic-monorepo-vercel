@@ -110,7 +110,7 @@ type CreateCertificateSettings struct {
 type CreateCourseQuizInput struct {
 	ID                    *int64                           `json:"id" form:"id" binding:"omitempty"`
 	Title                 string                           `json:"title" form:"title" binding:"required"`
-	Instructions          string                           `json:"instructions" form:"instructions" binding:"required"`
+	Instructions          string                           `json:"instructions" form:"instructions"`
 	IsPublished           bool                             `json:"is_published" form:"is_published"`
 	RandomizeQuestions    bool                             `json:"randomize_questions" form:"randomize_questions"`
 	SingleQuizView        bool                             `json:"single_quiz_view" form:"single_quiz_view"`

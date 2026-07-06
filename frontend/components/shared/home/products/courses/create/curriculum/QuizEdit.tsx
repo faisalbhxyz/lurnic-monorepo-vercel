@@ -72,7 +72,7 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
       title: "",
       instructions: "",
       enable_retry: false,
-      retry_attempts: 0,
+      retry_attempts: 1,
       is_published: false,
       minimum_pass_percentage: 0,
       single_quiz_view: false,
@@ -80,10 +80,19 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
       randomize_questions: false,
       time_limit: 1,
       time_limit_option: "weeks",
-      total_visible_questions: 1,
+      total_visible_questions: 0,
       questions: [],
     },
   });
+
+  const enableRetry = formMethods.watch("enable_retry");
+  const timeLimit = formMethods.watch("time_limit");
+
+  useEffect(() => {
+    if (enableRetry && (formMethods.getValues("retry_attempts") ?? 0) < 1) {
+      formMethods.setValue("retry_attempts", 1, { shouldDirty: true });
+    }
+  }, [enableRetry, formMethods]);
 
   useEffect(() => {
     if (chapterIndex === -1) return;
@@ -167,7 +176,7 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
         title: "",
         instructions: "",
         enable_retry: false,
-        retry_attempts: 0,
+        retry_attempts: 1,
         is_published: false,
         minimum_pass_percentage: 0,
         single_quiz_view: false,
@@ -175,7 +184,7 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
         randomize_questions: false,
         time_limit: 1,
         time_limit_option: "weeks",
-        total_visible_questions: 1,
+        total_visible_questions: 0,
         questions: [],
       });
     }
@@ -218,7 +227,7 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
                 htmlFor="title"
                 className="block mb-1 text-sm font-semibold"
               >
-                Instructions *
+                Instructions
               </label>
               <Controller
                 control={formMethods.control}
@@ -343,11 +352,16 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
               </div>
               <div className="my-4">
                 <label className="text-sm font-semibold block">
-                  Time Limit <span className="text-red-500">*</span>
+                  Time Limit {timeLimit > 0 && <span className="text-red-500">*</span>}
                 </label>
+                <p className="text-sm text-gray-600 font-medium mb-1">
+                  Set 0 for no time limit. Otherwise students must submit before time
+                  runs out.
+                </p>
                 <div className="flex items-center gap-5">
                   <InputField
                     type="number"
+                    min={0}
                     className="w-full"
                     {...formMethods.register("time_limit")}
                     error={formMethods.formState.errors.time_limit?.message}
@@ -375,10 +389,11 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
                 Total Visible Questions
               </label>
               <p className="text-sm text-gray-600 font-medium mb-1">
-                Number of questions to be displayed in the quiz
+                Number of questions shown per attempt. Set 0 to show all questions.
               </p>
               <InputField
                 type="number"
+                min={0}
                 className="w-full"
                 {...formMethods.register("total_visible_questions")}
                 error={
@@ -426,21 +441,23 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
                   Enable retry on quiz submission.
                 </p>
               </div>
-              <div className="mt-4">
-                <label className="text-sm font-semibold block">
-                  Retry Attempts
-                  <span className="text-red-500">*</span>
-                </label>
-                <p className="text-sm text-gray-600 font-medium mb-1">
-                  Number of times a student can attempt the quiz.
-                </p>
-                <InputField
-                  type="number"
-                  className="w-full"
-                  {...formMethods.register("retry_attempts")}
-                  error={formMethods.formState.errors.retry_attempts?.message}
-                />
-              </div>
+              {enableRetry && (
+                <div className="mt-4">
+                  <label className="text-sm font-semibold block">
+                    Retry Attempts
+                  </label>
+                  <p className="text-sm text-gray-600 font-medium mb-1">
+                    Maximum attempts per student. Set 0 for unlimited retries.
+                  </p>
+                  <InputField
+                    type="number"
+                    min={0}
+                    className="w-full"
+                    {...formMethods.register("retry_attempts")}
+                    error={formMethods.formState.errors.retry_attempts?.message}
+                  />
+                </div>
+              )}
             </div>
           </div>
           <div className="border rounded-xl mt-5">
@@ -454,10 +471,12 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
                   <span className="text-red-500">*</span>
                 </label>
                 <p className="text-sm text-gray-600 font-medium mb-1">
-                  Minimum pass percentage for the quiz
+                  Minimum pass percentage for the quiz (0–100).
                 </p>
                 <InputField
                   type="number"
+                  min={0}
+                  max={100}
                   className="w-full"
                   {...formMethods.register("minimum_pass_percentage")}
                   error={

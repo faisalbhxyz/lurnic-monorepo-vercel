@@ -111,12 +111,7 @@ export const CourseQuizSchema = z.object({
       message: "Title is required",
     })
     .max(200, { message: "Title should not exceed 200 characters" }),
-  instructions: z
-    .string({ required_error: "Instructions is required" })
-    .trim()
-    .min(1, {
-      message: "Instructions is required",
-    }),
+  instructions: z.string().trim().optional().nullable(),
   is_published: z.boolean(),
   randomize_questions: z.boolean(),
   single_quiz_view: z.boolean(),
@@ -134,8 +129,21 @@ export const CourseQuizSchema = z.object({
     .gte(0),
   minimum_pass_percentage: z.coerce
     .number({ required_error: "Minimum pass percentage is required" })
-    .gte(0),
+    .gte(0)
+    .lte(100, { message: "Minimum pass percentage cannot exceed 100" }),
   questions: z.array(QuizQuestionSchema),
+}).superRefine((data, ctx) => {
+  if (
+    data.total_visible_questions > 0 &&
+    data.questions.length > 0 &&
+    data.total_visible_questions > data.questions.length
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["total_visible_questions"],
+      message: "Cannot exceed the number of questions in this quiz.",
+    });
+  }
 });
 
 export type TCourseQuizSchema = z.infer<typeof CourseQuizSchema>;

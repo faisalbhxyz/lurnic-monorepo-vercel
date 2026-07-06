@@ -19,6 +19,7 @@ import (
 
 type QuizService interface {
 	GetStudentQuiz(tenantID, studentID uint, slug string, quizID uint) (*StudentQuizResponse, error)
+	GetStudentQuizQuestion(tenantID, studentID uint, slug string, quizID uint, questionIndex int) (*StudentQuizQuestionResponse, error)
 	SubmitQuiz(tenantID, studentID uint, slug string, quizID uint, input SubmitQuizInput) (*QuizSubmissionDetail, error)
 	ListCourseSubmissions(tenantID, courseID uint) ([]QuizSubmissionListItem, error)
 	GetCourseSubmission(tenantID, courseID, submissionID uint) (*QuizSubmissionDetail, error)
@@ -39,26 +40,85 @@ func (s *quizService) GetStudentQuiz(tenantID, studentID uint, slug string, quiz
 		return nil, err
 	}
 
-	attemptsUsed, err := s.countAttempts(tenantID, studentID, quizID)
+	session, attemptsUsed, err := s.resolveAttemptSession(tenantID, studentID, quiz)
 	if err != nil {
 		return nil, err
 	}
-	if !quiz.EnableRetry && attemptsUsed > 0 {
-		return nil, errors.New("quiz retry is disabled")
+
+	orderedQuestions, err := s.questionsForSession(quiz.Questions, session)
+	if err != nil {
+		return nil, err
 	}
-	if quiz.EnableRetry && quiz.RetryAttempts > 0 && attemptsUsed >= quiz.RetryAttempts {
-		return nil, errors.New("maximum quiz attempts reached")
+
+	displayMode := "all"
+	visibleQuestions := orderedQuestions
+	var currentIndex *int
+	if quiz.SingleQuizView && len(orderedQuestions) > 0 {
+		displayMode = "single"
+		visibleQuestions = orderedQuestions[:1]
+		idx := 0
+		currentIndex = &idx
 	}
 
 	canRetry := quiz.EnableRetry && (quiz.RetryAttempts == 0 || attemptsUsed < quiz.RetryAttempts)
 
-	questions := prepareQuestionsForAttempt(quiz.Questions, quiz)
 	resp := &StudentQuizResponse{
-		CourseQuizResponse: buildQuizResponse(*quiz, questions, false),
+		CourseQuizResponse: buildQuizResponse(*quiz, visibleQuestions, false),
 		AttemptsUsed:       attemptsUsed,
 		CanRetry:           canRetry,
+		DisplayMode:        displayMode,
+		AttemptNumber:      session.AttemptNumber,
+		TotalQuestions:     len(orderedQuestions),
+		StartedAt:          session.StartedAt.Format(time.RFC3339),
+		SecondsRemaining:   secondsRemaining(session.ExpiresAt),
+		CurrentQuestionIndex: currentIndex,
+	}
+	if session.ExpiresAt != nil {
+		resp.ExpiresAt = session.ExpiresAt.Format(time.RFC3339)
 	}
 	_ = course
+	return resp, nil
+}
+
+func (s *quizService) GetStudentQuizQuestion(tenantID, studentID uint, slug string, quizID uint, questionIndex int) (*StudentQuizQuestionResponse, error) {
+	if questionIndex < 0 {
+		return nil, errors.New("invalid question index")
+	}
+
+	_, quiz, err := s.loadPublishedQuizForStudent(tenantID, studentID, slug, quizID)
+	if err != nil {
+		return nil, err
+	}
+	if !quiz.SingleQuizView {
+		return nil, errors.New("single quiz view is disabled for this quiz")
+	}
+
+	session, _, err := s.resolveAttemptSession(tenantID, studentID, quiz)
+	if err != nil {
+		return nil, err
+	}
+
+	orderedQuestions, err := s.questionsForSession(quiz.Questions, session)
+	if err != nil {
+		return nil, err
+	}
+	if questionIndex >= len(orderedQuestions) {
+		return nil, errors.New("question index out of range")
+	}
+
+	question := orderedQuestions[questionIndex]
+	resp := &StudentQuizQuestionResponse{
+		CourseQuizQuestionsResponse: sanitizeQuestionResponse(question, false),
+		AttemptNumber:               session.AttemptNumber,
+		QuestionIndex:               questionIndex,
+		TotalQuestions:              len(orderedQuestions),
+		DisplayMode:                 "single",
+		StartedAt:                   session.StartedAt.Format(time.RFC3339),
+		SecondsRemaining:            secondsRemaining(session.ExpiresAt),
+	}
+	if session.ExpiresAt != nil {
+		resp.ExpiresAt = session.ExpiresAt.Format(time.RFC3339)
+	}
 	return resp, nil
 }
 
@@ -68,19 +128,21 @@ func (s *quizService) SubmitQuiz(tenantID, studentID uint, slug string, quizID u
 		return nil, err
 	}
 
-	attemptsUsed, err := s.countAttempts(tenantID, studentID, quizID)
+	session, _, err := s.resolveAttemptSession(tenantID, studentID, quiz)
 	if err != nil {
 		return nil, err
 	}
-	if !quiz.EnableRetry && attemptsUsed > 0 {
-		return nil, errors.New("quiz retry is disabled")
-	}
-	if quiz.EnableRetry && quiz.RetryAttempts > 0 && attemptsUsed >= quiz.RetryAttempts {
-		return nil, errors.New("maximum quiz attempts reached")
+	if session.IsExpired() {
+		return nil, errors.New("quiz time limit exceeded")
 	}
 
-	questionMap := make(map[uint]models.QuizQuestion, len(quiz.Questions))
-	for _, q := range quiz.Questions {
+	orderedQuestions, err := s.questionsForSession(quiz.Questions, session)
+	if err != nil {
+		return nil, err
+	}
+
+	questionMap := make(map[uint]models.QuizQuestion, len(orderedQuestions))
+	for _, q := range orderedQuestions {
 		questionMap[q.ID] = q
 	}
 
@@ -92,7 +154,7 @@ func (s *quizService) SubmitQuiz(tenantID, studentID uint, slug string, quizID u
 		answerByQuestion[ans.QuestionID] = ans
 	}
 
-	for _, q := range quiz.Questions {
+	for _, q := range orderedQuestions {
 		if q.AnswerRequired {
 			if _, ok := answerByQuestion[q.ID]; !ok {
 				return nil, fmt.Errorf("answer required for question %d", q.ID)
@@ -100,7 +162,7 @@ func (s *quizService) SubmitQuiz(tenantID, studentID uint, slug string, quizID u
 		}
 	}
 
-	attemptNumber := attemptsUsed + 1
+	attemptNumber := session.AttemptNumber
 	now := time.Now()
 	submission := models.QuizSubmission{
 		TenantID:      tenantID,
@@ -116,9 +178,9 @@ func (s *quizService) SubmitQuiz(tenantID, studentID uint, slug string, quizID u
 	var score float32
 	var maxScore float32
 	pendingReview := false
-	answerRows := make([]models.QuizSubmissionAnswer, 0, len(quiz.Questions))
+	answerRows := make([]models.QuizSubmissionAnswer, 0, len(orderedQuestions))
 
-	for _, q := range quiz.Questions {
+	for _, q := range orderedQuestions {
 		maxScore += q.Marks
 		submitted, hasAnswer := answerByQuestion[q.ID]
 
@@ -183,6 +245,11 @@ func (s *quizService) SubmitQuiz(tenantID, studentID uint, slug string, quizID u
 			if err := tx.Create(&answerRows[i]).Error; err != nil {
 				return err
 			}
+		}
+		now := time.Now()
+		session.SubmittedAt = &now
+		if err := tx.Save(session).Error; err != nil {
+			return err
 		}
 		return nil
 	})
@@ -279,6 +346,120 @@ func (s *quizService) countAttempts(tenantID, studentID, quizID uint) (int, erro
 	return int(count), err
 }
 
+func (s *quizService) ensureRetryAllowed(quiz *models.CourseQuiz, attemptsUsed int) error {
+	if !quiz.EnableRetry && attemptsUsed > 0 {
+		return errors.New("quiz retry is disabled")
+	}
+	if quiz.EnableRetry && quiz.RetryAttempts > 0 && attemptsUsed >= quiz.RetryAttempts {
+		return errors.New("maximum quiz attempts reached")
+	}
+	return nil
+}
+
+func (s *quizService) resolveAttemptSession(tenantID, studentID uint, quiz *models.CourseQuiz) (*models.QuizAttemptSession, int, error) {
+	attemptsUsed, err := s.countAttempts(tenantID, studentID, quiz.ID)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := s.ensureRetryAllowed(quiz, attemptsUsed); err != nil {
+		return nil, attemptsUsed, err
+	}
+
+	attemptNumber := attemptsUsed + 1
+	var session models.QuizAttemptSession
+	err = s.db.Where(
+		"tenant_id = ? AND student_id = ? AND quiz_id = ? AND attempt_number = ? AND submitted_at IS NULL",
+		tenantID, studentID, quiz.ID, attemptNumber,
+	).First(&session).Error
+
+	if err == nil {
+		if session.IsExpired() {
+			if forfeitErr := s.forfeitAttempt(&session, quiz, tenantID, studentID); forfeitErr != nil {
+				return nil, attemptsUsed, forfeitErr
+			}
+			return s.resolveAttemptSession(tenantID, studentID, quiz)
+		}
+		return &session, attemptsUsed, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, attemptsUsed, err
+	}
+
+	order := buildQuestionOrder(quiz.Questions, quiz)
+	orderJSON, err := json.Marshal(order)
+	if err != nil {
+		return nil, attemptsUsed, err
+	}
+
+	startedAt := time.Now()
+	var expiresAt *time.Time
+	if duration := quizTimeLimitDuration(quiz.TimeLimit, quiz.TimeLimitOption); duration > 0 {
+		expiry := startedAt.Add(duration)
+		expiresAt = &expiry
+	}
+
+	session = models.QuizAttemptSession{
+		TenantID:      tenantID,
+		StudentID:     studentID,
+		QuizID:        quiz.ID,
+		AttemptNumber: attemptNumber,
+		QuestionOrder: orderJSON,
+		StartedAt:     startedAt,
+		ExpiresAt:     expiresAt,
+	}
+	if err := s.db.Create(&session).Error; err != nil {
+		return nil, attemptsUsed, err
+	}
+	return &session, attemptsUsed, nil
+}
+
+func (s *quizService) questionsForSession(all []models.QuizQuestion, session *models.QuizAttemptSession) ([]models.QuizQuestion, error) {
+	order, err := decodeQuestionOrder(session.QuestionOrder)
+	if err != nil {
+		return nil, err
+	}
+	if len(order) == 0 {
+		return nil, errors.New("quiz attempt session is invalid")
+	}
+	return questionsFromOrder(all, order), nil
+}
+
+func (s *quizService) forfeitAttempt(session *models.QuizAttemptSession, quiz *models.CourseQuiz, tenantID, studentID uint) error {
+	orderedQuestions, err := s.questionsForSession(quiz.Questions, session)
+	if err != nil {
+		return err
+	}
+
+	var maxScore float32
+	for _, q := range orderedQuestions {
+		maxScore += q.Marks
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		submission := models.QuizSubmission{
+			TenantID:      tenantID,
+			CourseID:      quiz.CourseID,
+			ChapterID:     quiz.ChapterID,
+			QuizID:        quiz.ID,
+			StudentID:     studentID,
+			AttemptNumber: session.AttemptNumber,
+			Score:         0,
+			MaxScore:      maxScore,
+			Percentage:    0,
+			Passed:        false,
+			Status:        models.QuizSubmissionStatusGraded,
+			SubmittedAt:   now,
+			GradedAt:      &now,
+		}
+		if err := tx.Create(&submission).Error; err != nil {
+			return err
+		}
+		session.SubmittedAt = &now
+		return tx.Save(session).Error
+	})
+}
+
 func (s *quizService) mapSubmissionList(rows []models.QuizSubmission) ([]QuizSubmissionListItem, error) {
 	chapterTitles := map[uint]string{}
 	items := make([]QuizSubmissionListItem, 0, len(rows))
@@ -367,21 +548,6 @@ func (s *quizService) buildSubmissionDetail(submissionID uint, revealAnswers boo
 		RevealAnswers:          revealAnswers || submission.Quiz.RevealAnswers,
 		Answers:                answers,
 	}, nil
-}
-
-func prepareQuestionsForAttempt(questions []models.QuizQuestion, quiz *models.CourseQuiz) []models.QuizQuestion {
-	items := make([]models.QuizQuestion, len(questions))
-	copy(items, questions)
-	if quiz.RandomizeQuestions {
-		// simple shuffle by id xor for deterministic tests; good enough for MVP
-		sort.Slice(items, func(i, j int) bool {
-			return (items[i].ID ^ uint(quiz.ID))%7 < (items[j].ID ^ uint(quiz.ID))%7
-		})
-	}
-	if quiz.TotalVisibleQuestions != nil && *quiz.TotalVisibleQuestions > 0 && *quiz.TotalVisibleQuestions < len(items) {
-		items = items[:*quiz.TotalVisibleQuestions]
-	}
-	return items
 }
 
 func buildQuizResponse(quiz models.CourseQuiz, questions []models.QuizQuestion, revealSensitive bool) response.CourseQuizResponse {

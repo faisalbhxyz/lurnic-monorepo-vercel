@@ -44,6 +44,39 @@ func (h *QuizHandler) GetStudentQuiz(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": data})
 }
 
+func (h *QuizHandler) GetStudentQuizQuestion(c *gin.Context) {
+	quizID, err := strconv.ParseUint(c.Param("quizId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid quiz ID"})
+		return
+	}
+	questionIndex, err := strconv.Atoi(c.Param("questionIndex"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid question index"})
+		return
+	}
+
+	data, err := h.service.GetStudentQuizQuestion(
+		c.GetUint("tenant_id"),
+		c.GetUint("user_id"),
+		c.Param("slug"),
+		uint(quizID),
+		questionIndex,
+	)
+	if err != nil {
+		status := http.StatusBadRequest
+		if err.Error() == "course not found" || err.Error() == "quiz not found" {
+			status = http.StatusNotFound
+		} else if err.Error() == "enrollment required" {
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": data})
+}
+
 func (h *QuizHandler) SubmitQuiz(c *gin.Context) {
 	quizID, err := strconv.ParseUint(c.Param("quizId"), 10, 64)
 	if err != nil {

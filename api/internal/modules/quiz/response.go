@@ -51,6 +51,24 @@ type QuizSubmissionAnswerResponse struct {
 
 type StudentQuizResponse struct {
 	response.CourseQuizResponse
-	AttemptsUsed int  `json:"attempts_used"`
-	CanRetry     bool `json:"can_retry"`
+	AttemptsUsed        int    `json:"attempts_used"`
+	CanRetry            bool   `json:"can_retry"`
+	DisplayMode         string `json:"display_mode"`
+	AttemptNumber       int    `json:"attempt_number"`
+	TotalQuestions      int    `json:"total_questions"`
+	StartedAt           string `json:"started_at,omitempty"`
+	ExpiresAt           string `json:"expires_at,omitempty"`
+	SecondsRemaining    *int   `json:"seconds_remaining,omitempty"`
+	CurrentQuestionIndex *int  `json:"current_question_index,omitempty"`
+}
+
+type StudentQuizQuestionResponse struct {
+	response.CourseQuizQuestionsResponse
+	AttemptNumber        int    `json:"attempt_number"`
+	QuestionIndex        int    `json:"question_index"`
+	TotalQuestions       int    `json:"total_questions"`
+	DisplayMode          string `json:"display_mode"`
+	StartedAt            string `json:"started_at,omitempty"`
+	ExpiresAt            string `json:"expires_at,omitempty"`
+	SecondsRemaining     *int   `json:"seconds_remaining,omitempty"`
 }

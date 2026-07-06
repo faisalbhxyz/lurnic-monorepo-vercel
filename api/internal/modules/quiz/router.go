@@ -12,6 +12,7 @@ func RegisterQuizRoutes(rg *gin.RouterGroup) {
 	studentCourseGroup := rg.Group("/course", middleware.GetTenantID(), middleware.StudentAuthMiddleware())
 	{
 		studentCourseGroup.GET("/:slug/quizzes/:quizId", handler.GetStudentQuiz)
+		studentCourseGroup.GET("/:slug/quizzes/:quizId/questions/:questionIndex", handler.GetStudentQuizQuestion)
 		studentCourseGroup.POST("/:slug/quizzes/:quizId/submit", handler.SubmitQuiz)
 	}
 
