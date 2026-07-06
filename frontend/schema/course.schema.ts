@@ -304,14 +304,11 @@ export type TCourseChapterSchema = z.infer<typeof CourseChapterSchema>;
 const CertificateSettingsSchema = z
   .object({
     is_enabled: z.boolean(),
-    completion_percent: z.coerce
-      .number({ required_error: "Completion percent is required" })
-      .min(1, { message: "Minimum 1%" })
-      .max(100, { message: "Maximum 100%" }),
+    completion_percent: z.coerce.number().optional().nullable(),
     count_lessons: z.boolean(),
     count_quizzes: z.boolean(),
     count_assignments: z.boolean(),
-    template_path: z.string().min(1),
+    template_path: z.string().optional().nullable(),
     title: z.string().optional().nullable(),
     subtitle_one: z.string().optional().nullable(),
     subtitle_two: z.string().optional().nullable(),
@@ -319,6 +316,31 @@ const CertificateSettingsSchema = z
     instructor_signature: z.any().optional().nullable(),
   })
   .superRefine((data, ctx) => {
+    if (!data.is_enabled) return;
+
+    const completion = data.completion_percent;
+    if (completion == null || Number.isNaN(completion) || completion < 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["completion_percent"],
+        message: "Minimum 1%",
+      });
+    } else if (completion > 100) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["completion_percent"],
+        message: "Maximum 100%",
+      });
+    }
+
+    if (!data.template_path?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["template_path"],
+        message: "Choose a certificate template.",
+      });
+    }
+
     if (!data.count_lessons && !data.count_quizzes && !data.count_assignments) {
       ctx.addIssue({
         code: "custom",

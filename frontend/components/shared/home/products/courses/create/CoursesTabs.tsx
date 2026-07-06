@@ -52,7 +52,10 @@ const normalizeCertificateSettingsForForm = (
 
   return {
     is_enabled: cert?.is_enabled ?? false,
-    completion_percent: cert?.completion_percent ?? 100,
+    completion_percent:
+      cert?.completion_percent != null && cert.completion_percent >= 1
+        ? cert.completion_percent
+        : 100,
     count_lessons: allCountsOff ? true : countLessons,
     count_quizzes: allCountsOff ? true : countQuizzes,
     count_assignments: allCountsOff ? true : countAssignments,
