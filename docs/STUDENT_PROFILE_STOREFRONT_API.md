@@ -8,6 +8,9 @@ Logged-in student নিজের profile দেখতে ও edit করতে 
 সব request এ **`app-key: <tenant_app_key>`** header লাগবে।  
 Protected route এ **`Authorization: Bearer <student_jwt>`** (login থেকে পাওয়া token)।
 
+> **Storefront implement করতে:** copy-paste ready code + 404 troubleshooting →  
+> **[STUDENT_PROFILE_PICTURE_STOREFRONT_IMPLEMENTATION.md](./STUDENT_PROFILE_PICTURE_STOREFRONT_IMPLEMENTATION.md)**
+
 ---
 
 ## Status
