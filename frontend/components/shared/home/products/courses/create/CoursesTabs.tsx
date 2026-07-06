@@ -29,12 +29,72 @@ import CreateAssignmentModal from "./curriculum/CreateAssignmentModal";
 import UpdateAssignmentModal from "./curriculum/UpdateAssignmentModal";
 import UpdateQuizModal from "./curriculum/UpdateQuizModal";
 import UpdateQuestion from "./curriculum/UpdateQuestion";
-import { dbTimeToPickerFormat } from "@/lib/helpers";
+import {
+  dbTimeToPickerFormat,
+  getFirstFormError,
+} from "@/lib/helpers";
 import axios from "axios";
 import { normalizeChapterItemPositions, buildChapterItems, splitChapterItems } from "@/lib/chapterItems";
 
 const toDbId = (id?: number | null) =>
   id != null && Number(id) > 0 ? Number(id) : undefined;
+
+const DEFAULT_CERTIFICATE_TEMPLATE = "/images/Certificat-14.jpg";
+
+const normalizeCertificateSettingsForForm = (
+  cert?: CourseCertificateSettings | null
+) => {
+  const hasRow = Boolean(cert?.id);
+  const countLessons = hasRow ? Boolean(cert?.count_lessons) : true;
+  const countQuizzes = hasRow ? Boolean(cert?.count_quizzes) : true;
+  const countAssignments = hasRow ? Boolean(cert?.count_assignments) : true;
+  const allCountsOff = !countLessons && !countQuizzes && !countAssignments;
+
+  return {
+    is_enabled: cert?.is_enabled ?? false,
+    completion_percent: cert?.completion_percent ?? 100,
+    count_lessons: allCountsOff ? true : countLessons,
+    count_quizzes: allCountsOff ? true : countQuizzes,
+    count_assignments: allCountsOff ? true : countAssignments,
+    template_path: cert?.template_path?.trim() || DEFAULT_CERTIFICATE_TEMPLATE,
+    title: cert?.title ?? "Certificate of Completion",
+    subtitle_one: cert?.subtitle_one ?? "",
+    subtitle_two: cert?.subtitle_two ?? "",
+    owner_signature: cert?.owner_signature
+      ? { isDBImg: true, name: cert.owner_signature }
+      : null,
+    instructor_signature: cert?.instructor_signature
+      ? { isDBImg: true, name: cert.instructor_signature }
+      : null,
+  };
+};
+
+const serializeLessonSourceForApi = (source?: {
+  data?: unknown;
+  isFile?: boolean;
+  playback_time?: string | null;
+}) => ({
+  data:
+    typeof source?.data === "string"
+      ? source.data
+      : source?.data != null
+        ? String(source.data)
+        : "",
+  is_file: Boolean(source?.isFile),
+  playback_times: source?.playback_time ?? null,
+});
+
+const tabForFieldPath = (path: string): string => {
+  if (path.startsWith("course_chapters")) return "Curriculum";
+  if (
+    path.startsWith("general_settings") ||
+    path.startsWith("course_instructors") ||
+    path.startsWith("certificate_settings")
+  ) {
+    return "Settings";
+  }
+  return "Details";
+};
 
 const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
   chapters.map((chapter) => {
@@ -55,7 +115,7 @@ const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
       description: lesson.description ?? null,
       lesson_type: lesson.lesson_type,
       source_type: lesson.source_type,
-      source: lesson.source,
+      source: serializeLessonSourceForApi(lesson.source),
       is_published: lesson.is_published,
       is_public: lesson.is_public,
       is_scheduled: lesson.is_scheduled,
@@ -198,7 +258,7 @@ export default function CoursesTabs({
         count_lessons: true,
         count_quizzes: true,
         count_assignments: true,
-        template_path: "/images/Certificat-14.jpg",
+        template_path: DEFAULT_CERTIFICATE_TEMPLATE,
         title: "Certificate of Completion",
         subtitle_one: "",
         subtitle_two: "",
@@ -337,38 +397,15 @@ export default function CoursesTabs({
           language: courseDetails.general_settings.language,
           duration: courseDetails.general_settings.duration,
           category_id: courseDetails.general_settings.category_id,
-          sub_category_id: courseDetails.general_settings.sub_category_id,
+          sub_category_id:
+            courseDetails.general_settings.sub_category_id &&
+            courseDetails.general_settings.sub_category_id > 0
+              ? courseDetails.general_settings.sub_category_id
+              : null,
         },
-        certificate_settings: {
-          is_enabled: courseDetails.certificate_settings?.is_enabled ?? false,
-          completion_percent:
-            courseDetails.certificate_settings?.completion_percent ?? 100,
-          count_lessons: courseDetails.certificate_settings?.count_lessons ?? true,
-          count_quizzes: courseDetails.certificate_settings?.count_quizzes ?? true,
-          count_assignments:
-            courseDetails.certificate_settings?.count_assignments ?? true,
-          template_path:
-            courseDetails.certificate_settings?.template_path ??
-            "/images/Certificat-14.jpg",
-          title:
-            courseDetails.certificate_settings?.title ??
-            "Certificate of Completion",
-          subtitle_one: courseDetails.certificate_settings?.subtitle_one ?? "",
-          subtitle_two: courseDetails.certificate_settings?.subtitle_two ?? "",
-          owner_signature: courseDetails.certificate_settings?.owner_signature
-            ? {
-                isDBImg: true,
-                name: courseDetails.certificate_settings.owner_signature,
-              }
-            : null,
-          instructor_signature: courseDetails.certificate_settings
-            ?.instructor_signature
-            ? {
-                isDBImg: true,
-                name: courseDetails.certificate_settings.instructor_signature,
-              }
-            : null,
-        },
+        certificate_settings: normalizeCertificateSettingsForForm(
+          courseDetails.certificate_settings
+        ),
       });
     }
   }, [isEdit, courseDetails]);
@@ -452,6 +489,16 @@ export default function CoursesTabs({
 
     if (err instanceof Error && err.message.trim()) return err.message;
     return "Something went wrong.";
+  };
+
+  const handleInvalid = (errors: typeof formMethods.formState.errors) => {
+    const first = getFirstFormError(errors as Record<string, unknown>);
+    if (first) {
+      toast.error(`${first.message} (${first.path})`);
+      handleTabChange(tabForFieldPath(first.path));
+      return;
+    }
+    toast.error("Please fix the highlighted form errors before saving.");
   };
 
   const handleSave = (data: TCourseSchema) => {
@@ -756,7 +803,7 @@ export default function CoursesTabs({
               <Button
                 type="button"
                 disabled={loading}
-                onClick={formMethods.handleSubmit(handleSave)}
+                onClick={formMethods.handleSubmit(handleSave, handleInvalid)}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isEdit ? "Update Course" : "Publish Course"}

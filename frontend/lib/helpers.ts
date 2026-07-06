@@ -20,13 +20,38 @@ export const formatDateTime = (date: string): string => {
   return `${day} ${month} ${year}, ${hour12}:${minutes} ${period}`;
 };
 
+/** DB TIME / ISO datetime → backend UI format "10:05 AM". */
 export const dbTimeToPickerFormat = (timeStr: string): string => {
-  const [hourStr, minStr] = timeStr.split(":");
-  let hour = parseInt(hourStr, 10);
-  const period = hour < 12 ? "AM" : "PM";
-  hour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour.toString().padStart(2, "0")}:${minStr} ${period}`;
+  const hhmm = scheduleTimeToHHMM(timeStr);
+  if (!hhmm) return "";
+  return hhmmToScheduleTime(hhmm);
 };
+
+export function getFirstFormError(
+  errors: Record<string, unknown>
+): { path: string; message: string } | null {
+  const walk = (
+    obj: Record<string, unknown>,
+    path = ""
+  ): { path: string; message: string } | null => {
+    for (const [key, value] of Object.entries(obj)) {
+      const nextPath = path ? `${path}.${key}` : key;
+      if (value && typeof value === "object") {
+        if (
+          "message" in value &&
+          typeof (value as { message?: unknown }).message === "string"
+        ) {
+          const message = (value as { message: string }).message;
+          if (message.trim()) return { path: nextPath, message };
+        }
+        const nested = walk(value as Record<string, unknown>, nextPath);
+        if (nested) return nested;
+      }
+    }
+    return null;
+  };
+  return walk(errors);
+}
 
 /** 24h "HH:MM" for native `<input type="time" />` from DB "HH:MM:SS" or UI "hh:mm AM/PM". */
 export function scheduleTimeToHHMM(
