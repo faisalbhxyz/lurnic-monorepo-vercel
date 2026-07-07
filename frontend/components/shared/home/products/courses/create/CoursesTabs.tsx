@@ -8,6 +8,7 @@ import Curriculum from "./curriculum/Curriculum";
 import ReviewsTable from "./reviews/ReviewsTable";
 import NoticesTable from "./notices/NoticesTable";
 import SettingTabs from "./settings/SettingTabs";
+import CertificatesTab from "./settings/CertificatesTab";
 import { FormProvider, useForm } from "react-hook-form";
 import { CourseSchema, TCourseSchema } from "@/schema/course.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,7 +39,7 @@ import { normalizeAssignmentAttachments } from "@/lib/assignmentAttachments";
 const toDbId = (id?: number | null) =>
   id != null && Number(id) > 0 ? Number(id) : undefined;
 
-const DEFAULT_CERTIFICATE_TEMPLATE = "/images/Certificat-14.jpg";
+import { DEFAULT_CERTIFICATE_TEMPLATE } from "@/components/shared/certificates/certificate-templates";
 
 const normalizeCertificateSettingsForForm = (
   cert?: CourseCertificateSettings | null
@@ -58,10 +59,30 @@ const normalizeCertificateSettingsForForm = (
     count_lessons: allCountsOff ? true : countLessons,
     count_quizzes: allCountsOff ? true : countQuizzes,
     count_assignments: allCountsOff ? true : countAssignments,
-    template_path: cert?.template_path?.trim() || DEFAULT_CERTIFICATE_TEMPLATE,
+    template_path: DEFAULT_CERTIFICATE_TEMPLATE,
     title: cert?.title ?? "Certificate of Completion",
-    subtitle_one: cert?.subtitle_one ?? "",
+    subtitle_one: cert?.subtitle_one ?? "has successfully completed",
     subtitle_two: cert?.subtitle_two ?? "",
+    brand_logo: cert?.brand_logo
+      ? { isDBImg: true, name: cert.brand_logo }
+      : null,
+    watermark_image: cert?.watermark_image
+      ? { isDBImg: true, name: cert.watermark_image }
+      : null,
+    watermark_opacity:
+      cert?.watermark_opacity != null && cert.watermark_opacity >= 0
+        ? cert.watermark_opacity
+        : 30,
+    organization_name: cert?.organization_name ?? "",
+    signer_name: cert?.signer_name ?? "",
+    signer_role: cert?.signer_role ?? "",
+    signer_org: cert?.signer_org ?? "",
+    dual_signers_enabled:
+      cert?.dual_signers_enabled ??
+      Boolean(cert?.owner_signature && cert?.instructor_signature),
+    signer2_name: cert?.signer2_name ?? "",
+    signer2_role: cert?.signer2_role ?? "",
+    signer2_org: cert?.signer2_org ?? "",
     owner_signature: cert?.owner_signature
       ? { isDBImg: true, name: cert.owner_signature }
       : null,
@@ -88,12 +109,12 @@ const serializeLessonSourceForApi = (source?: {
 
 const tabForFieldPath = (path: string): string => {
   if (path.startsWith("course_chapters")) return "Curriculum";
+  if (path.startsWith("certificate_settings")) return "Certificates";
   if (
     path.startsWith("general_settings") ||
-    path.startsWith("course_instructors") ||
-    path.startsWith("certificate_settings")
+    path.startsWith("course_instructors")
   ) {
-    return "Settings";
+    return "Details";
   }
   return "Details";
 };
@@ -187,6 +208,7 @@ const tabs = [
   // { id: 5, label: "Reviews" },
   // { id: 6, label: "Notice" },
   { id: 7, label: "Settings" },
+  { id: 8, label: "Certificates" },
 ];
 
 export default function CoursesTabs({
@@ -269,8 +291,19 @@ export default function CoursesTabs({
         count_assignments: true,
         template_path: DEFAULT_CERTIFICATE_TEMPLATE,
         title: "Certificate of Completion",
-        subtitle_one: "",
+        subtitle_one: "has successfully completed",
         subtitle_two: "",
+        brand_logo: null,
+        watermark_image: null,
+        watermark_opacity: 30,
+        organization_name: "",
+        signer_name: "",
+        signer_role: "",
+        signer_org: "",
+        dual_signers_enabled: false,
+        signer2_name: "",
+        signer2_role: "",
+        signer2_org: "",
         owner_signature: null,
         instructor_signature: null,
       },
@@ -423,7 +456,13 @@ export default function CoursesTabs({
   const renderContent = () => {
     switch (activeTab) {
       case "Details":
-        return <Basics />;
+        return (
+          <Basics
+            categories={categories}
+            subcategories={subcategories}
+            instructors={instructors}
+          />
+        );
       case "Curriculum":
         return <Curriculum />;
       // case "Reviews":
@@ -442,12 +481,14 @@ export default function CoursesTabs({
         return (
           <div className="border p-5 rounded-lg mt-5">
             <Suspense fallback={<p>Loading...</p>}>
-              <SettingTabs
-                categories={categories}
-                subcategories={subcategories}
-                instructors={instructors}
-              />
+              <SettingTabs />
             </Suspense>
+          </div>
+        );
+      case "Certificates":
+        return (
+          <div className="border p-5 rounded-lg mt-5">
+            <CertificatesTab />
           </div>
         );
       default:
@@ -568,8 +609,40 @@ export default function CoursesTabs({
           title: data.certificate_settings.title || null,
           subtitle_one: data.certificate_settings.subtitle_one || null,
           subtitle_two: data.certificate_settings.subtitle_two || null,
+          organization_name: data.certificate_settings.organization_name || null,
+          signer_name: data.certificate_settings.signer_name || null,
+          signer_role: data.certificate_settings.signer_role || null,
+          signer_org: data.certificate_settings.signer_org || null,
+          dual_signers_enabled: Boolean(data.certificate_settings.dual_signers_enabled),
+          signer2_name: data.certificate_settings.signer2_name || null,
+          signer2_role: data.certificate_settings.signer2_role || null,
+          signer2_org: data.certificate_settings.signer2_org || null,
+          watermark_opacity:
+            data.certificate_settings.watermark_opacity != null
+              ? Math.min(100, Math.max(0, Number(data.certificate_settings.watermark_opacity)))
+              : 30,
         })
       );
+      if (
+        data.certificate_settings.brand_logo &&
+        !data.certificate_settings.brand_logo.isDBImg &&
+        data.certificate_settings.brand_logo instanceof File
+      ) {
+        fd.append(
+          "certificate_brand_logo",
+          data.certificate_settings.brand_logo
+        );
+      }
+      if (
+        data.certificate_settings.watermark_image &&
+        !data.certificate_settings.watermark_image.isDBImg &&
+        data.certificate_settings.watermark_image instanceof File
+      ) {
+        fd.append(
+          "certificate_watermark_image",
+          data.certificate_settings.watermark_image
+        );
+      }
       if (
         data.certificate_settings.owner_signature &&
         !data.certificate_settings.owner_signature.isDBImg &&
@@ -774,6 +847,7 @@ export default function CoursesTabs({
                 alt={"image"}
                 width={130}
                 height={130}
+                suppressHydrationWarning
               />
               <div>
                 <p className="font-semibold mb-3">Course</p>

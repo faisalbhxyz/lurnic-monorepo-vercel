@@ -38,6 +38,7 @@ export default function Profile() {
           alt={"image"}
           width={200}
           height={200}
+          suppressHydrationWarning
         />
       </div>
       <div className="text-sm truncate">

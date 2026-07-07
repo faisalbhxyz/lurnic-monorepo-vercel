@@ -16,8 +16,17 @@ import { Controller, useFormContext } from "react-hook-form";
 import { TCourseSchema } from "@/schema/course.schema";
 import CourseFeaturedImage from "./CourseFeaturedImage";
 import CurrencyPrefix from "@/components/ui/CurrencyPrefix";
+import CourseGeneralFields from "./CourseGeneralFields";
 
-export default function Basics() {
+export default function Basics({
+  categories,
+  subcategories,
+  instructors,
+}: {
+  categories: ICategory[] | null;
+  subcategories: ISubCategory[] | null;
+  instructors: IInstructor[] | null;
+}) {
   const {
     register,
     handleSubmit,
@@ -209,10 +218,11 @@ export default function Basics() {
           <Label>Tags</Label>
           <TagsSelect />
         </div>
-        {/* <div className="mt-5">
-          <Label htmlFor={""}>Author</Label>
-          <Author />
-        </div> */}
+        <CourseGeneralFields
+          categories={categories}
+          subcategories={subcategories}
+          instructors={instructors}
+        />
       </div>
     </div>
   );

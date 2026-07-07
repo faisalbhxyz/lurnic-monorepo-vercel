@@ -8,11 +8,22 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // Monorepo: trace deps from repo root so standalone layout is standalone/frontend/ in Docker.
   outputFileTracingRoot: path.join(frontendDir, ".."),
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Keep webpack for raw CSS imports; Next 16 defaults to Turbopack.
+  turbopack: {},
   typescript: {
     ignoreBuildErrors: true,
+  },
+  webpack: (config) => {
+    config.module.rules.forEach((rule) => {
+      if (typeof rule === "object" && rule !== null && "oneOf" in rule && Array.isArray(rule.oneOf)) {
+        rule.oneOf.unshift({
+          test: /\.css$/i,
+          resourceQuery: /raw/,
+          type: "asset/source",
+        });
+      }
+    });
+    return config;
   },
   images: {
     remotePatterns: [

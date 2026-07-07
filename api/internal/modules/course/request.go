@@ -103,6 +103,17 @@ type CreateCertificateSettings struct {
 	Title               *string `json:"title" form:"title"`
 	SubtitleOne         *string `json:"subtitle_one" form:"subtitle_one"`
 	SubtitleTwo         *string `json:"subtitle_two" form:"subtitle_two"`
+	BrandLogo           *string `json:"brand_logo" form:"brand_logo"`
+	WatermarkImage      *string `json:"watermark_image" form:"watermark_image"`
+	WatermarkOpacity    *uint8  `json:"watermark_opacity" form:"watermark_opacity"`
+	OrganizationName    *string `json:"organization_name" form:"organization_name"`
+	SignerName          *string `json:"signer_name" form:"signer_name"`
+	SignerRole          *string `json:"signer_role" form:"signer_role"`
+	SignerOrg           *string `json:"signer_org" form:"signer_org"`
+	DualSignersEnabled  bool    `json:"dual_signers_enabled" form:"dual_signers_enabled"`
+	Signer2Name         *string `json:"signer2_name" form:"signer2_name"`
+	Signer2Role         *string `json:"signer2_role" form:"signer2_role"`
+	Signer2Org          *string `json:"signer2_org" form:"signer2_org"`
 	OwnerSignature      *string `json:"owner_signature" form:"owner_signature"`
 	InstructorSignature *string `json:"instructor_signature" form:"instructor_signature"`
 }

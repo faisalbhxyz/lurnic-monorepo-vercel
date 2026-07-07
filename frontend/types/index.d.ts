@@ -371,6 +371,17 @@ interface CourseCertificateSettings {
   title?: string | null;
   subtitle_one?: string | null;
   subtitle_two?: string | null;
+  brand_logo?: string | null;
+  watermark_image?: string | null;
+  watermark_opacity?: number | null;
+  organization_name?: string | null;
+  signer_name?: string | null;
+  signer_role?: string | null;
+  signer_org?: string | null;
+  dual_signers_enabled?: boolean;
+  signer2_name?: string | null;
+  signer2_role?: string | null;
+  signer2_org?: string | null;
   owner_signature?: string | null;
   instructor_signature?: string | null;
   created_at?: string;

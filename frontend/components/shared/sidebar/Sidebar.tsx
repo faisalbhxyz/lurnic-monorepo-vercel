@@ -110,6 +110,7 @@ export default function Sidebar({ orgLogo }: { orgLogo: string | null }) {
               height={75}
               alt="image"
               className="w-[115px] h-[30px]"
+              suppressHydrationWarning
             />
           ) : (
             <Image
@@ -118,6 +119,7 @@ export default function Sidebar({ orgLogo }: { orgLogo: string | null }) {
               height={75}
               alt="image"
               className="w-[115px] h-[30px]"
+              suppressHydrationWarning
             />
           )}
         </Link>

@@ -40,8 +40,11 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en">
-      <body className={`${geistSans.className} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.className} antialiased`}
+        suppressHydrationWarning
+      >
         <ToasterProvider />
         <AuthProvider session={session}>{children}</AuthProvider>
       </body>

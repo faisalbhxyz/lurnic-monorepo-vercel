@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import React from "react";
+import { isMinarCertificateTemplate } from "@/components/shared/certificates/certificate-templates";
+import MinarAcademyCertificate from "./MinarAcademyCertificate";
 
 const TEMPLATE_BG: Record<string, string> = {
   "/images/Certificat-14.jpg": "#f7f5f0",
@@ -16,8 +18,20 @@ export interface CertificatePreviewProps {
   subtitleOne?: string | null;
   subtitleTwo?: string | null;
   courseTitle?: string | null;
+  pricingModel?: "free" | "paid" | null;
+  organizationName?: string | null;
+  brandLogoSrc?: string | null;
+  watermarkImageSrc?: string | null;
+  watermarkOpacity?: number | null;
   ownerSignatureSrc?: string | null;
   instructorSignatureSrc?: string | null;
+  signerName?: string | null;
+  signerRole?: string | null;
+  signerOrg?: string | null;
+  dualSigners?: boolean;
+  signer2Name?: string | null;
+  signer2Role?: string | null;
+  signer2Org?: string | null;
   className?: string;
 }
 
@@ -31,10 +45,51 @@ export default function CertificatePreview({
   subtitleOne,
   subtitleTwo,
   courseTitle,
+  pricingModel,
+  organizationName,
+  brandLogoSrc,
+  watermarkImageSrc,
+  watermarkOpacity,
   ownerSignatureSrc,
   instructorSignatureSrc,
+  signerName,
+  signerRole,
+  signerOrg,
+  dualSigners,
+  signer2Name,
+  signer2Role,
+  signer2Org,
   className = "",
 }: CertificatePreviewProps) {
+  if (isMinarCertificateTemplate(templatePath)) {
+    const signatureImageSrc = instructorSignatureSrc || (!dualSigners ? ownerSignatureSrc : null) || null;
+    const signatureImageSrc2 = dualSigners ? ownerSignatureSrc || null : null;
+
+    return (
+      <MinarAcademyCertificate
+        className={className}
+        previewMode
+        studentName="[STUDENT NAME]"
+        courseName={courseTitle}
+        pricingModel={pricingModel}
+        organizationName={organizationName}
+        completionLine={subtitleOne}
+        brandLogoSrc={brandLogoSrc}
+        watermarkImageSrc={watermarkImageSrc}
+        watermarkOpacity={watermarkOpacity}
+        signatureImageSrc={signatureImageSrc}
+        signerName={signerName}
+        signerRole={signerRole}
+        signerOrg={signerOrg}
+        dualSigners={dualSigners}
+        signatureImageSrc2={signatureImageSrc2}
+        signer2Name={signer2Name}
+        signer2Role={signer2Role}
+        signer2Org={signer2Org}
+      />
+    );
+  }
+
   const bg = overlayBg(templatePath);
   const displayTitle = title?.trim() || "Certificate of Completion";
   const displayCourse = courseTitle?.trim() || "Course Name";

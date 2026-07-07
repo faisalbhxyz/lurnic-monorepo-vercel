@@ -11,11 +11,23 @@ import (
 	"gorm.io/gorm"
 )
 
-const defaultCertificateTemplate = "/images/Certificat-14.jpg"
+const defaultCertificateTemplate = "/templates/minar-academy"
+const TemplateMinarAcademy = "/templates/minar-academy"
+const defaultWatermarkOpacity uint8 = 30
+
+func normalizeWatermarkOpacity(value *uint8) uint8 {
+	if value == nil {
+		return defaultWatermarkOpacity
+	}
+	if *value > 100 {
+		return 100
+	}
+	return *value
+}
 
 func normalizeCertificateSettings(input CreateCertificateSettings) models.CourseCertificateSettings {
 	templatePath := strings.TrimSpace(input.TemplatePath)
-	if templatePath == "" {
+	if templatePath == "" || strings.HasPrefix(templatePath, "/images/Certificat-") {
 		templatePath = defaultCertificateTemplate
 	}
 
@@ -46,6 +58,17 @@ func normalizeCertificateSettings(input CreateCertificateSettings) models.Course
 		Title:               input.Title,
 		SubtitleOne:         input.SubtitleOne,
 		SubtitleTwo:         input.SubtitleTwo,
+		BrandLogo:           input.BrandLogo,
+		WatermarkImage:      input.WatermarkImage,
+		WatermarkOpacity:    normalizeWatermarkOpacity(input.WatermarkOpacity),
+		OrganizationName:    input.OrganizationName,
+		SignerName:          input.SignerName,
+		SignerRole:          input.SignerRole,
+		SignerOrg:           input.SignerOrg,
+		DualSignersEnabled:  input.DualSignersEnabled,
+		Signer2Name:         input.Signer2Name,
+		Signer2Role:         input.Signer2Role,
+		Signer2Org:          input.Signer2Org,
 		OwnerSignature:      input.OwnerSignature,
 		InstructorSignature: input.InstructorSignature,
 	}
@@ -70,6 +93,12 @@ func upsertCertificateSettings(db *gorm.DB, courseID uint, input CreateCertifica
 	if payload.InstructorSignature == nil {
 		payload.InstructorSignature = existing.InstructorSignature
 	}
+	if payload.BrandLogo == nil {
+		payload.BrandLogo = existing.BrandLogo
+	}
+	if payload.WatermarkImage == nil {
+		payload.WatermarkImage = existing.WatermarkImage
+	}
 
 	return db.Model(&existing).Select(
 		"is_enabled",
@@ -81,6 +110,17 @@ func upsertCertificateSettings(db *gorm.DB, courseID uint, input CreateCertifica
 		"title",
 		"subtitle_one",
 		"subtitle_two",
+		"brand_logo",
+		"watermark_image",
+		"watermark_opacity",
+		"organization_name",
+		"signer_name",
+		"signer_role",
+		"signer_org",
+		"dual_signers_enabled",
+		"signer2_name",
+		"signer2_role",
+		"signer2_org",
 		"owner_signature",
 		"instructor_signature",
 	).Updates(payload).Error
@@ -107,6 +147,34 @@ func applyCertificateSettingsFromRequest(c *gin.Context, input *CourseDetailsInp
 			return err
 		}
 		input.CertificateSettings.OwnerSignature = &url
+	}
+
+	if brandLogoHeader, err := c.FormFile("certificate_brand_logo"); err == nil {
+		file, err := brandLogoHeader.Open()
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		url, err := utils.UploadToBunny(file, brandLogoHeader)
+		if err != nil {
+			return err
+		}
+		input.CertificateSettings.BrandLogo = &url
+	}
+
+	if watermarkHeader, err := c.FormFile("certificate_watermark_image"); err == nil {
+		file, err := watermarkHeader.Open()
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		url, err := utils.UploadToBunny(file, watermarkHeader)
+		if err != nil {
+			return err
+		}
+		input.CertificateSettings.WatermarkImage = &url
 	}
 
 	if instructorHeader, err := c.FormFile("instructor_signature"); err == nil {

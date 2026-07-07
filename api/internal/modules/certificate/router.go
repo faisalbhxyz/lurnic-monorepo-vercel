@@ -12,6 +12,7 @@ func RegisterCertificateRoutes(rg *gin.RouterGroup) {
 	studentGroup := rg.Group("/student", middleware.GetTenantID(), middleware.StudentAuthMiddleware())
 	{
 		studentGroup.GET("/certificates", handler.ListStudentCertificates)
+		studentGroup.GET("/certificates/:id/html", handler.GetStudentCertificateHTML)
 		studentGroup.GET("/certificates/:id", handler.GetStudentCertificate)
 	}
 

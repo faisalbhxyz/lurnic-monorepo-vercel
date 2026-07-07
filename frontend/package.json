@@ -3,8 +3,8 @@
   "version": "1.0.11",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "NODE_OPTIONS='--disable-warning=DEP0169' next dev --webpack",
+    "build": "next build --webpack",
     "start": "node .next/standalone/frontend/server.js",
     "lint": "next lint",
     "test:schedule-time": "npx --yes tsx scripts/verify-schedule-time.ts"
@@ -30,7 +30,7 @@
     "axios": "^1.9.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.514.0",
-    "next": "^15.5.7",
+    "next": "^16.2.10",
     "next-auth": "^5.0.0-beta.28",
     "react": "^19.0.0",
     "react-color": "^2.19.3",
@@ -54,7 +54,7 @@
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.3.1",
+    "eslint-config-next": "^16.2.10",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
