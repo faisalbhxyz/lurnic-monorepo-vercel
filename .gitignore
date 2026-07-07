@@ -8,6 +8,7 @@
 # Go
 /bin/
 /dist/
+api/dashlearn
 *.exe
 *.exe~
 *.dll

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { DashboardData } from "@/app/actions/dashboard_actions";
 import StatCard from "./StatCard";
@@ -13,10 +15,7 @@ import {
 } from "react-icons/hi";
 import { LuPlus } from "react-icons/lu";
 import Button from "@/components/ui/Button";
-
-function formatMoney(amount: number) {
-  return `৳ ${amount.toLocaleString("en-BD")}`;
-}
+import { useCurrency } from "@/context/CurrencyContext";
 
 const quickLinks = [
   { label: "Create Course", href: "/courses/create" },
@@ -33,6 +32,7 @@ export default function DashboardOverview({
   userName: string;
 }) {
   const { stats, recentEnrollments, recentOrders } = data;
+  const { formatAmount } = useCurrency();
 
   return (
     <div className="space-y-6">
@@ -77,8 +77,8 @@ export default function DashboardOverview({
         />
         <StatCard
           label="Total Revenue"
-          value={formatMoney(stats.totalRevenue)}
-          hint={`${formatMoney(stats.revenueThisMonth)} this month`}
+          value={formatAmount(stats.totalRevenue)}
+          hint={`${formatAmount(stats.revenueThisMonth)} this month`}
           icon={<HiOutlineCash size={20} />}
           iconClassName="bg-green-50 text-green-600"
         />

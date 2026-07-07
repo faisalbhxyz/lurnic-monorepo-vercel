@@ -5,6 +5,7 @@ import { FiSearch } from "react-icons/fi";
 import OrderAction from "./OrderAction";
 import Checkbox from "@/components/ui/Checkbox";
 import { formatDate } from "@/lib/helpers";
+import FormattedPrice from "@/components/ui/FormattedPrice";
 
 interface OrderListProps {
   data: IOrder[];
@@ -88,7 +89,7 @@ export default function OrderList({ data }: OrderListProps) {
                   {order.transaction_id ? order.transaction_id : "--"}
                 </td>
                 <td className="p-3">
-                  <p>&#2547; {order.total}</p>
+                  <FormattedPrice amount={order.total} />
                 </td>
                 <td className="p-3">
                   <div className="flex items-center gap-2">

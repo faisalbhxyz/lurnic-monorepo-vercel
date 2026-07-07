@@ -21,7 +21,8 @@ type AssignmentService interface {
 	ListCourseSubmissions(tenantID, courseID uint) ([]AssignmentSubmissionListItem, error)
 	GetCourseSubmission(tenantID, courseID, submissionID uint) (*AssignmentSubmissionDetail, error)
 	GradeSubmission(tenantID, courseID, submissionID uint, input GradeAssignmentInput) (*AssignmentSubmissionDetail, error)
-	ListStudentSubmissions(tenantID, studentID uint, courseID *uint) ([]AssignmentSubmissionListItem, error)
+	ListStudentSubmissions(tenantID, studentID uint, courseID *uint) ([]AssignmentSubmissionDetail, error)
+	GetStudentSubmission(tenantID, studentID, submissionID uint) (*AssignmentSubmissionDetail, error)
 }
 
 type assignmentService struct {
@@ -34,36 +35,48 @@ func NewAssignmentService(db *gorm.DB, upload func(multipart.File, *multipart.Fi
 }
 
 func (s *assignmentService) GetStudentAssignment(tenantID, studentID uint, slug string, assignmentID uint) (*StudentAssignmentResponse, error) {
-	course, assignment, err := s.loadPublishedAssignmentForStudent(tenantID, studentID, slug, assignmentID)
+	_, assignment, err := s.loadPublishedAssignmentForStudent(tenantID, studentID, slug, assignmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := s.resolveAssignmentSession(tenantID, studentID, assignment)
 	if err != nil {
 		return nil, err
 	}
 
 	var existing models.AssignmentSubmission
 	hasSubmitted := false
-	if err := s.db.Where("tenant_id = ? AND assignment_id = ? AND student_id = ?", tenantID, assignmentID, studentID).First(&existing).Error; err == nil {
+	if err := s.db.Preload("Files").
+		Where("tenant_id = ? AND assignment_id = ? AND student_id = ?", tenantID, assignmentID, studentID).
+		First(&existing).Error; err == nil {
 		hasSubmitted = true
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
+	sessionExpired := session.IsExpired()
+	editable := hasSubmitted && submissionEditable(existing.Status, sessionExpired)
+
 	resp := &StudentAssignmentResponse{
 		CourseAssignmentResponse: buildAssignmentResponse(*assignment),
 		HasSubmitted:             hasSubmitted,
-		CanSubmit:                !hasSubmitted,
+		CanSubmit:                (!hasSubmitted && !sessionExpired) || editable,
+		CanEdit:                  editable,
+		StartedAt:                session.StartedAt.Format(time.RFC3339),
+		MaxFileSizeBytes:         MaxAssignmentFileSizeBytes,
+		AllowedMimeTypes:         AllowedAssignmentMimeTypes,
+		MaxResponseTextLength:    MaxAssignmentResponseTextLength,
 	}
+	if session.ExpiresAt != nil {
+		resp.DeadlineAt = session.ExpiresAt.Format(time.RFC3339)
+		resp.SecondsRemaining = secondsRemaining(session.ExpiresAt)
+	}
+
 	if hasSubmitted {
-		resp.Submission = &AssignmentSubmissionSummary{
-			ID:          existing.ID,
-			Score:       existing.Score,
-			MaxScore:    existing.MaxScore,
-			Percentage:  existing.Percentage,
-			Passed:      existing.Passed,
-			Status:      existing.Status,
-			SubmittedAt: existing.SubmittedAt.Format(time.RFC3339),
-		}
+		resp.Submission = s.buildSubmissionSummary(existing)
 	}
-	_ = course
+
 	return resp, nil
 }
 
@@ -73,68 +86,51 @@ func (s *assignmentService) SubmitAssignment(tenantID, studentID uint, slug stri
 		return nil, err
 	}
 
-	var existingCount int64
-	if err := s.db.Model(&models.AssignmentSubmission{}).
-		Where("tenant_id = ? AND assignment_id = ? AND student_id = ?", tenantID, assignmentID, studentID).
-		Count(&existingCount).Error; err != nil {
+	session, err := s.resolveAssignmentSession(tenantID, studentID, assignment)
+	if err != nil {
 		return nil, err
 	}
-	if existingCount > 0 {
-		return nil, errors.New("assignment already submitted")
+	if session.IsExpired() {
+		return nil, errors.New("assignment time limit exceeded")
 	}
 
-	text := strings.TrimSpace(stringValue(responseText))
-	if text == "" && len(files) == 0 {
-		return nil, errors.New("response text or at least one file is required")
+	var existing models.AssignmentSubmission
+	hasExisting := false
+	if err := s.db.Preload("Files").
+		Where("tenant_id = ? AND assignment_id = ? AND student_id = ?", tenantID, assignmentID, studentID).
+		First(&existing).Error; err == nil {
+		hasExisting = true
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
 	}
 
-	limit := assignment.FileUploadLimit
-	if limit <= 0 {
-		limit = 1
-	}
-	if len(files) > limit {
-		return nil, fmt.Errorf("maximum %d file(s) allowed", limit)
-	}
-
-	uploadedFiles := make([]models.AssignmentSubmissionFile, 0, len(files))
-	for _, fileHeader := range files {
-		file, err := fileHeader.Open()
-		if err != nil {
-			return nil, fmt.Errorf("failed to open uploaded file: %w", err)
+	if hasExisting {
+		if existing.Status == models.AssignmentSubmissionStatusGraded {
+			return nil, errors.New("assignment already graded")
 		}
-
-		url, err := s.upload(file, fileHeader)
-		file.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to upload file: %w", err)
+		if existing.Status != models.AssignmentSubmissionStatusPendingReview {
+			return nil, errors.New("assignment cannot be updated")
 		}
+		return s.updateSubmission(&existing, assignment, responseText, files)
+	}
 
-		mimeType := fileHeader.Header.Get("Content-Type")
-		if mimeType == "" {
-			mimeType = "application/octet-stream"
-		}
+	return s.createSubmission(tenantID, studentID, assignment, responseText, files)
+}
 
-		uploadedFiles = append(uploadedFiles, models.AssignmentSubmissionFile{
-			URL:      url,
-			FileName: fileHeader.Filename,
-			MimeType: mimeType,
-			Size:     fileHeader.Size,
-		})
+func (s *assignmentService) createSubmission(tenantID, studentID uint, assignment *models.CourseAssignment, responseText *string, files []*multipart.FileHeader) (*AssignmentSubmissionDetail, error) {
+	text, uploadedFiles, err := s.prepareSubmissionContent(responseText, files, assignment, nil, false)
+	if err != nil {
+		return nil, err
 	}
 
 	now := time.Now()
-	var responsePtr *string
-	if text != "" {
-		responsePtr = &text
-	}
-
 	submission := models.AssignmentSubmission{
 		TenantID:     tenantID,
 		CourseID:     assignment.CourseID,
 		ChapterID:    assignment.ChapterID,
 		AssignmentID: assignment.ID,
 		StudentID:    studentID,
-		ResponseText: responsePtr,
+		ResponseText: text,
 		MaxScore:     assignment.TotalMarks,
 		Status:       models.AssignmentSubmissionStatusPendingReview,
 		SubmittedAt:  now,
@@ -161,6 +157,127 @@ func (s *assignmentService) SubmitAssignment(tenantID, studentID uint, slug stri
 	return s.buildSubmissionDetail(submission.ID)
 }
 
+func (s *assignmentService) updateSubmission(existing *models.AssignmentSubmission, assignment *models.CourseAssignment, responseText *string, files []*multipart.FileHeader) (*AssignmentSubmissionDetail, error) {
+	text, uploadedFiles, err := s.prepareSubmissionContent(responseText, files, assignment, existing, true)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"submitted_at": now,
+		"status":       models.AssignmentSubmissionStatusPendingReview,
+	}
+	if text != nil {
+		updates["response_text"] = text
+	}
+
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&existing).Updates(updates).Error; err != nil {
+			return err
+		}
+		if len(uploadedFiles) > 0 {
+			if err := tx.Where("submission_id = ?", existing.ID).Delete(&models.AssignmentSubmissionFile{}).Error; err != nil {
+				return err
+			}
+			for i := range uploadedFiles {
+				uploadedFiles[i].SubmissionID = existing.ID
+				if err := tx.Create(&uploadedFiles[i]).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildSubmissionDetail(existing.ID)
+}
+
+func (s *assignmentService) prepareSubmissionContent(
+	responseText *string,
+	files []*multipart.FileHeader,
+	assignment *models.CourseAssignment,
+	existing *models.AssignmentSubmission,
+	isUpdate bool,
+) (*string, []models.AssignmentSubmissionFile, error) {
+	rawText := strings.TrimSpace(stringValue(responseText))
+	var sanitizedText string
+	var textProvided bool
+	if rawText != "" {
+		textProvided = true
+		var err error
+		sanitizedText, err = sanitizeResponseText(rawText)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	limit := assignment.FileUploadLimit
+	if limit <= 0 {
+		limit = 1
+	}
+	if len(files) > limit {
+		return nil, nil, fmt.Errorf("maximum %d file(s) allowed", limit)
+	}
+
+	uploadedFiles := make([]models.AssignmentSubmissionFile, 0, len(files))
+	for _, fileHeader := range files {
+		if err := validateSubmissionFile(fileHeader); err != nil {
+			return nil, nil, err
+		}
+
+		file, err := fileHeader.Open()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to open uploaded file: %w", err)
+		}
+
+		url, err := s.upload(file, fileHeader)
+		file.Close()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to upload file: %w", err)
+		}
+
+		mimeType := fileHeader.Header.Get("Content-Type")
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		uploadedFiles = append(uploadedFiles, models.AssignmentSubmissionFile{
+			URL:      url,
+			FileName: fileHeader.Filename,
+			MimeType: mimeType,
+			Size:     fileHeader.Size,
+		})
+	}
+
+	existingFiles := 0
+	hasExistingText := false
+	if existing != nil {
+		existingFiles = len(existing.Files)
+		hasExistingText = existing.ResponseText != nil && strings.TrimSpace(*existing.ResponseText) != ""
+	}
+
+	finalFileCount := existingFiles
+	if len(uploadedFiles) > 0 {
+		finalFileCount = len(uploadedFiles)
+	}
+
+	hasText := sanitizedText != "" || (!textProvided && isUpdate && hasExistingText)
+	if !hasText && finalFileCount == 0 {
+		return nil, nil, errors.New("response text or at least one file is required")
+	}
+
+	var textPtr *string
+	if sanitizedText != "" {
+		textPtr = &sanitizedText
+	}
+
+	return textPtr, uploadedFiles, nil
+}
+
 func (s *assignmentService) ListCourseSubmissions(tenantID, courseID uint) ([]AssignmentSubmissionListItem, error) {
 	var rows []models.AssignmentSubmission
 	err := s.db.
@@ -179,6 +296,18 @@ func (s *assignmentService) ListCourseSubmissions(tenantID, courseID uint) ([]As
 func (s *assignmentService) GetCourseSubmission(tenantID, courseID, submissionID uint) (*AssignmentSubmissionDetail, error) {
 	var submission models.AssignmentSubmission
 	err := s.db.Where("id = ? AND tenant_id = ? AND course_id = ?", submissionID, tenantID, courseID).First(&submission).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("submission not found")
+		}
+		return nil, err
+	}
+	return s.buildSubmissionDetail(submission.ID)
+}
+
+func (s *assignmentService) GetStudentSubmission(tenantID, studentID, submissionID uint) (*AssignmentSubmissionDetail, error) {
+	var submission models.AssignmentSubmission
+	err := s.db.Where("id = ? AND tenant_id = ? AND student_id = ?", submissionID, tenantID, studentID).First(&submission).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("submission not found")
@@ -227,7 +356,7 @@ func (s *assignmentService) GradeSubmission(tenantID, courseID, submissionID uin
 	return s.buildSubmissionDetail(submission.ID)
 }
 
-func (s *assignmentService) ListStudentSubmissions(tenantID, studentID uint, courseID *uint) ([]AssignmentSubmissionListItem, error) {
+func (s *assignmentService) ListStudentSubmissions(tenantID, studentID uint, courseID *uint) ([]AssignmentSubmissionDetail, error) {
 	q := s.db.Preload("Assignment").Preload("Student").Preload("Files").
 		Where("tenant_id = ? AND student_id = ?", tenantID, studentID)
 	if courseID != nil {
@@ -237,7 +366,49 @@ func (s *assignmentService) ListStudentSubmissions(tenantID, studentID uint, cou
 	if err := q.Order("submitted_at DESC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	return s.mapSubmissionList(rows)
+
+	items := make([]AssignmentSubmissionDetail, 0, len(rows))
+	for _, row := range rows {
+		detail, err := s.buildSubmissionDetail(row.ID)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, *detail)
+	}
+	return items, nil
+}
+
+func (s *assignmentService) resolveAssignmentSession(tenantID, studentID uint, assignment *models.CourseAssignment) (*models.AssignmentAttemptSession, error) {
+	var session models.AssignmentAttemptSession
+	err := s.db.Where(
+		"tenant_id = ? AND student_id = ? AND assignment_id = ?",
+		tenantID, studentID, assignment.ID,
+	).First(&session).Error
+	if err == nil {
+		return &session, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	startedAt := time.Now()
+	var expiresAt *time.Time
+	if duration := assignmentTimeLimitDuration(assignment.TimeLimit, assignment.TimeLimitOption); duration > 0 {
+		expiry := startedAt.Add(duration)
+		expiresAt = &expiry
+	}
+
+	session = models.AssignmentAttemptSession{
+		TenantID:     tenantID,
+		StudentID:    studentID,
+		AssignmentID: assignment.ID,
+		StartedAt:    startedAt,
+		ExpiresAt:    expiresAt,
+	}
+	if err := s.db.Create(&session).Error; err != nil {
+		return nil, err
+	}
+	return &session, nil
 }
 
 func (s *assignmentService) loadPublishedAssignmentForStudent(tenantID, studentID uint, slug string, assignmentID uint) (*models.CourseDetails, *models.CourseAssignment, error) {
@@ -315,6 +486,31 @@ func (s *assignmentService) mapSubmissionList(rows []models.AssignmentSubmission
 	return items, nil
 }
 
+func (s *assignmentService) buildSubmissionSummary(submission models.AssignmentSubmission) *AssignmentSubmissionSummary {
+	files := make([]AssignmentSubmissionFileResponse, 0, len(submission.Files))
+	for _, file := range submission.Files {
+		files = append(files, AssignmentSubmissionFileResponse{
+			ID:       file.ID,
+			URL:      file.URL,
+			FileName: file.FileName,
+			MimeType: file.MimeType,
+			Size:     file.Size,
+		})
+	}
+
+	return &AssignmentSubmissionSummary{
+		ID:           submission.ID,
+		Score:        submission.Score,
+		MaxScore:     submission.MaxScore,
+		Percentage:   submission.Percentage,
+		Passed:       submission.Passed,
+		Status:       submission.Status,
+		SubmittedAt:  submission.SubmittedAt.Format(time.RFC3339),
+		ResponseText: submission.ResponseText,
+		Files:        files,
+	}
+}
+
 func (s *assignmentService) buildSubmissionDetail(submissionID uint) (*AssignmentSubmissionDetail, error) {
 	var submission models.AssignmentSubmission
 	if err := s.db.
@@ -330,22 +526,13 @@ func (s *assignmentService) buildSubmissionDetail(submissionID uint) (*Assignmen
 		return nil, errors.New("submission not found")
 	}
 
-	files := make([]AssignmentSubmissionFileResponse, 0, len(submission.Files))
-	for _, file := range submission.Files {
-		files = append(files, AssignmentSubmissionFileResponse{
-			ID:       file.ID,
-			URL:      file.URL,
-			FileName: file.FileName,
-			MimeType: file.MimeType,
-			Size:     file.Size,
-		})
-	}
+	summary := s.buildSubmissionSummary(submission)
 
 	return &AssignmentSubmissionDetail{
 		AssignmentSubmissionListItem: list[0],
-		ResponseText:                 submission.ResponseText,
+		ResponseText:                 summary.ResponseText,
 		InstructorFeedback:           submission.InstructorFeedback,
-		Files:                        files,
+		Files:                        summary.Files,
 	}, nil
 }
 

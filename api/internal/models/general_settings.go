@@ -9,6 +9,7 @@ type GeneralSettings struct {
 	Favicon       *string   `json:"favicon" form:"favicon" gorm:"type:varchar(255);null"`
 	StudentPrefix string    `json:"student_prefix" form:"student_prefix" gorm:"type:varchar(10);default:'S-'"`
 	TeacherPrefix string    `json:"teacher_prefix" form:"teacher_prefix" gorm:"type:varchar(10);default:'T-'"`
+	Currency      string    `json:"currency" form:"currency" gorm:"type:varchar(10);default:'BDT'"`
 	CreatedAt     time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 	TenantID      uint      `gorm:"column:tenant_id" json:"-"`

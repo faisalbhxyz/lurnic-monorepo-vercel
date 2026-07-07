@@ -13,17 +13,16 @@ import {
   TCourseSchema,
 } from "@/schema/course.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LucideEdit } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   Controller,
   useFieldArray,
   useForm,
   useFormContext,
 } from "react-hook-form";
-import { LuTrash2 } from "react-icons/lu";
 import { toast } from "sonner";
 import { nextChapterItemPosition } from "@/lib/chapterItems";
+import QuizQuestionList from "./QuizQuestionList";
 
 const options = [
   { id: 1, name: "Days", value: "days" },
@@ -42,9 +41,7 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
     closeEditQuiz,
     questions,
     setQuestions,
-    removeQuestion,
     editQuizID,
-    openEditQuestion,
   } = useCoursesStore();
 
   const { watch, control, getValues, setValue } = useFormContext<TCourseSchema>();
@@ -249,31 +246,9 @@ export default function QuizEdit({ isEdit = false }: { isEdit?: boolean }) {
               <div className="p-4 border-b border-gray-300">
                 <p className="font-semibold">Questions</p>
               </div>
-              <div className="p-2">
-                <div className="mb-3 p-4">
-                  <ul>
-                    {questions.map((question, index) => (
-                      <li key={index} className="flex items-center gap-3 mb-2">
-                        {index + 1}. {question.title}{" "}
-                        {isEdit && (
-                          <button
-                            type="button"
-                            className="text-blue-500"
-                            onClick={() => openEditQuestion(question._id)}
-                          >
-                            <LucideEdit size={16} />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="text-red-500"
-                          onClick={() => removeQuestion(question)}
-                        >
-                          <LuTrash2 size={16} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+              <div className="p-4">
+                <div className="mb-4">
+                  <QuizQuestionList questions={questions} />
                 </div>
                 <div className="flex items-center justify-center">
                   <Button

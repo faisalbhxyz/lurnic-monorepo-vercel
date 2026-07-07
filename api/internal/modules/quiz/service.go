@@ -21,9 +21,12 @@ type QuizService interface {
 	GetStudentQuiz(tenantID, studentID uint, slug string, quizID uint) (*StudentQuizResponse, error)
 	GetStudentQuizQuestion(tenantID, studentID uint, slug string, quizID uint, questionIndex int) (*StudentQuizQuestionResponse, error)
 	SubmitQuiz(tenantID, studentID uint, slug string, quizID uint, input SubmitQuizInput) (*QuizSubmissionDetail, error)
+	SkipQuiz(tenantID, studentID uint, slug string, quizID uint) (*QuizSubmissionDetail, error)
 	ListCourseSubmissions(tenantID, courseID uint) ([]QuizSubmissionListItem, error)
 	GetCourseSubmission(tenantID, courseID, submissionID uint) (*QuizSubmissionDetail, error)
+	UpdateSubmissionFeedback(tenantID, courseID, submissionID uint, input UpdateQuizSubmissionFeedbackInput) (*QuizSubmissionDetail, error)
 	ListStudentSubmissions(tenantID, studentID uint, courseID *uint) ([]QuizSubmissionListItem, error)
+	GetStudentSubmission(tenantID, studentID, submissionID uint) (*QuizSubmissionDetail, error)
 }
 
 type quizService struct {
@@ -288,6 +291,26 @@ func (s *quizService) GetCourseSubmission(tenantID, courseID, submissionID uint)
 	return s.buildSubmissionDetail(submission.ID, true)
 }
 
+func (s *quizService) UpdateSubmissionFeedback(tenantID, courseID, submissionID uint, input UpdateQuizSubmissionFeedbackInput) (*QuizSubmissionDetail, error) {
+	var submission models.QuizSubmission
+	err := s.db.
+		Where("id = ? AND tenant_id = ? AND course_id = ?", submissionID, tenantID, courseID).
+		First(&submission).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("submission not found")
+		}
+		return nil, err
+	}
+
+	submission.InstructorFeedback = input.Feedback
+	if err := s.db.Save(&submission).Error; err != nil {
+		return nil, err
+	}
+
+	return s.buildSubmissionDetail(submission.ID, true)
+}
+
 func (s *quizService) ListStudentSubmissions(tenantID, studentID uint, courseID *uint) ([]QuizSubmissionListItem, error) {
 	q := s.db.Preload("Quiz").Preload("Student").Where("tenant_id = ? AND student_id = ?", tenantID, studentID)
 	if courseID != nil {
@@ -298,6 +321,58 @@ func (s *quizService) ListStudentSubmissions(tenantID, studentID uint, courseID 
 		return nil, err
 	}
 	return s.mapSubmissionList(rows)
+}
+
+func (s *quizService) GetStudentSubmission(tenantID, studentID, submissionID uint) (*QuizSubmissionDetail, error) {
+	var submission models.QuizSubmission
+	err := s.db.
+		Preload("Quiz").
+		Where("id = ? AND tenant_id = ? AND student_id = ?", submissionID, tenantID, studentID).
+		First(&submission).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("submission not found")
+		}
+		return nil, err
+	}
+	return s.buildSubmissionDetail(submission.ID, submission.Quiz.RevealAnswers)
+}
+
+func (s *quizService) SkipQuiz(tenantID, studentID uint, slug string, quizID uint) (*QuizSubmissionDetail, error) {
+	_, quiz, err := s.loadPublishedQuizForStudent(tenantID, studentID, slug, quizID)
+	if err != nil {
+		return nil, err
+	}
+
+	attemptsUsed, err := s.countAttempts(tenantID, studentID, quiz.ID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureRetryAllowed(quiz, attemptsUsed); err != nil {
+		return nil, err
+	}
+
+	attemptNumber := attemptsUsed + 1
+	var session models.QuizAttemptSession
+	err = s.db.Where(
+		"tenant_id = ? AND student_id = ? AND quiz_id = ? AND attempt_number = ? AND submitted_at IS NULL",
+		tenantID, studentID, quiz.ID, attemptNumber,
+	).First(&session).Error
+
+	var submissionID uint
+	switch {
+	case err == nil:
+		submissionID, err = s.forfeitAttempt(&session, quiz, tenantID, studentID)
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		submissionID, err = s.createForfeitWithoutSession(tenantID, studentID, quiz, attemptNumber)
+	default:
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildSubmissionDetail(submissionID, quiz.RevealAnswers)
 }
 
 func (s *quizService) loadPublishedQuizForStudent(tenantID, studentID uint, slug string, quizID uint) (*models.CourseDetails, *models.CourseQuiz, error) {
@@ -374,7 +449,7 @@ func (s *quizService) resolveAttemptSession(tenantID, studentID uint, quiz *mode
 
 	if err == nil {
 		if session.IsExpired() {
-			if forfeitErr := s.forfeitAttempt(&session, quiz, tenantID, studentID); forfeitErr != nil {
+			if _, forfeitErr := s.forfeitAttempt(&session, quiz, tenantID, studentID); forfeitErr != nil {
 				return nil, attemptsUsed, forfeitErr
 			}
 			return s.resolveAttemptSession(tenantID, studentID, quiz)
@@ -424,18 +499,64 @@ func (s *quizService) questionsForSession(all []models.QuizQuestion, session *mo
 	return questionsFromOrder(all, order), nil
 }
 
-func (s *quizService) forfeitAttempt(session *models.QuizAttemptSession, quiz *models.CourseQuiz, tenantID, studentID uint) error {
+func (s *quizService) forfeitAttempt(session *models.QuizAttemptSession, quiz *models.CourseQuiz, tenantID, studentID uint) (uint, error) {
 	orderedQuestions, err := s.questionsForSession(quiz.Questions, session)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	var maxScore float32
-	for _, q := range orderedQuestions {
-		maxScore += q.Marks
+	maxScore := sumQuestionMarks(orderedQuestions)
+	submissionID, err := s.persistForfeitSubmission(tenantID, studentID, quiz, session.AttemptNumber, maxScore, func(tx *gorm.DB, now time.Time) error {
+		session.SubmittedAt = &now
+		return tx.Save(session).Error
+	})
+	if err != nil {
+		return 0, err
 	}
 
-	return s.db.Transaction(func(tx *gorm.DB) error {
+	_, _ = certificate.NewService(s.db).TryIssueCertificate(tenantID, studentID, quiz.CourseID)
+	return submissionID, nil
+}
+
+func (s *quizService) createForfeitWithoutSession(tenantID, studentID uint, quiz *models.CourseQuiz, attemptNumber int) (uint, error) {
+	order := buildQuestionOrder(quiz.Questions, quiz)
+	orderJSON, err := json.Marshal(order)
+	if err != nil {
+		return 0, err
+	}
+
+	orderedQuestions := questionsFromOrder(quiz.Questions, order)
+	maxScore := sumQuestionMarks(orderedQuestions)
+
+	submissionID, err := s.persistForfeitSubmission(tenantID, studentID, quiz, attemptNumber, maxScore, func(tx *gorm.DB, now time.Time) error {
+		session := models.QuizAttemptSession{
+			TenantID:      tenantID,
+			StudentID:     studentID,
+			QuizID:        quiz.ID,
+			AttemptNumber: attemptNumber,
+			QuestionOrder: orderJSON,
+			StartedAt:     now,
+			SubmittedAt:   &now,
+		}
+		return tx.Create(&session).Error
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	_, _ = certificate.NewService(s.db).TryIssueCertificate(tenantID, studentID, quiz.CourseID)
+	return submissionID, nil
+}
+
+func (s *quizService) persistForfeitSubmission(
+	tenantID, studentID uint,
+	quiz *models.CourseQuiz,
+	attemptNumber int,
+	maxScore float32,
+	afterCreate func(tx *gorm.DB, now time.Time) error,
+) (uint, error) {
+	var submissionID uint
+	err := s.db.Transaction(func(tx *gorm.DB) error {
 		now := time.Now()
 		submission := models.QuizSubmission{
 			TenantID:      tenantID,
@@ -443,7 +564,7 @@ func (s *quizService) forfeitAttempt(session *models.QuizAttemptSession, quiz *m
 			ChapterID:     quiz.ChapterID,
 			QuizID:        quiz.ID,
 			StudentID:     studentID,
-			AttemptNumber: session.AttemptNumber,
+			AttemptNumber: attemptNumber,
 			Score:         0,
 			MaxScore:      maxScore,
 			Percentage:    0,
@@ -455,9 +576,18 @@ func (s *quizService) forfeitAttempt(session *models.QuizAttemptSession, quiz *m
 		if err := tx.Create(&submission).Error; err != nil {
 			return err
 		}
-		session.SubmittedAt = &now
-		return tx.Save(session).Error
+		submissionID = submission.ID
+		return afterCreate(tx, now)
 	})
+	return submissionID, err
+}
+
+func sumQuestionMarks(questions []models.QuizQuestion) float32 {
+	var maxScore float32
+	for _, q := range questions {
+		maxScore += q.Marks
+	}
+	return maxScore
 }
 
 func (s *quizService) mapSubmissionList(rows []models.QuizSubmission) ([]QuizSubmissionListItem, error) {
@@ -517,35 +647,117 @@ func (s *quizService) buildSubmissionDetail(submissionID uint, revealAnswers boo
 		return nil, errors.New("submission not found")
 	}
 
-	answers := make([]QuizSubmissionAnswerResponse, 0, len(submission.Answers))
-	sort.Slice(submission.Answers, func(i, j int) bool {
-		return submission.Answers[i].QuestionID < submission.Answers[j].QuestionID
-	})
+	reveal := revealAnswers || submission.Quiz.RevealAnswers
 
+	answerByQuestion := make(map[uint]models.QuizSubmissionAnswer, len(submission.Answers))
 	for _, ans := range submission.Answers {
+		answerByQuestion[ans.QuestionID] = ans
+	}
+
+	questionOrder := make([]uint, 0, len(submission.Answers))
+	var session models.QuizAttemptSession
+	if err := s.db.
+		Where("student_id = ? AND quiz_id = ? AND attempt_number = ?", submission.StudentID, submission.QuizID, submission.AttemptNumber).
+		First(&session).Error; err == nil {
+		if order, decodeErr := decodeQuestionOrder(session.QuestionOrder); decodeErr == nil && len(order) > 0 {
+			questionOrder = order
+		}
+	}
+	if len(questionOrder) == 0 {
+		ids := make([]uint, 0, len(submission.Answers))
+		for _, ans := range submission.Answers {
+			ids = append(ids, ans.QuestionID)
+		}
+		sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+		questionOrder = ids
+	}
+
+	answers := make([]QuizSubmissionAnswerResponse, 0, len(questionOrder))
+	var correctCount, incorrectCount, unansweredCount int
+
+	for _, questionID := range questionOrder {
+		ans, ok := answerByQuestion[questionID]
+		if !ok {
+			continue
+		}
+
 		var submitted interface{}
-		_ = json.Unmarshal(ans.Answer, &submitted)
+		hasSubmitted := len(ans.Answer) > 0 && string(ans.Answer) != "null"
+		if hasSubmitted {
+			_ = json.Unmarshal(ans.Answer, &submitted)
+		}
 
 		item := QuizSubmissionAnswerResponse{
-			QuestionID:      ans.QuestionID,
-			QuestionTitle:   ans.Question.Title,
-			QuestionType:    ans.Question.Type,
-			SubmittedAnswer: submitted,
-			IsCorrect:       ans.IsCorrect,
-			MarksAwarded:    ans.MarksAwarded,
+			QuestionID:    ans.QuestionID,
+			QuestionTitle: ans.Question.Title,
+			QuestionType:  ans.Question.Type,
+			IsCorrect:     ans.IsCorrect,
+			MarksAwarded:  ans.MarksAwarded,
+			QuestionMarks: ans.Question.Marks,
 		}
-		if revealAnswers || submission.Quiz.RevealAnswers {
+		if hasSubmitted {
+			item.SubmittedAnswer = submitted
+		}
+		if ans.Question.Options != nil {
+			var options interface{}
+			_ = json.Unmarshal(*ans.Question.Options, &options)
+			item.Options = options
+		}
+		if reveal {
 			item.AnswerExplanation = ans.Question.AnswerExplanation
 			if ans.Question.CorrectAnswer != nil {
 				_ = json.Unmarshal(*ans.Question.CorrectAnswer, &item.CorrectAnswer)
 			}
 		}
+
+		switch {
+		case !hasSubmitted:
+			unansweredCount++
+		case ans.IsCorrect != nil && *ans.IsCorrect:
+			correctCount++
+		case ans.IsCorrect != nil && !*ans.IsCorrect:
+			incorrectCount++
+		default:
+			unansweredCount++
+		}
+
 		answers = append(answers, item)
+	}
+
+	quizTimeSeconds := int(quizTimeLimitDuration(submission.Quiz.TimeLimit, submission.Quiz.TimeLimitOption).Seconds())
+	passMarks := float32(0)
+	if submission.MaxScore > 0 {
+		passMarks = float32(math.Round(float64(submission.MaxScore*submission.Quiz.MinimumPassPercentage/100*100)) / 100)
+	}
+
+	var attemptTimeSeconds *int
+	attemptStartedAt := ""
+	if !session.StartedAt.IsZero() {
+		attemptStartedAt = session.StartedAt.Format(time.RFC3339)
+		endTime := submission.SubmittedAt
+		if session.SubmittedAt != nil {
+			endTime = *session.SubmittedAt
+		}
+		seconds := int(endTime.Sub(session.StartedAt).Seconds())
+		if seconds < 0 {
+			seconds = 0
+		}
+		attemptTimeSeconds = &seconds
 	}
 
 	return &QuizSubmissionDetail{
 		QuizSubmissionListItem: list[0],
-		RevealAnswers:          revealAnswers || submission.Quiz.RevealAnswers,
+		RevealAnswers:          reveal,
+		TotalQuestions:         len(answers),
+		CorrectCount:           correctCount,
+		IncorrectCount:         incorrectCount,
+		UnansweredCount:        unansweredCount,
+		PassMarks:              passMarks,
+		MinimumPassPercentage:  submission.Quiz.MinimumPassPercentage,
+		QuizTimeSeconds:        quizTimeSeconds,
+		AttemptTimeSeconds:     attemptTimeSeconds,
+		AttemptStartedAt:       attemptStartedAt,
+		InstructorFeedback:     submission.InstructorFeedback,
 		Answers:                answers,
 	}, nil
 }

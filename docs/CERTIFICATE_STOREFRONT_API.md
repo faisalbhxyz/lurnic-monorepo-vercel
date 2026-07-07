@@ -105,7 +105,8 @@ Authorization: Bearer <student_token>
     "count_lessons": true,
     "count_quizzes": true,
     "count_assignments": true,
-    "completed_lesson_ids": [12, 13, 14, 15]
+    "completed_lesson_ids": [12, 13, 14, 15],
+    "completed_quiz_ids": [9, 11]
   }
 }
 ```
@@ -117,6 +118,7 @@ Authorization: Bearer <student_token>
 | `progress_percent` | Progress bar |
 | `count_lessons` / `count_quizzes` / `count_assignments` | Kon metric UI te dekhano hobe |
 | `completed_lesson_ids` | Lesson list e tick/check mark |
+| `completed_quiz_ids` | Quiz list e tick/check mark |
 
 **Errors:**
 

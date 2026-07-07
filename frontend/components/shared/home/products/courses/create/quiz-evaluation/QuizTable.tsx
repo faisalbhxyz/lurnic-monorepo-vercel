@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
 import { useSession } from "next-auth/react";
 import axios from "axios";
-import QuizSubmissionDetailModal from "./QuizSubmissionDetailModal";
+import QuizSubmissionDetailView from "./QuizSubmissionDetailView";
 
 type QuizSubmissionRow = {
   id: number;
@@ -21,14 +22,19 @@ type QuizSubmissionRow = {
 };
 
 export default function QuizTable({ courseId }: { courseId: number }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [filter, setFilter] = useState("All");
   const [rows, setRows] = useState<QuizSubmissionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<
-    number | null
-  >(null);
+
+  const submissionParam = searchParams.get("submission");
+  const selectedSubmissionId =
+    submissionParam && /^\d+$/.test(submissionParam)
+      ? Number(submissionParam)
+      : null;
 
   useEffect(() => {
     if (!session?.accessToken || !courseId) return;
@@ -57,6 +63,19 @@ export default function QuizTable({ courseId }: { courseId: number }) {
       .finally(() => setLoading(false));
   }, [session?.accessToken, courseId]);
 
+  const openSubmission = (submissionId: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "Quizzes");
+    params.set("submission", String(submissionId));
+    router.replace(`?${params.toString()}`);
+  };
+
+  const closeSubmission = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("submission");
+    router.replace(`?${params.toString()}`);
+  };
+
   const filteredData =
     filter === "All"
       ? rows
@@ -65,6 +84,17 @@ export default function QuizTable({ courseId }: { courseId: number }) {
           if (filter === "Pending") return d.status === "submitted";
           return true;
         });
+
+  if (selectedSubmissionId != null) {
+    return (
+      <QuizSubmissionDetailView
+        courseId={courseId}
+        submissionId={selectedSubmissionId}
+        accessToken={session?.accessToken}
+        onBack={closeSubmission}
+      />
+    );
+  }
 
   return (
     <>
@@ -119,7 +149,7 @@ export default function QuizTable({ courseId }: { courseId: number }) {
               {filteredData.map((quiz) => (
                 <tr
                   key={quiz.id}
-                  onClick={() => setSelectedSubmissionId(quiz.id)}
+                  onClick={() => openSubmission(quiz.id)}
                   className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-4 py-2 text-sm">{quiz.quiz_title}</td>
@@ -164,17 +194,10 @@ export default function QuizTable({ courseId }: { courseId: number }) {
             </tbody>
           </table>
           <p className="text-xs text-gray-500 mt-3">
-            Click a row to view full submission details.
+            Click a row to review answers and see correct/incorrect results.
           </p>
         </div>
       )}
-
-      <QuizSubmissionDetailModal
-        courseId={courseId}
-        submissionId={selectedSubmissionId}
-        accessToken={session?.accessToken}
-        onClose={() => setSelectedSubmissionId(null)}
-      />
     </>
   );
 }

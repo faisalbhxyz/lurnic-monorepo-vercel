@@ -15,5 +15,6 @@ func RegisterGeneralSettingsRoutes(rg *gin.RouterGroup) {
 	{
 		authGroup.GET("", handler.Get)
 		authGroup.PUT("/update", handler.UpdateOrCreate)
+		authGroup.PUT("/currency", handler.UpdateCurrency)
 	}
 }

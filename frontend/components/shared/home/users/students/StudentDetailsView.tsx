@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,6 +17,7 @@ import {
 } from "react-icons/hi";
 import { BiEditAlt } from "react-icons/bi";
 import StudentDetailsActions from "./StudentDetailsActions";
+import { useCurrency } from "@/context/CurrencyContext";
 
 function fullName(student: IStudentDetails) {
   return `${student.first_name}${student.last_name ? ` ${student.last_name}` : ""}`;
@@ -24,10 +27,6 @@ function initials(student: IStudentDetails) {
   const first = student.first_name?.charAt(0) ?? "";
   const last = student.last_name?.charAt(0) ?? "";
   return (first + last).toUpperCase() || "?";
-}
-
-function formatMoney(amount: number) {
-  return `৳ ${amount.toLocaleString("en-BD")}`;
 }
 
 function PaymentStatusBadge({ status }: { status: "paid" | "unpaid" }) {
@@ -50,6 +49,7 @@ export default function StudentDetailsView({
   student: IStudentDetails;
   studentPrefix?: string | null;
 }) {
+  const { formatAmount } = useCurrency();
   const name = fullName(student);
   const orders = student.orders ?? [];
 
@@ -172,7 +172,7 @@ export default function StudentDetailsView({
         />
         <StatCard
           label="Total Spent"
-          value={formatMoney(student.stats.total_spent ?? 0)}
+          value={formatAmount(student.stats.total_spent ?? 0)}
           hint="Paid orders only"
           icon={<HiOutlineCash size={20} />}
           iconClassName="bg-emerald-50 text-emerald-600"
@@ -343,7 +343,7 @@ export default function StudentDetailsView({
                       {order.transaction_id || "—"}
                     </td>
                     <td className="p-3 font-medium whitespace-nowrap">
-                      {formatMoney(order.total)}
+                      {formatAmount(order.total)}
                     </td>
                   </tr>
                 ))}

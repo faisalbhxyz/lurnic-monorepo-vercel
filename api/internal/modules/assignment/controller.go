@@ -115,6 +115,25 @@ func (h *AssignmentHandler) ListStudentSubmissions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": data})
 }
 
+func (h *AssignmentHandler) GetStudentSubmission(c *gin.Context) {
+	submissionID, err := strconv.ParseUint(c.Param("submissionId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		return
+	}
+
+	data, err := h.service.GetStudentSubmission(c.GetUint("tenant_id"), c.GetUint("user_id"), uint(submissionID))
+	if err != nil {
+		status := http.StatusNotFound
+		if err.Error() != "submission not found" {
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": data})
+}
+
 func (h *AssignmentHandler) ListCourseSubmissions(c *gin.Context) {
 	courseID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

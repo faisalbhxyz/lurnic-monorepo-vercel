@@ -22,9 +22,10 @@ type QuizSubmission struct {
 	MaxScore      float32              `gorm:"column:max_score" json:"max_score"`
 	Percentage    float32              `json:"percentage"`
 	Passed        bool                 `json:"passed"`
-	Status        QuizSubmissionStatus `gorm:"type:enum('submitted','graded','pending_review');default:'submitted'" json:"status"`
-	SubmittedAt   time.Time            `gorm:"column:submitted_at" json:"submitted_at"`
-	GradedAt      *time.Time           `gorm:"column:graded_at" json:"graded_at,omitempty"`
+	Status              QuizSubmissionStatus `gorm:"type:enum('submitted','graded','pending_review');default:'submitted'" json:"status"`
+	SubmittedAt         time.Time            `gorm:"column:submitted_at" json:"submitted_at"`
+	GradedAt            *time.Time           `gorm:"column:graded_at" json:"graded_at,omitempty"`
+	InstructorFeedback  *string              `gorm:"column:instructor_feedback;type:text" json:"instructor_feedback,omitempty"`
 	CreatedAt     time.Time            `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time            `gorm:"autoUpdateTime" json:"updated_at"`
 	Quiz          CourseQuiz           `gorm:"foreignKey:QuizID;references:ID" json:"quiz,omitempty"`

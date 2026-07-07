@@ -13,6 +13,7 @@ import (
 type GeneralSettingsService interface {
 	GetGeneralSettings(tenantID uint) (*response.GeneralSettingsRes, error)
 	UpdateGeneralSettings(input *CreateOrUpdateGeneralSettingsInput, tenantID uint) error
+	UpdateCurrency(input *UpdateCurrencyInput, tenantID uint) error
 }
 
 type generalsettingsService struct {
@@ -51,6 +52,7 @@ func (s *generalsettingsService) UpdateGeneralSettings(input *CreateOrUpdateGene
 			Favicon:       utils.ZeroToNil(input.Favicon),
 			StudentPrefix: input.StudentPrefix,
 			TeacherPrefix: input.TeacherPrefix,
+			Currency:      "BDT",
 			TenantID:      tenantID,
 		}
 
@@ -91,4 +93,24 @@ func (s *generalsettingsService) UpdateGeneralSettings(input *CreateOrUpdateGene
 		return s.db.Where("tenant_id = ?", tenantID).Updates(&updatedSettings).Error
 	}
 
+}
+
+func (s *generalsettingsService) UpdateCurrency(input *UpdateCurrencyInput, tenantID uint) error {
+	var existing models.GeneralSettings
+	err := s.db.Where("tenant_id = ?", tenantID).First(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return s.db.Create(&models.GeneralSettings{
+			Currency:      input.Currency,
+			OrgName:       "Lurnic",
+			StudentPrefix: "S-",
+			TeacherPrefix: "T-",
+			TenantID:      tenantID,
+		}).Error
+	}
+	if err != nil {
+		return err
+	}
+	return s.db.Model(&models.GeneralSettings{}).
+		Where("tenant_id = ?", tenantID).
+		Update("currency", input.Currency).Error
 }

@@ -28,6 +28,8 @@ interface CoursesStore {
   setQuestions: (questions: QuizQuestion[]) => void;
   appendQuestion: (question: QuizQuestion) => void;
   removeQuestion: (question: QuizQuestion) => void;
+  duplicateQuestion: (question: QuizQuestion) => void;
+  reorderQuestions: (questions: QuizQuestion[]) => void;
   clearQuestions: () => void;
 
   isNewChapter: boolean;
@@ -100,6 +102,28 @@ export const useCoursesStore = create<CoursesStore>((set) => ({
     set((state) => ({
       questions: state.questions.filter((q) => q._id !== question._id),
     })),
+  duplicateQuestion: (question) =>
+    set((state) => ({
+      questions: [
+        ...state.questions,
+        {
+          ...question,
+          _id: Date.now(),
+          id: undefined,
+          options: question.options
+            ? question.options.map((option) => ({ ...option }))
+            : question.options,
+          correct_answer: question.correct_answer
+            ? question.type === "multiple_choice"
+              ? {
+                  values: [...(question.correct_answer.values ?? [])],
+                }
+              : { value: question.correct_answer.value }
+            : question.correct_answer,
+        },
+      ],
+    })),
+  reorderQuestions: (questions) => set({ questions }),
   clearQuestions: () => set({ questions: [] }),
 
   isNewChapter: false,

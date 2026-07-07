@@ -492,6 +492,7 @@ interface GeneralSettings {
   favicon: string | null;
   student_prefix: string;
   teacher_prefix: string;
+  currency: string;
   created_at: string;
   updated_at: string;
 }

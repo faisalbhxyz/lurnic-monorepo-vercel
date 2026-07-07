@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"mime/multipart"
+	"strings"
 	"testing"
+	"time"
 
 	"dashlearn/internal/models"
 
@@ -77,6 +79,7 @@ func setupAssignmentTestDB(t *testing.T) *gorm.DB {
 			file_upload_limit INTEGER DEFAULT 1,
 			total_marks REAL DEFAULT 10,
 			minimum_pass_marks REAL DEFAULT 6,
+			position INTEGER DEFAULT 0,
 			created_at DATETIME,
 			updated_at DATETIME
 		)`,
@@ -89,6 +92,7 @@ func setupAssignmentTestDB(t *testing.T) *gorm.DB {
 			phone TEXT,
 			email TEXT NOT NULL,
 			password TEXT NOT NULL,
+			profile_image TEXT,
 			status INTEGER DEFAULT 0,
 			otp_code TEXT,
 			created_at DATETIME,
@@ -131,6 +135,17 @@ func setupAssignmentTestDB(t *testing.T) *gorm.DB {
 			size INTEGER DEFAULT 0,
 			created_at DATETIME,
 			updated_at DATETIME
+		)`,
+		`CREATE TABLE IF NOT EXISTS assignment_attempt_sessions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			tenant_id INTEGER NOT NULL,
+			student_id INTEGER NOT NULL,
+			assignment_id INTEGER NOT NULL,
+			started_at DATETIME NOT NULL,
+			expires_at DATETIME,
+			created_at DATETIME,
+			updated_at DATETIME,
+			UNIQUE(tenant_id, student_id, assignment_id)
 		)`,
 	}
 	for _, stmt := range stmts {
@@ -256,6 +271,15 @@ func TestGetStudentAssignment_Enrolled(t *testing.T) {
 	if !resp.CanSubmit {
 		t.Fatal("expected can_submit true")
 	}
+	if resp.DeadlineAt == "" {
+		t.Fatal("expected deadline_at to be set")
+	}
+	if resp.SecondsRemaining == nil {
+		t.Fatal("expected seconds_remaining to be set")
+	}
+	if resp.MaxFileSizeBytes != MaxAssignmentFileSizeBytes {
+		t.Fatalf("unexpected max_file_size_bytes: %d", resp.MaxFileSizeBytes)
+	}
 }
 
 func TestSubmitAndGradeAssignment_Flow(t *testing.T) {
@@ -294,13 +318,34 @@ func TestSubmitAndGradeAssignment_Flow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetStudentAssignment after submit: %v", err)
 	}
-	if !afterSubmit.HasSubmitted || afterSubmit.CanSubmit {
-		t.Fatal("expected submitted and cannot submit again")
+	if !afterSubmit.HasSubmitted || !afterSubmit.CanSubmit || !afterSubmit.CanEdit {
+		t.Fatal("expected submitted with can_submit and can_edit true while pending review")
+	}
+	if afterSubmit.Submission == nil || afterSubmit.Submission.ResponseText == nil {
+		t.Fatal("expected full submission content on detail GET")
+	}
+	if len(afterSubmit.Submission.Files) != 1 {
+		t.Fatalf("expected 1 file on detail submission, got %d", len(afterSubmit.Submission.Files))
 	}
 
-	_, err = svc.SubmitAssignment(tenantID, studentID, "test-course", assignmentID, &responseText, nil)
-	if err == nil || err.Error() != "assignment already submitted" {
-		t.Fatalf("expected duplicate submit error, got %v", err)
+	updatedText := "<p>Updated answer</p>"
+	resubmitted, err := svc.SubmitAssignment(tenantID, studentID, "test-course", assignmentID, &updatedText, nil)
+	if err != nil {
+		t.Fatalf("resubmit assignment: %v", err)
+	}
+	if resubmitted.ResponseText == nil || *resubmitted.ResponseText != updatedText {
+		t.Fatalf("expected updated response text, got %+v", resubmitted.ResponseText)
+	}
+	if len(resubmitted.Files) != 1 {
+		t.Fatalf("expected existing file retained after text-only resubmit, got %d", len(resubmitted.Files))
+	}
+
+	afterGradeBlock, err := svc.GetStudentAssignment(tenantID, studentID, "test-course", assignmentID)
+	if err != nil {
+		t.Fatalf("GetStudentAssignment after resubmit: %v", err)
+	}
+	if !afterGradeBlock.CanSubmit || !afterGradeBlock.CanEdit {
+		t.Fatal("expected can still edit before grading")
 	}
 
 	list, err := svc.ListCourseSubmissions(tenantID, courseID)
@@ -345,6 +390,17 @@ func TestSubmitAndGradeAssignment_Flow(t *testing.T) {
 	if len(studentList) != 1 || studentList[0].Status != models.AssignmentSubmissionStatusGraded {
 		t.Fatalf("unexpected student submission list: %+v", studentList)
 	}
+	if studentList[0].ResponseText == nil || len(studentList[0].Files) != 1 {
+		t.Fatal("expected full submission detail in student list")
+	}
+
+	detail, err := svc.GetStudentSubmission(tenantID, studentID, submitted.ID)
+	if err != nil {
+		t.Fatalf("GetStudentSubmission: %v", err)
+	}
+	if detail.Status != models.AssignmentSubmissionStatusGraded {
+		t.Fatalf("expected graded detail, got %s", detail.Status)
+	}
 }
 
 func TestSubmitAssignment_RequiresContent(t *testing.T) {
@@ -356,6 +412,59 @@ func TestSubmitAssignment_RequiresContent(t *testing.T) {
 	if err == nil || err.Error() != "response text or at least one file is required" {
 		t.Fatalf("expected empty submission error, got %v", err)
 	}
+}
+
+func TestSubmitAssignment_RejectsOversizedFile(t *testing.T) {
+	db := setupAssignmentTestDB(t)
+	tenantID, _, _, assignmentID, studentID := seedAssignmentFixture(t, db)
+	svc := NewAssignmentService(db, mockUpload)
+
+	body := make([]byte, MaxAssignmentFileSizeBytes+1)
+	file := makeFileHeader(t, "big.pdf", "application/pdf", body)
+	_, err := svc.SubmitAssignment(tenantID, studentID, "test-course", assignmentID, nil, []*multipart.FileHeader{file})
+	if err == nil || !containsErr(err, "exceeds maximum size") {
+		t.Fatalf("expected file size error, got %v", err)
+	}
+}
+
+func TestSubmitAssignment_RejectsDisallowedMime(t *testing.T) {
+	db := setupAssignmentTestDB(t)
+	tenantID, _, _, assignmentID, studentID := seedAssignmentFixture(t, db)
+	svc := NewAssignmentService(db, mockUpload)
+
+	file := makeFileHeader(t, "evil.html", "text/html", []byte("<html></html>"))
+	_, err := svc.SubmitAssignment(tenantID, studentID, "test-course", assignmentID, nil, []*multipart.FileHeader{file})
+	if err == nil || !containsErr(err, "not allowed") {
+		t.Fatalf("expected mime error, got %v", err)
+	}
+}
+
+func TestSubmitAssignment_RejectsAfterTimeLimit(t *testing.T) {
+	db := setupAssignmentTestDB(t)
+	tenantID, _, _, assignmentID, studentID := seedAssignmentFixture(t, db)
+	svc := NewAssignmentService(db, mockUpload)
+
+	past := time.Now().Add(-2 * time.Hour)
+	session := models.AssignmentAttemptSession{
+		TenantID:     tenantID,
+		StudentID:    studentID,
+		AssignmentID: assignmentID,
+		StartedAt:    past.Add(-1 * time.Hour),
+		ExpiresAt:    &past,
+	}
+	if err := db.Create(&session).Error; err != nil {
+		t.Fatalf("create expired session: %v", err)
+	}
+
+	text := "<p>late</p>"
+	_, err := svc.SubmitAssignment(tenantID, studentID, "test-course", assignmentID, &text, nil)
+	if err == nil || err.Error() != "assignment time limit exceeded" {
+		t.Fatalf("expected time limit error, got %v", err)
+	}
+}
+
+func containsErr(err error, sub string) bool {
+	return err != nil && strings.Contains(err.Error(), sub)
 }
 
 func TestGetStudentAssignment_NotEnrolled(t *testing.T) {

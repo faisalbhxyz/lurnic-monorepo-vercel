@@ -9,6 +9,7 @@ type GeneralSettingsRes struct {
 	Favicon       *string   `json:"favicon" form:"favicon"`
 	StudentPrefix string    `json:"student_prefix" form:"student_prefix"`
 	TeacherPrefix string    `json:"teacher_prefix" form:"teacher_prefix"`
+	Currency      string    `json:"currency" form:"currency"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }

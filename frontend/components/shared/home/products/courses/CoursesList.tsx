@@ -6,6 +6,7 @@ import Link from "next/link";
 import Checkbox from "@/components/ui/Checkbox";
 import Pagination from "@/components/shared/Pagination";
 import { formatDate } from "@/lib/helpers";
+import FormattedPrice from "@/components/ui/FormattedPrice";
 
 import {
   DndContext,
@@ -222,7 +223,12 @@ function SortableRow({
               className="w-20 h-10 object-contain rounded-md"
             />
             <div>
-              <p className="font-medium">{course.title}</p>
+              <Link
+                href={`/courses/${course.id}`}
+                className="font-medium hover:text-primary transition-colors"
+              >
+                {course.title}
+              </Link>
               <div className="flex items-center gap-2 mt-1">
                 <p className="text-sm text-gray-600">
                   Topic:{" "}
@@ -262,7 +268,9 @@ function SortableRow({
         </div>
       </td>
 
-      <td className="p-3">{course.sale_price}</td>
+      <td className="p-3">
+        <FormattedPrice amount={course.sale_price} />
+      </td>
 
       <td className="p-3">
         <p>{formatDate(course.created_at)}</p>

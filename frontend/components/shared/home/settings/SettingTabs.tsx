@@ -35,7 +35,7 @@ export default function SettingTabs({
       case "Course":
         return <Course />;
       case "Monetization":
-        return <Monetization />;
+        return <Monetization generalSettings={generalsettings} />;
       case "Payment Methods":
         return <PaymentMethods />;
       case "Taxes":

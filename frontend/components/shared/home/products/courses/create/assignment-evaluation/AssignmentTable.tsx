@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
 import { useSession } from "next-auth/react";
 import axios from "axios";
-import AssignmentSubmissionDetailModal from "./AssignmentSubmissionDetailModal";
+import AssignmentSubmissionDetailView from "./AssignmentSubmissionDetailView";
 
 type AssignmentSubmissionRow = {
   id: number;
@@ -21,15 +22,26 @@ type AssignmentSubmissionRow = {
   file_count: number;
 };
 
-export default function AssignmentTable({ courseId }: { courseId: number }) {
+export default function AssignmentTable({
+  courseId,
+  courseTitle,
+}: {
+  courseId: number;
+  courseTitle: string;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [filter, setFilter] = useState("All");
   const [rows, setRows] = useState<AssignmentSubmissionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<
-    number | null
-  >(null);
+
+  const submissionParam = searchParams.get("submission");
+  const selectedSubmissionId =
+    submissionParam && /^\d+$/.test(submissionParam)
+      ? Number(submissionParam)
+      : null;
 
   const loadRows = () => {
     if (!session?.accessToken || !courseId) return;
@@ -62,6 +74,19 @@ export default function AssignmentTable({ courseId }: { courseId: number }) {
     loadRows();
   }, [session?.accessToken, courseId]);
 
+  const openSubmission = (submissionId: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "Assignments");
+    params.set("submission", String(submissionId));
+    router.replace(`?${params.toString()}`);
+  };
+
+  const closeSubmission = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("submission");
+    router.replace(`?${params.toString()}`);
+  };
+
   const filteredData =
     filter === "All"
       ? rows
@@ -70,6 +95,19 @@ export default function AssignmentTable({ courseId }: { courseId: number }) {
           if (filter === "Pending") return d.status === "submitted";
           return true;
         });
+
+  if (selectedSubmissionId != null) {
+    return (
+      <AssignmentSubmissionDetailView
+        courseId={courseId}
+        courseTitle={courseTitle}
+        submissionId={selectedSubmissionId}
+        accessToken={session?.accessToken}
+        onBack={closeSubmission}
+        onGraded={loadRows}
+      />
+    );
+  }
 
   return (
     <>
@@ -127,7 +165,7 @@ export default function AssignmentTable({ courseId }: { courseId: number }) {
               {filteredData.map((row) => (
                 <tr
                   key={row.id}
-                  onClick={() => setSelectedSubmissionId(row.id)}
+                  onClick={() => openSubmission(row.id)}
                   className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-4 py-2 text-sm">{row.assignment_title}</td>
@@ -179,14 +217,6 @@ export default function AssignmentTable({ courseId }: { courseId: number }) {
           </p>
         </div>
       )}
-
-      <AssignmentSubmissionDetailModal
-        courseId={courseId}
-        submissionId={selectedSubmissionId}
-        accessToken={session?.accessToken}
-        onClose={() => setSelectedSubmissionId(null)}
-        onGraded={loadRows}
-      />
     </>
   );
 }

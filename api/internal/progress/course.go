@@ -50,6 +50,7 @@ type Breakdown struct {
 	CountQuizzes         bool    `json:"count_quizzes"`
 	CountAssignments     bool    `json:"count_assignments"`
 	CompletedLessonIDs   []uint  `json:"completed_lesson_ids,omitempty"`
+	CompletedQuizIDs     []uint  `json:"completed_quiz_ids,omitempty"`
 }
 
 func CalcCourseProgress(db *gorm.DB, tenantID, studentID, courseID uint, opts Options) float32 {
@@ -128,6 +129,13 @@ func CalcBreakdown(db *gorm.DB, tenantID, studentID, courseID uint, opts Options
 		for _, row := range rows {
 			breakdown.CompletedLessonIDs = append(breakdown.CompletedLessonIDs, row.LessonID)
 		}
+
+		var quizIDs []uint
+		db.Model(&models.QuizSubmission{}).
+			Distinct("quiz_id").
+			Where("tenant_id = ? AND student_id = ? AND course_id = ?", tenantID, studentID, courseID).
+			Pluck("quiz_id", &quizIDs)
+		breakdown.CompletedQuizIDs = quizIDs
 	}
 
 	return breakdown

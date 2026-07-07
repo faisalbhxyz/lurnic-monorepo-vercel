@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Controller, useFormContext } from "react-hook-form";
 import { TCourseSchema } from "@/schema/course.schema";
 import CourseFeaturedImage from "./CourseFeaturedImage";
+import CurrencyPrefix from "@/components/ui/CurrencyPrefix";
 
 export default function Basics() {
   const {
@@ -175,9 +176,7 @@ export default function Basics() {
             <div>
               <p className="text-sm mb-1">Regular Price</p>
               <div className="border bg-white focus-within:border-primary flex items-center rounded-md">
-                <span className="w-10 h-8 flex items-center justify-center border-r border-gray-300">
-                  $
-                </span>
+                <CurrencyPrefix />
                 <input
                   type="text"
                   placeholder="0"
@@ -190,9 +189,7 @@ export default function Basics() {
             <div>
               <p className="text-sm mb-1">Sale Price</p>
               <div className="border bg-white focus-within:border-primary flex items-center rounded-md">
-                <span className="w-10 h-8 flex items-center justify-center border-r border-gray-300">
-                  $
-                </span>
+                <CurrencyPrefix />
                 <input
                   type="text"
                   placeholder="0"

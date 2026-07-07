@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import Basics from "./details/Basics";
 import Curriculum from "./curriculum/Curriculum";
-import QuizTable from "./quiz-evaluation/QuizTable";
-import AssignmentTable from "./assignment-evaluation/AssignmentTable";
 import ReviewsTable from "./reviews/ReviewsTable";
 import NoticesTable from "./notices/NoticesTable";
 import SettingTabs from "./settings/SettingTabs";
@@ -177,8 +175,6 @@ const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
 const tabs = [
   { id: 1, label: "Details" },
   { id: 2, label: "Curriculum" },
-  { id: 3, label: "Quizzes" },
-  { id: 4, label: "Assignments" },
   // { id: 5, label: "Reviews" },
   // { id: 6, label: "Notice" },
   { id: 7, label: "Settings" },
@@ -213,6 +209,7 @@ export default function CoursesTabs({
   const handleTabChange = (tabLabel: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabLabel);
+    params.delete("submission");
     router.replace(`?${params.toString()}`);
     setActiveTab(tabLabel);
   };
@@ -419,26 +416,6 @@ export default function CoursesTabs({
         return <Basics />;
       case "Curriculum":
         return <Curriculum />;
-      case "Quizzes":
-        return courseDetails?.id ? (
-          <div className="border p-5 rounded-lg mt-5">
-            <QuizTable courseId={courseDetails.id} />
-          </div>
-        ) : (
-          <div className="border p-5 rounded-lg mt-5 text-sm text-gray-500">
-            Save the course first to view quiz submissions.
-          </div>
-        );
-      case "Assignments":
-        return courseDetails?.id ? (
-          <div className="border p-5 rounded-lg mt-5">
-            <AssignmentTable courseId={courseDetails.id} />
-          </div>
-        ) : (
-          <div className="border p-5 rounded-lg mt-5 text-sm text-gray-500">
-            Save the course first to view assignment submissions.
-          </div>
-        );
       // case "Reviews":
       //   return (
       //     <div className="border p-5 rounded-lg mt-5">

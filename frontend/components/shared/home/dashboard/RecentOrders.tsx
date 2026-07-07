@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { formatDate } from "@/lib/helpers";
-
-function formatMoney(amount: number) {
-  return `৳ ${amount.toLocaleString("en-BD")}`;
-}
+import FormattedPrice from "@/components/ui/FormattedPrice";
 
 export default function RecentOrders({ orders }: { orders: IOrder[] }) {
   return (
@@ -33,7 +30,9 @@ export default function RecentOrders({ orders }: { orders: IOrder[] }) {
                   <p className="text-gray-700">{order.student.email}</p>
                   <p className="text-xs text-gray-500">{order.course.title}</p>
                 </td>
-                <td className="p-3 text-gray-700">{formatMoney(order.total)}</td>
+                <td className="p-3 text-gray-700">
+                  <FormattedPrice amount={order.total} />
+                </td>
                 <td className="p-3">
                   <span
                     className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium capitalize ${

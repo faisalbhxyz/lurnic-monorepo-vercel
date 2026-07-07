@@ -14,6 +14,10 @@ type SubmitQuizAnswerInput struct {
 	Value      interface{} `json:"value" binding:"required"`
 }
 
+type UpdateQuizSubmissionFeedbackInput struct {
+	Feedback *string `json:"feedback" binding:"omitempty"`
+}
+
 type QuizSubmissionListItem struct {
 	ID            uint                        `json:"id"`
 	QuizID        uint                        `json:"quiz_id"`
@@ -34,17 +38,29 @@ type QuizSubmissionListItem struct {
 
 type QuizSubmissionDetail struct {
 	QuizSubmissionListItem
-	RevealAnswers bool                           `json:"reveal_answers"`
-	Answers       []QuizSubmissionAnswerResponse `json:"answers"`
+	RevealAnswers           bool                           `json:"reveal_answers"`
+	TotalQuestions          int                            `json:"total_questions"`
+	CorrectCount            int                            `json:"correct_count"`
+	IncorrectCount          int                            `json:"incorrect_count"`
+	UnansweredCount         int                            `json:"unanswered_count"`
+	PassMarks               float32                        `json:"pass_marks"`
+	MinimumPassPercentage   float32                        `json:"minimum_pass_percentage"`
+	QuizTimeSeconds         int                            `json:"quiz_time_seconds"`
+	AttemptTimeSeconds      *int                           `json:"attempt_time_seconds,omitempty"`
+	AttemptStartedAt        string                         `json:"attempt_started_at,omitempty"`
+	InstructorFeedback      *string                        `json:"instructor_feedback,omitempty"`
+	Answers                 []QuizSubmissionAnswerResponse `json:"answers"`
 }
 
 type QuizSubmissionAnswerResponse struct {
 	QuestionID        uint                    `json:"question_id"`
 	QuestionTitle     string                  `json:"question_title"`
 	QuestionType      models.QuizQuestionType `json:"question_type"`
+	Options           interface{}             `json:"options,omitempty"`
 	SubmittedAnswer   interface{}             `json:"submitted_answer"`
 	IsCorrect         *bool                   `json:"is_correct"`
 	MarksAwarded      float32                 `json:"marks_awarded"`
+	QuestionMarks     float32                 `json:"question_marks"`
 	AnswerExplanation *string                 `json:"answer_explanation,omitempty"`
 	CorrectAnswer     interface{}             `json:"correct_answer,omitempty"`
 }
