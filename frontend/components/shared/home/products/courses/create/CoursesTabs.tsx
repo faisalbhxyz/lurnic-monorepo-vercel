@@ -33,6 +33,7 @@ import {
 } from "@/lib/helpers";
 import axios from "axios";
 import { normalizeChapterItemPositions, buildChapterItems, splitChapterItems } from "@/lib/chapterItems";
+import { normalizeAssignmentAttachments } from "@/lib/assignmentAttachments";
 
 const toDbId = (id?: number | null) =>
   id != null && Number(id) > 0 ? Number(id) : undefined;
@@ -153,22 +154,30 @@ const serializeChaptersForApi = (chapters: TCourseSchema["course_chapters"]) =>
         answer_explanation: question.answer_explanation ?? null,
       })),
     })),
-    assignments: assignments.map((assignment) => ({
+    assignments: assignments.map((assignment) => {
+      const allAttachments = assignment.attachments ?? [];
+      const stored = normalizeAssignmentAttachments(allAttachments);
+      const hasNewFiles = allAttachments.some((item) => item instanceof File);
+
+      return {
       id: toDbId(assignment.id),
       position: assignment.position ?? 0,
       title: assignment.title,
       instructions: assignment.instructions,
       attachments:
-        (assignment.attachments ?? []).filter(
-          (item) => !(item instanceof File)
-        ) ?? null,
+        stored && stored.length > 0
+          ? stored
+          : hasNewFiles
+            ? []
+            : null,
       is_published: assignment.is_published,
       time_limit: assignment.time_limit,
       time_limit_option: assignment.time_limit_option,
       file_upload_limit: assignment.file_upload_limit,
       total_marks: assignment.total_marks,
       minimum_pass_marks: assignment.minimum_pass_marks,
-    })),
+    };
+    }),
   };
   });
 
@@ -311,6 +320,7 @@ export default function CoursesTabs({
               _id: assignment.id,
               type: "assignment",
               position: (assignment as { position?: number }).position,
+              attachments: normalizeAssignmentAttachments(assignment.attachments),
             };
           }),
           quizzes: (chapter.quizzes ?? []).map((quiz) => {
@@ -592,7 +602,8 @@ export default function CoursesTabs({
             }
           });
         });
-        chapter.assignments?.forEach((assignment, assignmentIndex) => {
+        const { assignments } = splitChapterItems(buildChapterItems(chapter));
+        assignments.forEach((assignment, assignmentIndex) => {
           assignment.attachments?.forEach((file) => {
             if (file instanceof File) {
               fd.append(

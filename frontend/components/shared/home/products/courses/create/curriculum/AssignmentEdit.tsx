@@ -29,25 +29,13 @@ import {
 } from "react-hook-form";
 import { IoIosArrowDown } from "react-icons/io";
 import { nextChapterItemPosition } from "@/lib/chapterItems";
+import {
+  buildAttachmentPreviews,
+  revokeBlobUrls,
+} from "@/lib/assignmentAttachments";
 
 const ACCEPTED_ATTACHMENT_TYPES =
   "image/jpeg,image/jpg,image/png,image/gif,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip";
-
-type StoredAttachment = {
-  url: string;
-  file_name: string;
-  mime_type?: string;
-  size?: number;
-};
-
-function isStoredAttachment(value: unknown): value is StoredAttachment {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "url" in value &&
-    typeof (value as StoredAttachment).url === "string"
-  );
-}
 const options = [
   { id: 2, name: "Minutes", value: "minutes" },
   { id: 3, name: "Hours", value: "hours" },
@@ -63,6 +51,7 @@ export default function AssignmentEdit({
 }) {
   const [isMedia, setIsMedia] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const previewBlobUrlsRef = useRef<string[]>([]);
   const [previews, setPreviews] = useState<
     { type: "image" | "file"; src: string; name: string }[]
   >([]);
@@ -156,6 +145,9 @@ export default function AssignmentEdit({
   };
 
   useEffect(() => {
+    revokeBlobUrls(previewBlobUrlsRef.current);
+    previewBlobUrlsRef.current = [];
+
     const watchedAssignments =
       watch(`course_chapters.${safeChapterIndex}.assignments`) || [];
     if (isEdit && assignmentID && watchedAssignments?.length > 0) {
@@ -163,16 +155,19 @@ export default function AssignmentEdit({
       if (index !== -1) {
         const assignment = watchedAssignments[index];
         formMethods.reset(assignment);
-        const existing = (assignment.attachments ?? []).filter(isStoredAttachment);
-        setPreviews(
-          existing.map((item) => ({
-            type: item.mime_type?.startsWith("image/") ? "image" : "file",
-            src: item.url,
-            name: item.file_name,
-          }))
-        );
+        const attachments = assignment.attachments ?? [];
+        const { previews: nextPreviews, blobUrls } =
+          buildAttachmentPreviews(attachments);
+        previewBlobUrlsRef.current = blobUrls;
+        setPreviews(nextPreviews);
+        setIsMedia(attachments.length > 0);
       }
     }
+
+    return () => {
+      revokeBlobUrls(previewBlobUrlsRef.current);
+      previewBlobUrlsRef.current = [];
+    };
   }, [isEdit, assignmentID, watch, safeChapterIndex, formMethods]);
 
   const handleSave = (data: TCourseAssignmentSchema) => {
