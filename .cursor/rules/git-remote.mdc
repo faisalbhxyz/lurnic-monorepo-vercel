@@ -9,8 +9,9 @@ This repo's **canonical remote** is **`lurnic-new`** → `https://github.com/fai
 
 When the user asks to commit or push:
 
-- **Push to `lurnic-new`**, not `origin` (`adstryker/lurnic-server`).
-- Use `git push -u lurnic-new HEAD` on a new branch, or `git push lurnic-new` / plain `git push` when upstream is already `lurnic-new/*`.
-- Do **not** push to `origin` or `fbh` unless the user explicitly asks for a different remote.
+- **Always push to `lurnic-new` first** — this is the production/canonical repo.
+- Command: `git push lurnic-new HEAD` (or `git push lurnic-new master` on master).
+- Do **not** push to `origin` (`adstryker/lurnic-server`) or `fbh` unless the user explicitly asks.
+- After commit, verify: `git rev-parse master` must match `lurnic-new/master`.
 
-Local `master` tracks **`lurnic-new/master`**.
+New branch: `git push -u lurnic-new HEAD`
