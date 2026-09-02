@@ -281,17 +281,7 @@ func LoginStudent(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
-		"user": gin.H{
-			"user_id": user.UserID,
-			"name": user.FirstName + func() string {
-				if user.LastName != nil {
-					return " " + *user.LastName
-				}
-				return ""
-			}(),
-			"phone": user.Phone,
-			"email": user.Email,
-		},
+		"user":  studentLoginUserResponse(user),
 	})
 
 }

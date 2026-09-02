@@ -44,4 +44,5 @@ type EnrolledCourseRes struct {
 	Course    CourseDetailsPublicResponse `json:"course" gorm:"foreignKey:ID;references:CourseID"`
 	StudentID uint                        `json:"student_id"`
 	CreatedAt time.Time                   `json:"created_at"`
+	UpdatedAt time.Time                   `json:"updated_at"`
 }

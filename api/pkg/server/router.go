@@ -9,6 +9,7 @@ import (
 	"dashlearn/internal/modules/certificate"
 	"dashlearn/internal/modules/courseprogress"
 	"dashlearn/internal/modules/course"
+	"dashlearn/internal/modules/coursereview"
 	"dashlearn/internal/modules/enrollment"
 	generalsettings "dashlearn/internal/modules/general_settings"
 	"dashlearn/internal/modules/instructor"
@@ -157,6 +158,7 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	assignment.RegisterAssignmentRoutes(apiRoutesGroup)
 	certificate.RegisterCertificateRoutes(apiRoutesGroup)
 	courseprogress.RegisterCourseProgressRoutes(apiRoutesGroup)
+	coursereview.RegisterRoutes(apiRoutesGroup)
 
 	// Vercel/serverless: in-process cron is disabled when VERCEL=1; schedule this path in vercel.json
 	// and set CRON_SECRET (Vercel sends Authorization: Bearer <CRON_SECRET>).

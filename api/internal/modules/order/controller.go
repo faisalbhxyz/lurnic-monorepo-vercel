@@ -43,7 +43,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully", "order": res})
+	c.JSON(http.StatusCreated, gin.H{"message": "Order placed successfully", "order": res})
 }
 
 func (h *OrderHandler) MarkAsPaid(c *gin.Context) {

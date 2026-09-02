@@ -2,6 +2,7 @@ package enrollment
 
 import (
 	"dashlearn/internal/models"
+	coursemodule "dashlearn/internal/modules/course"
 	"dashlearn/internal/response"
 	"errors"
 
@@ -42,33 +43,50 @@ func (s *enrollmentService) GetAll(tenantID uint) ([]response.EnrollmentResponse
 }
 
 func (s *enrollmentService) GetEnrolledCourses(tenantID uint, studentID uint) ([]response.EnrolledCourseRes, error) {
-	var enrollments []response.EnrolledCourseRes
-	var modelEnrollment []models.Enrollment
-
+	var modelEnrollments []models.Enrollment
 	err := s.db.
-		Preload("Course").
-		// Select("id", "course_id", "course", "student_id", "student", "created_at", "updated_at", "course.title").
 		Where(&models.Enrollment{
 			TenantID:  tenantID,
 			StudentID: studentID,
 		}).
-		Find(&modelEnrollment).Error
+		Order("created_at DESC").
+		Find(&modelEnrollments).Error
+	if err != nil {
+		return nil, err
+	}
 
-	for _, enrollment := range modelEnrollment {
+	if len(modelEnrollments) == 0 {
+		return []response.EnrolledCourseRes{}, nil
+	}
+
+	courseIDs := make([]uint, len(modelEnrollments))
+	for i, enrollment := range modelEnrollments {
+		courseIDs[i] = enrollment.CourseID
+	}
+
+	coursesByID, err := coursemodule.LoadPublicCoursesByIDs(s.db, tenantID, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	enrollments := make([]response.EnrolledCourseRes, 0, len(modelEnrollments))
+	for _, enrollment := range modelEnrollments {
+		course, ok := coursesByID[enrollment.CourseID]
+		if !ok || course == nil {
+			continue
+		}
+
 		enrollments = append(enrollments, response.EnrolledCourseRes{
-			ID:       enrollment.ID,
-			CourseID: enrollment.CourseID,
-			Course: response.CourseDetailsPublicResponse{
-				ID:            enrollment.Course.ID,
-				Title:         enrollment.Course.Title,
-				Slug:          enrollment.Course.Slug,
-				FeaturedImage: enrollment.Course.FeaturedImage,
-			},
+			ID:        enrollment.ID,
+			CourseID:  enrollment.CourseID,
+			Course:    *course,
 			StudentID: enrollment.StudentID,
+			CreatedAt: enrollment.CreatedAt,
+			UpdatedAt: enrollment.UpdatedAt,
 		})
 	}
 
-	return enrollments, err
+	return enrollments, nil
 }
 
 func (s *enrollmentService) Create(input models.Enrollment, tenantID uint) error {

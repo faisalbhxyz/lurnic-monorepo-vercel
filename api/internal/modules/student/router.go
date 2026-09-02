@@ -19,6 +19,8 @@ func RegisterStudentRoutes(rg *gin.RouterGroup) {
 
 	publicGroup := rg.Group("/student", middleware.GetTenantID())
 	{
+		storefront := NewStorefrontHandler()
+
 		publicGroup.POST("/login", LoginStudent)
 		publicGroup.POST("/logout", middleware.StudentAuthMiddleware(), LogoutStudent)
 		publicGroup.POST("/register", CreateStudentPublic)
@@ -26,5 +28,10 @@ func RegisterStudentRoutes(rg *gin.RouterGroup) {
 		publicGroup.POST("/reset-password", ResetPasswordStudent)
 		publicGroup.GET("/details", middleware.StudentAuthMiddleware(), GetStudentDetails)
 		publicGroup.PUT("/update", middleware.StudentAuthMiddleware(), UpdateStudentProfile)
+
+		publicGroup.GET("/learning-report", middleware.StudentAuthMiddleware(), storefront.GetLearningReport)
+		publicGroup.GET("/notifications", middleware.StudentAuthMiddleware(), storefront.ListNotifications)
+		publicGroup.PATCH("/notifications/:id/read", middleware.StudentAuthMiddleware(), storefront.MarkNotificationRead)
+		publicGroup.GET("/orders", middleware.StudentAuthMiddleware(), storefront.ListOrders)
 	}
 }
