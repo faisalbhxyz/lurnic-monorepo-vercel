@@ -655,7 +655,10 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 
 			// Create lessons
 			for _, lesson := range chapter.CourseLessons {
-				sourceJSON := utils.JSONB[models.Source]{Data: lesson.Source}
+				sourceType, sourceJSON, err := prepareLessonSource(lesson.LessonType, lesson.SourceType, lesson.Source)
+				if err != nil {
+					return err
+				}
 
 				var lessonDateForDB *string
 				var lessonTimeForDB *string
@@ -685,7 +688,7 @@ func (s *courseService) Create(input CourseDetailsInput, tenantID uint, userID u
 					Description: utils.EmptyStringToNil(lesson.Description),
 					Position:    lesson.Position,
 					LessonType:  lesson.LessonType,
-					SourceType:  lesson.SourceType,
+					SourceType:  sourceType,
 					Source:      sourceJSON,
 					IsPublished: func() bool {
 						if lesson.IsScheduled {
@@ -1039,7 +1042,10 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 
 			fmt.Println("🔄 Processing lesson:", lesson.Title)
 
-			sourceJSON := utils.JSONB[models.Source]{Data: lesson.Source}
+			sourceType, sourceJSON, err := prepareLessonSource(lesson.LessonType, lesson.SourceType, lesson.Source)
+			if err != nil {
+				return err
+			}
 
 			var lessonDateForDB *string
 			var lessonTimeForDB *string
@@ -1080,7 +1086,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					existingLesson.Description = utils.EmptyStringToNil(lesson.Description)
 					existingLesson.Position = lesson.Position
 					existingLesson.LessonType = lesson.LessonType
-					existingLesson.SourceType = lesson.SourceType
+					existingLesson.SourceType = sourceType
 					existingLesson.Source = sourceJSON
 					if lesson.IsScheduled {
 						existingLesson.IsPublished = false
@@ -1127,7 +1133,7 @@ func (s *courseService) Update(courseID, tenantID, userID uint, input CourseDeta
 					Description:     utils.EmptyStringToNil(lesson.Description),
 					Position:        lesson.Position,
 					LessonType:      lesson.LessonType,
-					SourceType:      lesson.SourceType,
+					SourceType:      sourceType,
 					Source:          sourceJSON,
 					IsPublished:     !lesson.IsScheduled,
 					IsPublic:        lesson.IsPublic,

@@ -141,7 +141,7 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
               isDBImg: true,
               url: r.file_path,
               size: r.size || 13495,
-              type: r.mine_type,
+              type: r.mime_type ?? r.mine_type,
             };
           }),
           source: {
@@ -173,7 +173,7 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
                 course_id: r.course_id,
                 name: r.title,
                 url: r.file_path,
-                type: r.mine_type,
+                type: r.mime_type ?? r.mine_type,
                 isDBImg: true,
                 size: 13495,
               };

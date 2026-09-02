@@ -72,7 +72,7 @@ type CreateCourseLesson struct {
 	Title           string                  `json:"title" form:"title" binding:"required"`
 	Description     *string                 `json:"description" form:"description" binding:"omitempty"`
 	LessonType      models.LessonType       `json:"lesson_type" form:"lesson_type" binding:"required,oneof=video live_session audio text"`
-	SourceType      models.LessonSourceType `json:"source_type" form:"source_type" binding:"required,oneof=youtube vimeo sound_cloud spotify custom_code upload"`
+	SourceType      models.LessonSourceType `json:"source_type" form:"source_type" binding:"required,oneof=youtube vimeo sound_cloud spotify custom_code upload google_drive"`
 	Source          models.Source           `json:"source" form:"source" binding:"omitempty"`
 	IsPublished     bool                    `json:"is_published" form:"is_published" binding:"required"`
 	IsPublic        bool                    `json:"is_public" form:"is_public" binding:"required"`

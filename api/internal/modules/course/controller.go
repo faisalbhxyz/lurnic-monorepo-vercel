@@ -15,12 +15,14 @@ import (
 )
 
 type CourseHandler struct {
-	service CourseService
+	service         CourseService
+	downloadService *DownloadService
 }
 
 func NewCourseHandler(db *gorm.DB) *CourseHandler {
 	return &CourseHandler{
-		service: NewCourseService(db),
+		service:         NewCourseService(db),
+		downloadService: NewDownloadService(db),
 	}
 }
 

@@ -99,18 +99,20 @@ const (
 type LessonSourceType string
 
 const (
-	Youtube    LessonSourceType = "youtube"
-	Vimeo      LessonSourceType = "vimeo"
-	CustomCode LessonSourceType = "custom_code"
-	UploadFile LessonSourceType = "upload"
-	SoundCloud LessonSourceType = "sound_cloud"
-	Spotify    LessonSourceType = "spotify"
+	Youtube      LessonSourceType = "youtube"
+	Vimeo        LessonSourceType = "vimeo"
+	CustomCode   LessonSourceType = "custom_code"
+	UploadFile   LessonSourceType = "upload"
+	GoogleDrive  LessonSourceType = "google_drive"
+	SoundCloud   LessonSourceType = "sound_cloud"
+	Spotify      LessonSourceType = "spotify"
 )
 
 type Source struct {
 	Data          string  `json:"data"`
 	IsFile        bool    `json:"is_file"`
-	PlaybackTimes *string `json:"playback_times"`
+	PlaybackTimes *string `json:"playback_times,omitempty"`
+	DriveFileID   *string `json:"drive_file_id,omitempty"`
 }
 
 type CourseLesson struct {
@@ -118,7 +120,7 @@ type CourseLesson struct {
 	Title           string              `json:"title"`
 	Description     *string             `gorm:"type:text" json:"description"`
 	LessonType      LessonType          `gorm:"enum('video','live_session','audio','text');default:'video'" json:"lesson_type"`
-	SourceType      LessonSourceType    `gorm:"enum('youtube','vimeo', 'sound_cloud','spotify','custom_code','upload');default:'youtube'" json:"source_type"`
+	SourceType      LessonSourceType    `gorm:"enum('youtube','vimeo','sound_cloud','spotify','custom_code','upload','google_drive');default:'upload'" json:"source_type"`
 	Source          utils.JSONB[Source] `gorm:"type:json" json:"source"`
 	IsPublished     bool                `gorm:"default:false" json:"is_published"`
 	IsPublic        bool                `gorm:"default:false" json:"is_public"`
@@ -139,7 +141,7 @@ type LessonResource struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	CourseID  uint      `gorm:"column:course_id" json:"course_id"`
 	LessonID  uint      `gorm:"column:lesson_id" json:"lesson_id"`
-	MimeType  string    `gorm:"column:mime_type" json:"mine_type"`
+	MimeType  string    `gorm:"column:mime_type" json:"mime_type"`
 	Title     string    `json:"title"`
 	FilePath  string    `gorm:"column:file_path" json:"file_path"`
 	Position  int       `json:"position"`

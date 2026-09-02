@@ -34,21 +34,7 @@ func BuildCourseDetailsPublicResponse(modelCourse *models.CourseDetails) *respon
 	for _, chapter := range modelCourse.Chapters {
 		lessons := make([]response.CourseLessonResponse, 0, len(chapter.Lessons))
 		for _, lesson := range chapter.Lessons {
-			lessons = append(lessons, response.CourseLessonResponse{
-				ID:          lesson.ID,
-				Title:       lesson.Title,
-				Description: lesson.Description,
-				Position:    lesson.Position,
-				CreatedAt:   lesson.CreatedAt,
-				UpdatedAt:   lesson.UpdatedAt,
-				ChapterID:   lesson.ChapterID,
-				LessonType:  lesson.LessonType,
-				SourceType:  lesson.SourceType,
-				Source:      lesson.Source,
-				IsPublic:    lesson.IsPublic,
-				IsPublished: lesson.IsPublished,
-				Resources:   lesson.Resources,
-			})
+			lessons = append(lessons, mapPublicLesson(lesson))
 		}
 
 		assignments := make([]response.CourseAssignmentResponse, 0, len(chapter.Assignments))
