@@ -3,7 +3,7 @@
 CREATE TABLE student_notifications (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT UNSIGNED NOT NULL,
-    student_id BIGINT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NOT NULL,
     title VARCHAR(255) NOT NULL,
     body TEXT NULL,
     type VARCHAR(50) NOT NULL DEFAULT 'general',

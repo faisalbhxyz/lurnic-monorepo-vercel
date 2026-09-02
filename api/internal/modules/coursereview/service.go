@@ -3,6 +3,7 @@ package coursereview
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"math"
 	"strings"
 
@@ -56,6 +57,14 @@ func (s *Service) ListReviews(params ListReviewsParams) (*response.CourseReviews
 	}
 	offset := (page - 1) * perPage
 
+	emptySummary := func() *response.CourseReviewsSummary {
+		return &response.CourseReviewsSummary{
+			AverageRating: 0,
+			TotalReviews:  0,
+			Reviews:       []response.CourseReviewResponse{},
+		}
+	}
+
 	var reviews []models.CourseReview
 	if err := s.db.
 		Preload("Student", func(db *gorm.DB) *gorm.DB {
@@ -66,19 +75,33 @@ func (s *Service) ListReviews(params ListReviewsParams) (*response.CourseReviews
 		Limit(perPage).
 		Offset(offset).
 		Find(&reviews).Error; err != nil {
+		if isMissingTable(err) {
+			log.Printf("[coursereview] course_reviews table missing; returning empty summary (run migration 00063)")
+			return emptySummary(), nil
+		}
 		return nil, err
 	}
 
 	var total int64
-	s.db.Model(&models.CourseReview{}).
+	if err := s.db.Model(&models.CourseReview{}).
 		Where("tenant_id = ? AND course_id = ? AND status = ?", params.TenantID, course.ID, models.CourseReviewStatusPublished).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		if isMissingTable(err) {
+			return emptySummary(), nil
+		}
+		return nil, err
+	}
 
 	var avgRating float64
-	s.db.Model(&models.CourseReview{}).
+	if err := s.db.Model(&models.CourseReview{}).
 		Where("tenant_id = ? AND course_id = ? AND status = ?", params.TenantID, course.ID, models.CourseReviewStatusPublished).
 		Select("COALESCE(AVG(rating), 0)").
-		Scan(&avgRating)
+		Scan(&avgRating).Error; err != nil {
+		if isMissingTable(err) {
+			return emptySummary(), nil
+		}
+		return nil, err
+	}
 
 	summary := &response.CourseReviewsSummary{
 		AverageRating: math.Round(avgRating*10) / 10,

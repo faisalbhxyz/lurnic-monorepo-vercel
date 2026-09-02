@@ -3,8 +3,8 @@
 CREATE TABLE course_reviews (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT UNSIGNED NOT NULL,
-    course_id BIGINT UNSIGNED NOT NULL,
-    student_id BIGINT UNSIGNED NOT NULL,
+    course_id INT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NOT NULL,
     rating TINYINT UNSIGNED NOT NULL,
     comment TEXT NULL,
     tags JSON NULL,

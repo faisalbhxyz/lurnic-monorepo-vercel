@@ -1,6 +1,7 @@
 package coursereview
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -38,6 +39,7 @@ func (h *Handler) ListCourseReviews(c *gin.Context) {
 			apiresponse.NotFound(c, "Course not found")
 			return
 		}
+		log.Printf("[coursereview] ListCourseReviews failed slug=%s tenant=%d: %v", c.Param("slug"), c.GetUint("tenant_id"), err)
 		apiresponse.Error(c, http.StatusInternalServerError, "Failed to load reviews", "INTERNAL_ERROR")
 		return
 	}
