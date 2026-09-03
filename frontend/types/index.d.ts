@@ -143,11 +143,13 @@ interface ICourseLesson {
     | "spotify"
     | "recording"
     | "custom_code"
-    | "upload";
+    | "upload"
+    | "google_drive";
   source: {
     data: File | string;
     playback_time?: string | null;
     isFile: boolean;
+    drive_url?: string | null;
   };
   is_published: boolean;
   is_public: boolean;
@@ -217,7 +219,8 @@ type LessonSourceType =
   | "custom_code"
   | "upload"
   | "sound_cloud"
-  | "spotify";
+  | "spotify"
+  | "google_drive";
 
 interface IntroVideo {
   type: string;
@@ -228,6 +231,8 @@ interface Source {
   data: string;
   is_file: boolean;
   playback_times?: string | null;
+  drive_url?: string | null;
+  drive_file_id?: string | null;
 }
 
 interface CourseDetails {

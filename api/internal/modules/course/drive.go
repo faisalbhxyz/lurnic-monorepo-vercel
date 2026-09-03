@@ -37,12 +37,19 @@ func IsDirectVideoURL(url string) bool {
 	return directVideoURLPattern.MatchString(strings.TrimSpace(url))
 }
 
+func offlineCandidateURL(source models.Source) string {
+	if url := strings.TrimSpace(source.DriveURL); url != "" {
+		return url
+	}
+	return strings.TrimSpace(source.Data)
+}
+
 func OfflineDownloadable(lessonType models.LessonType, source models.Source) bool {
 	if lessonType != models.Video {
 		return false
 	}
 
-	url := strings.TrimSpace(source.Data)
+	url := offlineCandidateURL(source)
 	if _, ok := ExtractDriveFileID(url); ok {
 		return true
 	}
@@ -53,7 +60,7 @@ func OfflineDownloadable(lessonType models.LessonType, source models.Source) boo
 }
 
 func DownloadURLForLesson(source models.Source) string {
-	url := strings.TrimSpace(source.Data)
+	url := offlineCandidateURL(source)
 	if url == "" {
 		return ""
 	}
@@ -72,12 +79,23 @@ func NormalizeLessonSource(
 	source models.Source,
 ) (models.LessonSourceType, models.Source) {
 	source.Data = strings.TrimSpace(source.Data)
+	source.DriveURL = strings.TrimSpace(source.DriveURL)
 	if lessonType != models.Video {
+		source.DriveURL = ""
+		source.DriveFileID = nil
+		return sourceType, source
+	}
+
+	if source.DriveURL != "" {
+		if fileID, ok := ExtractDriveFileID(source.DriveURL); ok {
+			source.DriveFileID = &fileID
+		}
 		return sourceType, source
 	}
 
 	fileID, ok := ExtractDriveFileID(source.Data)
 	if !ok {
+		source.DriveFileID = nil
 		return sourceType, source
 	}
 
@@ -87,6 +105,11 @@ func NormalizeLessonSource(
 }
 
 func ValidateLessonSource(sourceType models.LessonSourceType, source models.Source) error {
+	if source.DriveURL != "" {
+		if _, ok := ExtractDriveFileID(source.DriveURL); !ok {
+			return errors.New("drive_url must be a valid Google Drive URL")
+		}
+	}
 	if sourceType != models.GoogleDrive {
 		return nil
 	}

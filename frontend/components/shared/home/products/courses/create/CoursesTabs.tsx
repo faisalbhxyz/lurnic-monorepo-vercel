@@ -96,6 +96,7 @@ const serializeLessonSourceForApi = (source?: {
   data?: unknown;
   isFile?: boolean;
   playback_time?: string | null;
+  drive_url?: string | null;
 }) => ({
   data:
     typeof source?.data === "string"
@@ -105,6 +106,7 @@ const serializeLessonSourceForApi = (source?: {
         : "",
   is_file: Boolean(source?.isFile),
   playback_times: source?.playback_time ?? null,
+  drive_url: source?.drive_url?.trim() ? source.drive_url.trim() : "",
 });
 
 const tabForFieldPath = (path: string): string => {
@@ -338,6 +340,7 @@ export default function CoursesTabs({
                 data: source.data?.data ?? source.data,
                 playback_time: source.data?.playback_times,
                 isFile: false,
+                drive_url: source.data?.drive_url ?? "",
               },
             };
           })

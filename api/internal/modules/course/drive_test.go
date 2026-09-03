@@ -90,6 +90,15 @@ func TestOfflineDownloadable(t *testing.T) {
 			source:     models.Source{Data: "https://www.youtube.com/watch?v=test"},
 			want:       false,
 		},
+		{
+			name:       "youtube playback with separate drive url",
+			lessonType: models.Video,
+			source: models.Source{
+				Data:     "https://www.youtube.com/watch?v=test",
+				DriveURL: driveURL,
+			},
+			want: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -107,6 +116,17 @@ func TestOfflineDownloadable(t *testing.T) {
 	if normalizedSource.DriveFileID == nil || *normalizedSource.DriveFileID != fileID {
 		t.Fatalf("expected drive_file_id %q, got %#v", fileID, normalizedSource.DriveFileID)
 	}
+
+	keptType, keptSource := NormalizeLessonSource(models.Video, models.Youtube, models.Source{
+		Data:     "https://www.youtube.com/watch?v=test",
+		DriveURL: driveURL,
+	})
+	if keptType != models.Youtube {
+		t.Fatalf("expected source type youtube, got %q", keptType)
+	}
+	if keptSource.DriveFileID == nil || *keptSource.DriveFileID != fileID {
+		t.Fatalf("expected drive_file_id from drive_url %q, got %#v", fileID, keptSource.DriveFileID)
+	}
 }
 
 func TestValidateLessonSource(t *testing.T) {
@@ -115,5 +135,11 @@ func TestValidateLessonSource(t *testing.T) {
 	}
 	if err := ValidateLessonSource(models.GoogleDrive, models.Source{Data: "https://example.com/video.mp4"}); err == nil {
 		t.Fatal("expected validation error for invalid google_drive source")
+	}
+	if err := ValidateLessonSource(models.Youtube, models.Source{
+		Data:     "https://www.youtube.com/watch?v=test",
+		DriveURL: "https://example.com/not-drive",
+	}); err == nil {
+		t.Fatal("expected validation error for invalid drive_url")
 	}
 }

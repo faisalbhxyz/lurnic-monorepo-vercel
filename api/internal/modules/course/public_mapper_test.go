@@ -128,6 +128,58 @@ func TestBuildCourseDetailsPublicResponse_IncludesGoogleDriveOfflineFields(t *te
 	}
 }
 
+func TestBuildCourseDetailsPublicResponse_YouTubeKeepsPlaybackWithDriveURL(t *testing.T) {
+	driveURL := "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing"
+	fileID := "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+	youtubeEmbed := `<iframe src="https://www.youtube.com/embed/vHXkebRshWk"></iframe>`
+	course := &models.CourseDetails{
+		ID:    5,
+		Title: "Mixed Source Course",
+		Slug:  "mixed-source-course",
+		Chapters: []models.CourseChapter{
+			{
+				ID:       10,
+				Title:    "Chapter 1",
+				Access:   models.Published,
+				CourseID: 5,
+				Lessons: []models.CourseLesson{
+					{
+						ID:         42,
+						Title:      "Intro",
+						LessonType: models.Video,
+						SourceType: models.Youtube,
+						Source: utils.JSONB[models.Source]{
+							Data: models.Source{
+								Data:        youtubeEmbed,
+								IsFile:      false,
+								DriveURL:    driveURL,
+								DriveFileID: &fileID,
+							},
+						},
+						IsPublished: true,
+						ChapterID:   10,
+					},
+				},
+			},
+		},
+	}
+
+	got := BuildCourseDetailsPublicResponse(course)
+	lesson := got.Chapters[0].Lessons[0]
+	if lesson.SourceType != models.Youtube {
+		t.Fatalf("expected youtube source type, got %q", lesson.SourceType)
+	}
+	if lesson.Source.Data.Data != youtubeEmbed {
+		t.Fatalf("expected youtube embed preserved, got %q", lesson.Source.Data.Data)
+	}
+	if !lesson.OfflineDownloadable {
+		t.Fatal("expected offline_downloadable=true when drive_url is set")
+	}
+	if lesson.DownloadURL == nil || *lesson.DownloadURL != driveURL {
+		t.Fatalf("expected download_url=%q, got %#v", driveURL, lesson.DownloadURL)
+	}
+}
+
 func TestMapLessonResources_EmptyReturnsNil(t *testing.T) {
 	if got := response.MapLessonResources(nil); got != nil {
 		t.Fatalf("expected nil for empty input, got %#v", got)

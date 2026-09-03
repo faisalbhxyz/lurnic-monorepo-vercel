@@ -103,6 +103,8 @@ func (s *Service) UpdateLessonVideoProgress(tenantID, studentID uint, slug strin
 			"max_position_seconds": maxPosition,
 			"duration_seconds":     duration,
 			"progress_percent":     progressPercent,
+			// Force touch so learning-report daily aggregation (by updated_at) sees rewatches.
+			"updated_at": time.Now(),
 		}
 		if err := s.db.Model(&existing).Updates(updates).Error; err != nil {
 			return nil, err

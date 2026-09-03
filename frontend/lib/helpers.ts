@@ -94,3 +94,20 @@ export function hhmmToScheduleTime(hhmm: string): string {
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
 }
+
+const driveFileIdPatterns = [
+  /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+  /drive\.google\.com\/open\?(?:[^#&]*&)*id=([a-zA-Z0-9_-]+)/,
+  /drive\.google\.com\/uc\?(?:[^#&]*&)*id=([a-zA-Z0-9_-]+)/,
+  /docs\.google\.com\/uc\?(?:[^#&]*&)*id=([a-zA-Z0-9_-]+)/,
+];
+
+export function extractDriveFileId(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  for (const pattern of driveFileIdPatterns) {
+    const match = value.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}

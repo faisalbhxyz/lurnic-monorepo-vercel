@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { extractDriveFileId } from "@/lib/helpers";
 
 export const QuizOptionSchema = z.object({
   id: z.string().trim().min(1, { message: "Option id is required" }),
@@ -205,11 +206,13 @@ export const CourseLessonSchema = z
       "recording",
       "custom_code",
       "upload",
+      "google_drive",
     ]),
     source: z.object({
       data: z.any(),
       playback_time: z.string().optional().nullable(),
       isFile: z.boolean(),
+      drive_url: z.string().optional().nullable(),
     }),
     is_published: z.boolean(),
     is_public: z.boolean(),
@@ -229,7 +232,8 @@ export const CourseLessonSchema = z
       .optional()
       .nullable(),
   })
-  .superRefine(({ source, is_scheduled, schedule_date, schedule_time }, ctx) => {
+  .superRefine(
+    ({ source, is_scheduled, schedule_date, schedule_time }, ctx) => {
     // Keep client validation aligned with Go API:
     // - schedule_date must be YYYY-MM-DD
     // - schedule_time must be "03:04 PM" (12h with minutes)
@@ -285,6 +289,16 @@ export const CourseLessonSchema = z
           message: "This field is required.",
         });
       }
+    }
+
+    const driveURL =
+      typeof source.drive_url === "string" ? source.drive_url.trim() : "";
+    if (driveURL && !extractDriveFileId(driveURL)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["source", "drive_url"],
+        message: "Enter a valid Google Drive file URL.",
+      });
     }
   });
 

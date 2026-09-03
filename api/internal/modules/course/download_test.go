@@ -76,6 +76,31 @@ func TestBuildLessonDownloadResult_YouTubeNotDownloadable(t *testing.T) {
 	}
 }
 
+func TestBuildLessonDownloadResult_YouTubeWithSeparateDriveURL(t *testing.T) {
+	driveURL := "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing"
+	lesson := &models.CourseLesson{
+		Title:      "YouTube Lesson",
+		LessonType: models.Video,
+		SourceType: models.Youtube,
+		Source: utils.JSONB[models.Source]{
+			Data: models.Source{
+				Data:     `<iframe src="https://www.youtube.com/embed/vHXkebRshWk"></iframe>`,
+				IsFile:   false,
+				DriveURL: driveURL,
+			},
+		},
+	}
+
+	got, err := buildLessonDownloadResult(lesson)
+	if err != nil {
+		t.Fatalf("buildLessonDownloadResult() error = %v", err)
+	}
+	wantURL := "https://drive.usercontent.google.com/download?id=1AbCdEfGhIjKlMnOpQrStUvWxYz&export=download&confirm=t"
+	if got.RedirectURL != wantURL {
+		t.Fatalf("RedirectURL = %q, want %q", got.RedirectURL, wantURL)
+	}
+}
+
 func TestLessonDownloadFileName(t *testing.T) {
 	if got := lessonDownloadFileName("  Hello World!  ", ".mp4"); got != "hello-world.mp4" {
 		t.Fatalf("unexpected filename %q", got)

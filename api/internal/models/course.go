@@ -112,6 +112,7 @@ type Source struct {
 	Data          string  `json:"data"`
 	IsFile        bool    `json:"is_file"`
 	PlaybackTimes *string `json:"playback_times,omitempty"`
+	DriveURL      string  `json:"drive_url,omitempty"`
 	DriveFileID   *string `json:"drive_file_id,omitempty"`
 }
 

@@ -23,6 +23,7 @@ import UploadResources from "./UploadResources";
 import Schedule from "../details/Schedule";
 import LessonSchedule from "../lesson/LessonSchedule";
 import { nextChapterItemPosition } from "@/lib/chapterItems";
+import { extractDriveFileId } from "@/lib/helpers";
 
 const mediaOptions = [
   { id: 1, name: "Video", value: "video" },
@@ -80,6 +81,7 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
         data: "",
         playback_time: "",
         isFile: false,
+        drive_url: "",
       },
       is_scheduled: false,
       schedule_date: null,
@@ -148,6 +150,7 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
             data: lesson.source.data,
             playback_time: lesson.source.playback_time,
             isFile: lesson.source.isFile,
+            drive_url: lesson.source.drive_url ?? "",
           },
         });
       }
@@ -252,6 +255,27 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
     );
   };
 
+  const renderDrivePreview = () => {
+    const fileId = extractDriveFileId(
+      String(formMethods.watch("source.drive_url") ?? "")
+    );
+    if (!fileId) {
+      return (
+        <p className="text-gray-500 text-sm">
+          Preview unavailable. Please add a Google Drive link.
+        </p>
+      );
+    }
+    return (
+      <iframe
+        title="Google Drive preview"
+        src={`https://drive.google.com/file/d/${fileId}/preview`}
+        className="w-full min-h-44"
+        allow="autoplay"
+      />
+    );
+  };
+
   return (
     <>
       {/* {JSON.stringify(formMethods.formState.errors, null, 2)} */}
@@ -350,11 +374,9 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
                         value={selected}
                         onChange={(option) => {
                           onChange(option.value);
-                          formMethods.setValue("source", {
-                            data: "",
-                            isFile: false,
-                            playback_time: "",
-                          });
+                          formMethods.setValue("source.data", "");
+                          formMethods.setValue("source.isFile", false);
+                          formMethods.setValue("source.playback_time", "");
                         }}
                         className="w-full font-medium"
                       />
@@ -386,11 +408,9 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
                         value={selected}
                         onChange={(option) => {
                           onChange(option.value);
-                          formMethods.setValue("source", {
-                            data: "",
-                            isFile: false,
-                            playback_time: "",
-                          });
+                          formMethods.setValue("source.data", "");
+                          formMethods.setValue("source.isFile", false);
+                          formMethods.setValue("source.playback_time", "");
                         }}
                         className="w-full font-medium"
                       />
@@ -537,11 +557,12 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
                         value={selected}
                         onChange={(option) => {
                           onChange(option.value);
-                          formMethods.setValue("source", {
-                            data: "",
-                            isFile: false,
-                            playback_time: "",
-                          });
+                          formMethods.setValue("source.data", "");
+                          formMethods.setValue("source.isFile", false);
+                          formMethods.setValue("source.playback_time", "");
+                          if (option.value !== "video") {
+                            formMethods.setValue("source.drive_url", "");
+                          }
                         }}
                         className="w-full font-medium"
                       />
@@ -555,6 +576,39 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
           <div className="mt-4">
             <LessonSchedule formMethods={formMethods} />
           </div>
+
+          {formMethods.watch("lesson_type") === "video" && (
+            <div className="border rounded-xl mt-5">
+              <div className="p-4 border-b border-gray-300">
+                <p className="font-semibold">Offline Download</p>
+              </div>
+              <div className="p-4">
+                <label
+                  htmlFor="drive_url"
+                  className="block mb-1 text-sm font-semibold"
+                >
+                  Google Drive video
+                </label>
+                <InputField
+                  id="drive_url"
+                  placeholder="https://drive.google.com/file/d/FILE_ID/view"
+                  className="w-full"
+                  {...formMethods.register("source.drive_url")}
+                  error={
+                    formMethods.formState.errors.source?.drive_url?.message
+                  }
+                />
+                <p className="text-sm text-gray-600 font-medium mt-2">
+                  Optional. Students use this file for offline download in the
+                  app. Lesson playback still uses the source on the left.
+                  Sharing must be “Anyone with the link”.
+                </p>
+                <div className="w-full border rounded-md p-5 mt-4 flex items-center justify-center min-h-36">
+                  {renderDrivePreview()}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="border rounded-xl mt-5">
             <div className="p-4 border-b border-gray-300">

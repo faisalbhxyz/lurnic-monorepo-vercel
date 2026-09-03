@@ -51,7 +51,7 @@ func buildLessonDownloadResult(lesson *models.CourseLesson) (*LessonDownloadResu
 		return nil, ErrDownloadNotDownloadable
 	}
 
-	sourceURL := strings.TrimSpace(lesson.Source.Data.Data)
+	sourceURL := offlineCandidateURL(lesson.Source.Data)
 	if sourceURL == "" {
 		return nil, ErrDownloadNotDownloadable
 	}

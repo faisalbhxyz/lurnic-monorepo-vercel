@@ -3,6 +3,7 @@ package student
 import (
 	"errors"
 	"math"
+	"strings"
 	"time"
 
 	"dashlearn/internal/models"
@@ -34,15 +35,37 @@ type DailyWatchSecondsEntry struct {
 	Seconds int64  `json:"seconds"`
 }
 
+func reportLocation() *time.Location {
+	loc, err := time.LoadLocation("Asia/Dhaka")
+	if err != nil {
+		return time.UTC
+	}
+	return loc
+}
+
+func startOfLocalDay(t time.Time, loc *time.Location) time.Time {
+	local := t.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
+}
+
+func normalizeReportDate(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if len(raw) >= 10 {
+		return raw[:10]
+	}
+	return raw
+}
+
 func (s *StorefrontService) GetLearningReport(tenantID, studentID uint, period string) (*LearningReportResponse, error) {
 	days, err := parseReportPeriod(period)
 	if err != nil {
 		return nil, err
 	}
 
-	startDate := time.Now().AddDate(0, 0, -(days - 1)).Truncate(24 * time.Hour)
+	loc := reportLocation()
+	startDate := startOfLocalDay(time.Now(), loc).AddDate(0, 0, -(days - 1))
 
-	dailyWatch, err := s.aggregateDailyWatchSeconds(tenantID, studentID, startDate)
+	dailyWatch, err := s.aggregateDailyWatchSeconds(tenantID, studentID, startDate, days, loc)
 	if err != nil {
 		return nil, err
 	}
@@ -82,17 +105,18 @@ func parseReportPeriod(period string) (int, error) {
 	}
 }
 
-func (s *StorefrontService) aggregateDailyWatchSeconds(tenantID, studentID uint, startDate time.Time) ([]DailyWatchSecondsEntry, error) {
+func (s *StorefrontService) aggregateDailyWatchSeconds(tenantID, studentID uint, startDate time.Time, days int, loc *time.Location) ([]DailyWatchSecondsEntry, error) {
 	type row struct {
 		Date    string
 		Seconds float64
 	}
 
 	var rows []row
+	// DATE_FORMAT keeps a stable YYYY-MM-DD key even when the driver returns DATETIME blobs.
 	err := s.db.Model(&models.StudentLessonVideoProgress{}).
-		Select("DATE(updated_at) as date, SUM(max_position_seconds) as seconds").
+		Select("DATE_FORMAT(updated_at, '%Y-%m-%d') as date, SUM(max_position_seconds) as seconds").
 		Where("tenant_id = ? AND student_id = ? AND updated_at >= ?", tenantID, studentID, startDate).
-		Group("DATE(updated_at)").
+		Group("DATE_FORMAT(updated_at, '%Y-%m-%d')").
 		Order("date ASC").
 		Scan(&rows).Error
 	if err != nil {
@@ -101,17 +125,20 @@ func (s *StorefrontService) aggregateDailyWatchSeconds(tenantID, studentID uint,
 
 	byDate := make(map[string]int64, len(rows))
 	for _, row := range rows {
-		byDate[row.Date] = int64(math.Round(row.Seconds))
+		key := normalizeReportDate(row.Date)
+		if key == "" {
+			continue
+		}
+		byDate[key] += int64(math.Round(row.Seconds))
 	}
 
-	days := int(time.Since(startDate).Hours()/24) + 1
 	if days < 1 {
 		days = 1
 	}
 
 	result := make([]DailyWatchSecondsEntry, 0, days)
 	for i := 0; i < days; i++ {
-		day := startDate.AddDate(0, 0, i).Format("2006-01-02")
+		day := startDate.In(loc).AddDate(0, 0, i).Format("2006-01-02")
 		result = append(result, DailyWatchSecondsEntry{
 			Date:    day,
 			Seconds: byDate[day],
