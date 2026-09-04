@@ -521,9 +521,9 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
                 </>
               )}
 
-              {/* Public toggle */}
+              {/* Free (preview) toggle — storefront Free Class catalog */}
               <div className="flex items-center justify-between mt-3">
-                <label className="text-sm font-semibold">Public</label>
+                <label className="text-sm font-semibold">Free</label>
                 <Controller
                   control={formMethods.control}
                   name="is_public"
@@ -536,7 +536,7 @@ export default function LessonItem({ isEdit = false }: { isEdit?: boolean }) {
                 />
               </div>
               <p className="text-sm text-gray-600 font-medium">
-                Make lesson public for students
+                Free class এ দেখাবে — enrollment ছাড়াই প্লে করা যাবে
               </p>
 
               {/* Lesson Type Select */}

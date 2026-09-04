@@ -11,6 +11,7 @@ import (
 	"dashlearn/internal/modules/course"
 	"dashlearn/internal/modules/coursereview"
 	"dashlearn/internal/modules/enrollment"
+	"dashlearn/internal/modules/freelesson"
 	generalsettings "dashlearn/internal/modules/general_settings"
 	"dashlearn/internal/modules/instructor"
 	"dashlearn/internal/modules/order"
@@ -189,6 +190,7 @@ func NewEngine(version string) (*gin.Engine, func(time.Duration) bool, error) {
 	order.RegisterCourseRoutes(apiRoutesGroup)
 	generalsettings.RegisterGeneralSettingsRoutes(apiRoutesGroup)
 	paymentmethod.RegisterRoutes(apiRoutesGroup)
+	freelesson.RegisterRoutes(apiRoutesGroup)
 
 	return router, flush, nil
 }

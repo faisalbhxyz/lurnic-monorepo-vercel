@@ -2,7 +2,7 @@ package student
 
 import "dashlearn/internal/models"
 
-func studentLoginUserResponse(user models.Student) map[string]interface{} {
+func studentLoginUserResponse(user models.Student, classProfile *models.StudentClassProfile) map[string]interface{} {
 	status := "inactive"
 	if user.Status {
 		status = "active"
@@ -17,5 +17,6 @@ func studentLoginUserResponse(user models.Student) map[string]interface{} {
 		"phone":         user.Phone,
 		"profile_image": user.ProfileImage,
 		"status":        status,
+		"class_profile": toClassProfileResponse(classProfile),
 	}
 }

@@ -81,6 +81,16 @@ func buildStudentAdminDetails(db *gorm.DB, tenantID, studentID uint) (*response.
 		}
 	}
 
+	var learningTime *response.StudentLearningTimeSummary
+	if summary, summaryErr := NewStorefrontService(db).GetLearningTimeSummary(tenantID, studentID); summaryErr == nil && summary != nil {
+		learningTime = &response.StudentLearningTimeSummary{
+			VideoSeconds7d:  summary.VideoSeconds7d,
+			VideoSeconds30d: summary.VideoSeconds30d,
+			StreakDays:      summary.StreakDays,
+			LastWatchedAt:   summary.LastWatchedAt,
+		}
+	}
+
 	return &response.StudentDetailsAdminResponse{
 		ID:           student.ID,
 		UserID:       student.UserID,
@@ -92,8 +102,8 @@ func buildStudentAdminDetails(db *gorm.DB, tenantID, studentID uint) (*response.
 		Status:       student.Status,
 		CreatedAt:    student.CreatedAt,
 		UpdatedAt:    student.UpdatedAt,
-		Enrollments: enrollmentDetails,
-		Orders:      orderDetails,
+		Enrollments:  enrollmentDetails,
+		Orders:       orderDetails,
 		Stats: response.StudentDetailsStats{
 			TotalEnrollments:     len(enrollmentDetails),
 			AverageProgress:      avgProgress,
@@ -105,6 +115,7 @@ func buildStudentAdminDetails(db *gorm.DB, tenantID, studentID uint) (*response.
 			TotalSpent:           orderStats.spent,
 		},
 		ActiveDevice: activeDevice,
+		LearningTime: learningTime,
 	}, nil
 }
 

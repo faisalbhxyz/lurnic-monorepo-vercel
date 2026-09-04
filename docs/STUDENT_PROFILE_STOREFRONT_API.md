@@ -29,6 +29,7 @@ Protected route এ **`Authorization: Bearer <student_jwt>`** (login থেক�
 |--------|--------|------|------|
 | Profile দেখা | `GET` | `/student/details` | `app-key` + `Bearer` |
 | Profile + image update | `PUT` | `/student/update` | `app-key` + `Bearer` |
+| Class / grade preference | `GET`/`PUT` | `/student/class-profile` | `app-key` + `Bearer` — [STUDENT_CLASS_PROFILE_STOREFRONT_API.md](./STUDENT_CLASS_PROFILE_STOREFRONT_API.md) |
 | Login (token নেওয়ার জন্য) | `POST` | `/student/login` | `app-key` |
 
 **Admin dashboard (reference only — storefront এ ব্যবহার করবেন না):**

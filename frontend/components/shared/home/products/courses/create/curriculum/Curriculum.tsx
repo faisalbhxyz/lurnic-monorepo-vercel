@@ -331,6 +331,11 @@ function SortableItem({
           <span className="ml-5 text-xs bg-gray-200 px-2 py-0.5 rounded-md">
             {item.is_published ? "Published" : "Draft"}
           </span>
+          {item.type === "lesson" && item.is_public && (
+            <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+              Free
+            </span>
+          )}
         </div>
         <ItemActions
           chapterID={chapterId}

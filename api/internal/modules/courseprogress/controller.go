@@ -21,7 +21,7 @@ func NewHandler() *Handler {
 func (h *Handler) GetCourseProgress(c *gin.Context) {
 	slug := c.Param("slug")
 	tenantID := c.GetUint("tenant_id")
-	studentID := c.GetUint("student_id")
+	studentID := c.GetUint("user_id")
 
 	data, err := h.service.GetCourseProgress(tenantID, studentID, slug)
 	if err != nil {
@@ -39,7 +39,7 @@ func (h *Handler) GetCourseProgress(c *gin.Context) {
 func (h *Handler) MarkLessonComplete(c *gin.Context) {
 	slug := c.Param("slug")
 	tenantID := c.GetUint("tenant_id")
-	studentID := c.GetUint("student_id")
+	studentID := c.GetUint("user_id")
 
 	lessonID, err := strconv.ParseUint(c.Param("lessonId"), 10, 64)
 	if err != nil {
@@ -63,7 +63,7 @@ func (h *Handler) MarkLessonComplete(c *gin.Context) {
 func (h *Handler) GetLessonVideoProgress(c *gin.Context) {
 	slug := c.Param("slug")
 	tenantID := c.GetUint("tenant_id")
-	studentID := c.GetUint("student_id")
+	studentID := c.GetUint("user_id")
 
 	lessonID, err := strconv.ParseUint(c.Param("lessonId"), 10, 64)
 	if err != nil {
@@ -91,7 +91,7 @@ func (h *Handler) GetLessonVideoProgress(c *gin.Context) {
 func (h *Handler) UpdateLessonVideoProgress(c *gin.Context) {
 	slug := c.Param("slug")
 	tenantID := c.GetUint("tenant_id")
-	studentID := c.GetUint("student_id")
+	studentID := c.GetUint("user_id")
 
 	lessonID, err := strconv.ParseUint(c.Param("lessonId"), 10, 64)
 	if err != nil {

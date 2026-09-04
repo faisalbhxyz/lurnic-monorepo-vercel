@@ -31,7 +31,7 @@ func (s *Service) GetCourseProgress(tenantID, studentID uint, slug string) (*pro
 }
 
 func (s *Service) GetLessonVideoProgress(tenantID, studentID uint, slug string, lessonID uint) (*LessonVideoProgressResponse, error) {
-	course, err := s.loadEnrolledCourse(tenantID, studentID, slug)
+	course, err := s.loadCourseForLessonAccess(tenantID, studentID, slug, lessonID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s *Service) GetLessonVideoProgress(tenantID, studentID uint, slug string, 
 }
 
 func (s *Service) UpdateLessonVideoProgress(tenantID, studentID uint, slug string, lessonID uint, req UpdateLessonVideoProgressRequest) (*LessonVideoProgressResponse, error) {
-	course, err := s.loadEnrolledCourse(tenantID, studentID, slug)
+	course, err := s.loadCourseForLessonAccess(tenantID, studentID, slug, lessonID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,7 @@ func (s *Service) UpdateLessonVideoProgress(tenantID, studentID uint, slug strin
 			"max_position_seconds": maxPosition,
 			"duration_seconds":     duration,
 			"progress_percent":     progressPercent,
-			// Force touch so learning-report daily aggregation (by updated_at) sees rewatches.
-			"updated_at": time.Now(),
+			"updated_at":           time.Now(),
 		}
 		if err := s.db.Model(&existing).Updates(updates).Error; err != nil {
 			return nil, err
@@ -122,7 +121,7 @@ func (s *Service) UpdateLessonVideoProgress(tenantID, studentID uint, slug strin
 }
 
 func (s *Service) MarkLessonComplete(tenantID, studentID uint, slug string, lessonID uint) (*progress.Breakdown, error) {
-	course, err := s.loadEnrolledCourse(tenantID, studentID, slug)
+	course, err := s.loadCourseForLessonAccess(tenantID, studentID, slug, lessonID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +172,40 @@ func (s *Service) loadEnrolledCourse(tenantID, studentID uint, slug string) (*mo
 		return nil, err
 	}
 	if count == 0 {
+		return nil, errors.New("enrollment required")
+	}
+
+	return &course, nil
+}
+
+// loadCourseForLessonAccess allows enrolled students, or free/public lessons without enrollment.
+func (s *Service) loadCourseForLessonAccess(tenantID, studentID uint, slug string, lessonID uint) (*models.CourseDetails, error) {
+	var course models.CourseDetails
+	if err := s.db.Where("tenant_id = ? AND slug = ?", tenantID, slug).First(&course).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("course not found")
+		}
+		return nil, err
+	}
+
+	var enrolled int64
+	if err := s.db.Model(&models.Enrollment{}).
+		Where("tenant_id = ? AND student_id = ? AND course_id = ?", tenantID, studentID, course.ID).
+		Count(&enrolled).Error; err != nil {
+		return nil, err
+	}
+	if enrolled > 0 {
+		return &course, nil
+	}
+
+	var publicCount int64
+	if err := s.db.Table("course_lessons AS l").
+		Joins("JOIN course_chapters AS ch ON ch.id = l.chapter_id").
+		Where("l.id = ? AND ch.course_id = ? AND l.is_published = ? AND l.is_public = ?", lessonID, course.ID, true, true).
+		Count(&publicCount).Error; err != nil {
+		return nil, err
+	}
+	if publicCount == 0 {
 		return nil, errors.New("enrollment required")
 	}
 

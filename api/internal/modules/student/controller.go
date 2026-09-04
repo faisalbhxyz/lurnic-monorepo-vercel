@@ -279,9 +279,11 @@ func LoginStudent(c *gin.Context) {
 		return
 	}
 
+	classProfile, _ := loadClassProfile(utils.DB, user.ID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
-		"user":  studentLoginUserResponse(user),
+		"user":  studentLoginUserResponse(user, classProfile),
 	})
 
 }
@@ -503,13 +505,16 @@ func GetStudentDetailsByID(c *gin.Context) {
 }
 
 func GetStudentDetails(c *gin.Context) {
+	studentID := c.GetUint("user_id")
 	var users models.StudentDetailsRes
 	utils.DB.
 		Preload("Enrollments").
-		Where("tenant_id = ? AND id = ?", c.GetUint("tenant_id"), c.GetUint("user_id")).
+		Where("tenant_id = ? AND id = ?", c.GetUint("tenant_id"), studentID).
 		First(&users)
 
-	c.JSON(http.StatusOK, gin.H{"data": users})
+	classProfile, _ := loadClassProfile(utils.DB, studentID)
+
+	c.JSON(http.StatusOK, gin.H{"data": studentDetailsPayload(users, classProfile)})
 }
 
 func UpdateStudentProfile(c *gin.Context) {
@@ -561,9 +566,11 @@ func UpdateStudentProfile(c *gin.Context) {
 		Where("tenant_id = ? AND id = ?", tenantID, studentID).
 		First(&profile)
 
+	classProfile, _ := loadClassProfile(utils.DB, studentID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Profile updated successfully",
-		"data":    profile,
+		"data":    studentDetailsPayload(profile, classProfile),
 	})
 }
 

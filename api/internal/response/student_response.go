@@ -61,18 +61,26 @@ type StudentOrderDetail struct {
 }
 
 type StudentDetailsAdminResponse struct {
-	ID          uint                      `json:"id"`
-	UserID      string                    `json:"user_id"`
-	FirstName   string                    `json:"first_name"`
-	LastName    *string                   `json:"last_name"`
+	ID           uint                      `json:"id"`
+	UserID       string                    `json:"user_id"`
+	FirstName    string                    `json:"first_name"`
+	LastName     *string                   `json:"last_name"`
 	Phone        *string                   `json:"phone"`
 	Email        string                    `json:"email"`
 	ProfileImage *string                   `json:"profile_image"`
 	Status       bool                      `json:"status"`
-	CreatedAt   time.Time                 `json:"created_at"`
-	UpdatedAt   time.Time                 `json:"updated_at"`
+	CreatedAt    time.Time                 `json:"created_at"`
+	UpdatedAt    time.Time                 `json:"updated_at"`
 	Enrollments  []StudentEnrollmentDetail `json:"enrollments"`
 	Orders       []StudentOrderDetail      `json:"orders"`
 	Stats        StudentDetailsStats       `json:"stats"`
 	ActiveDevice *StudentActiveDevice      `json:"active_device"`
+	LearningTime *StudentLearningTimeSummary `json:"learning_time,omitempty"`
+}
+
+type StudentLearningTimeSummary struct {
+	VideoSeconds7d  int64   `json:"video_seconds_7d"`
+	VideoSeconds30d int64   `json:"video_seconds_30d"`
+	StreakDays      int     `json:"streak_days"`
+	LastWatchedAt   *string `json:"last_watched_at"`
 }

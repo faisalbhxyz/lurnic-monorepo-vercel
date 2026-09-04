@@ -57,39 +57,7 @@ func normalizeReportDate(raw string) string {
 }
 
 func (s *StorefrontService) GetLearningReport(tenantID, studentID uint, period string) (*LearningReportResponse, error) {
-	days, err := parseReportPeriod(period)
-	if err != nil {
-		return nil, err
-	}
-
-	loc := reportLocation()
-	startDate := startOfLocalDay(time.Now(), loc).AddDate(0, 0, -(days - 1))
-
-	dailyWatch, err := s.aggregateDailyWatchSeconds(tenantID, studentID, startDate, days, loc)
-	if err != nil {
-		return nil, err
-	}
-
-	streakDays := calcStreakDays(dailyWatch)
-
-	quizAccuracy, err := s.calcQuizAccuracy(tenantID, studentID, startDate)
-	if err != nil {
-		return nil, err
-	}
-
-	inProgress, completed, err := s.countCourseStates(tenantID, studentID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &LearningReportResponse{
-		Period:              period,
-		DailyWatchSeconds:   dailyWatch,
-		StreakDays:          streakDays,
-		QuizAccuracyPercent: quizAccuracy,
-		CoursesInProgress:   inProgress,
-		CoursesCompleted:    completed,
-	}, nil
+	return s.buildLearningReport(tenantID, studentID, period, false)
 }
 
 func parseReportPeriod(period string) (int, error) {
@@ -108,16 +76,14 @@ func parseReportPeriod(period string) (int, error) {
 func (s *StorefrontService) aggregateDailyWatchSeconds(tenantID, studentID uint, startDate time.Time, days int, loc *time.Location) ([]DailyWatchSecondsEntry, error) {
 	type row struct {
 		Date    string
-		Seconds float64
+		Seconds int64
 	}
 
 	var rows []row
-	// DATE_FORMAT keeps a stable YYYY-MM-DD key even when the driver returns DATETIME blobs.
-	err := s.db.Model(&models.StudentLessonVideoProgress{}).
-		Select("DATE_FORMAT(updated_at, '%Y-%m-%d') as date, SUM(max_position_seconds) as seconds").
-		Where("tenant_id = ? AND student_id = ? AND updated_at >= ?", tenantID, studentID, startDate).
-		Group("DATE_FORMAT(updated_at, '%Y-%m-%d')").
-		Order("date ASC").
+	err := s.db.Model(&models.StudentDailyWatch{}).
+		Select("DATE_FORMAT(watch_date, '%Y-%m-%d') as date, video_seconds as seconds").
+		Where("tenant_id = ? AND student_id = ? AND watch_date >= ?", tenantID, studentID, startDate.Format("2006-01-02")).
+		Order("watch_date ASC").
 		Scan(&rows).Error
 	if err != nil {
 		return nil, err
@@ -129,7 +95,7 @@ func (s *StorefrontService) aggregateDailyWatchSeconds(tenantID, studentID uint,
 		if key == "" {
 			continue
 		}
-		byDate[key] += int64(math.Round(row.Seconds))
+		byDate[key] += row.Seconds
 	}
 
 	if days < 1 {
@@ -162,9 +128,11 @@ func calcStreakDays(daily []DailyWatchSecondsEntry) int {
 
 func (s *StorefrontService) calcQuizAccuracy(tenantID, studentID uint, startDate time.Time) (float64, error) {
 	var submissions []models.QuizSubmission
-	err := s.db.
-		Where("tenant_id = ? AND student_id = ? AND submitted_at >= ?", tenantID, studentID, startDate).
-		Find(&submissions).Error
+	q := s.db.Where("tenant_id = ? AND student_id = ?", tenantID, studentID)
+	if !startDate.IsZero() {
+		q = q.Where("submitted_at >= ?", startDate)
+	}
+	err := q.Find(&submissions).Error
 	if err != nil {
 		return 0, err
 	}

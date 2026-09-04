@@ -8,7 +8,7 @@
 একটি মাস্টার ডকুমেন্ট — web ও mobile অ্যাপের জন্য প্রয়োজনীয় সব storefront API কীভাবে কাজ করে, কোন flow এ কোন endpoint লাগে, এবং backend implementation কোথায় আছে।
 
 **Related per-feature docs:**  
-`STUDENT_DEVICE_LOGIN_STOREFRONT_API.md` · `LESSON_VIDEO_PROGRESS_STOREFRONT_API.md` · `LESSON_OFFLINE_DOWNLOAD_STOREFRONT_API.md` · `QUIZ_STOREFRONT_API.md` · `ASSIGNMENT_STOREFRONT_API.md` · `CERTIFICATE_STOREFRONT_API.md` · `CLASS_NOTE_STOREFRONT_API.md` · `STUDENT_PROFILE_STOREFRONT_API.md`
+`STUDENT_DEVICE_LOGIN_STOREFRONT_API.md` · `LESSON_VIDEO_PROGRESS_STOREFRONT_API.md` · `LESSON_OFFLINE_DOWNLOAD_STOREFRONT_API.md` · `QUIZ_STOREFRONT_API.md` · `ASSIGNMENT_STOREFRONT_API.md` · `CERTIFICATE_STOREFRONT_API.md` · `CLASS_NOTE_STOREFRONT_API.md` · `STUDENT_PROFILE_STOREFRONT_API.md` · `FREE_LESSONS_STOREFRONT_API.md`
 
 ---
 
@@ -195,6 +195,9 @@ HTTP `401` — frontend sign-out করে login page এ redirect করে।
 | GET | `/category` | app-key | ✅ |
 | GET | `/instructor/all` | app-key | ✅ |
 | GET | `/payment-methods` | app-key | ✅ |
+| GET | `/free-lessons` | app-key | ✅ |
+| GET/POST | `/student/free-lessons` | Bearer | ✅ |
+| DELETE | `/student/free-lessons/{lessonId}` | Bearer | ✅ |
 | **Student** | | | |
 | GET | `/student/details` | Bearer | ✅ |
 | PUT | `/student/update` | Bearer (multipart) | ✅ |
@@ -434,6 +437,8 @@ Admin `Mark as paid` করলে auto-enrollment হয় (`order/service.go` 
 
 #### `GET /student/learning-report?period=7d|30d|90d`
 
+`daily_watch_seconds` comes from `student_daily_watch` (actual play time via `POST /student/watch-time`). See [STUDENT_WATCH_TIME_STOREFRONT_API.md](./STUDENT_WATCH_TIME_STOREFRONT_API.md).
+
 ```json
 {
   "data": {
@@ -448,6 +453,10 @@ Admin `Mark as paid` করলে auto-enrollment হয় (`order/service.go` 
   }
 }
 ```
+
+#### `POST /student/watch-time` · `POST /student/watch-time/batch`
+
+Ingest actual video play deltas (idempotent `client_event_id`). Full contract: [STUDENT_WATCH_TIME_STOREFRONT_API.md](./STUDENT_WATCH_TIME_STOREFRONT_API.md).
 
 #### `GET /student/notifications`
 
